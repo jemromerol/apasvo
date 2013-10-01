@@ -1,5 +1,5 @@
 *.csv
 *.out
 *.pyc
-./examples/*
+examples/*
 
