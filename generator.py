@@ -16,98 +16,17 @@ A tool to generate synthetic seismic signal
 
 import argparse
 import os
-import picking
 import sys
-import utils
-import glob
 from scipy import signal
+
+from lib import utils
+from lib import parse
+from lib import picking
 
 __all__ = []
 __version__ = '0.0.1'
 __date__ = '2013-10-05'
-__updated__ = '2013-10-06ç5'
-
-
-def print_msg(msg):
-    sys.stdout.write(msg)
-    sys.stdout.flush()
-
-
-def filein(arg):
-    if not os.path.isfile(arg):
-        msg = "%r is not a regular file" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return arg
-
-
-def positive_float(arg):
-    value = float(arg)
-    if value <= 0:
-        msg = "%r is not a positive float number" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-def positive_int(arg):
-    value = int(arg)
-    if value <= 0:
-        msg = "%r is not a positive integer number" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-def percentile(arg):
-    value = float(arg)
-    if value < 0 or value > 100:
-        msg = "%r is not a percentile" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-def fraction(arg):
-    value = float(arg)
-    if value < 0 or value > 1:
-        msg = "%r must be a value between [0,1)" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-def segment_length(arg):
-    value = float(arg)
-    if value < 1 or value > 168:
-        msg = "%r must be a value between 1 and 168 hours (one week)" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value * 3600
-
-
-class GlobInputFilenames(argparse.Action):
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        fnames = []
-        for pname in values:
-            if '*' in pname or '?' in pname:
-                fnames.extend(glob.glob(pname))
-            else:
-                fnames.append(pname)
-        files = [self.fopen(fname) for fname in fnames]
-        setattr(namespace, self.dest, files)
-
-    def fopen(self, fname):
-        ft = argparse.FileType('r') if utils.istextfile(fname) else argparse.FileType('rb')
-        return ft(fname)
-
-
-class CustomArgumentParser(argparse.ArgumentParser):
-    def __init__(self, *args, **kwargs):
-        super(CustomArgumentParser, self).__init__(*args, **kwargs)
-
-    def convert_arg_line_to_args(self, line):
-        for arg in line.split():
-            if not arg.strip():
-                continue
-            if arg[0] == '#':
-                break
-            yield arg
+__updated__ = '2013-10-06'
 
 
 def print_settings(args):
@@ -149,16 +68,16 @@ def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
              gen_noise_coefficients=False, output_format='binary',
              datatype='float64', byteorder='native', **kwargs):
     # Configure generator
-    print_msg("Configuring generator... ")
+    utils.print_msg("Configuring generator... ")
     generator = picking.EarthquakeGenerator(**kwargs)
-    print_msg("Done\n")
+    utils.print_msg("Done\n")
     # Load noise coefficients
     if gen_noise_coefficients:
         f = open(gen_noise_coefficients, 'r') if utils.istextfile(gen_noise_coefficients) else open(gen_noise_coefficients, 'rb')
-        print_msg("Loading noise coefficients from %s... " %
+        utils.print_msg("Loading noise coefficients from %s... " %
                          f.name)
         generator.load_noise_coefficients(f, dtype=datatype, byteorder=byteorder)
-        print_msg("Done\n")
+        utils.print_msg("Done\n")
     # Process input files
     basename, ext = os.path.splitext(output)
     filename_out = output
@@ -166,30 +85,30 @@ def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
         fileno = 0
         for f in FILEIN:
             fin_handler = utils.get_file_handler(f, dtype=datatype, byteorder=byteorder)
-            print_msg("Loading seismic signal from %s... " % fin_handler.filename)
+            utils.print_msg("Loading seismic signal from %s... " % fin_handler.filename)
             signal = fin_handler.read()
-            print_msg("Done\n")
+            utils.print_msg("Done\n")
             if len(FILEIN) > 1:
                 filename_out = "%s%02.0i%s" % (basename, fileno, ext)
                 fileno += 1
-            print_msg("Generating artificial signal in %s... " %
+            utils.print_msg("Generating artificial signal in %s... " %
                              filename_out)
             eq = generator.generate_earthquake(length, t_event,
                                                gen_event_power, signal)
             fout_handler = utils.TextFile(filename_out, dtype=datatype, byteorder=byteorder) if output_format is 'text' else utils.BinFile(filename_out, dtype=datatype, byteorder=byteorder)
             fout_handler.write(eq)
-            print_msg("Done\n")
+            utils.print_msg("Done\n")
     else:
         for i in xrange(n_events):
             if n_events > 1:
                 filename_out = "%s%02.0i%s" % (basename, i, ext)
-            print_msg("Generating artificial signal in %s... " %
+            utils.print_msg("Generating artificial signal in %s... " %
                              filename_out)
             eq = generator.generate_earthquake(length, t_event,
                                                gen_event_power)
             fout_handler = utils.TextFile(filename_out, dtype=datatype, byteorder=byteorder) if output_format is 'text' else utils.BinFile(filename_out, dtype=datatype, byteorder=byteorder)
             fout_handler.write(eq)
-            print_msg("Done\n")
+            utils.print_msg("Done\n")
 
 
 def main(argv=None):
@@ -229,7 +148,7 @@ USAGE
 
     try:
         # Setup argument parser
-        parser = CustomArgumentParser(description=program_license,
+        parser = parse.CustomArgumentParser(description=program_license,
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 fromfile_prefix_chars='@')
         #Create common arguments for all commands
@@ -253,7 +172,7 @@ USAGE
         parser.set_defaults(func=generate)
         # Create arguments for "generate" command
         parser.add_argument("FILEIN", nargs='*',
-                                     action=GlobInputFilenames,
+                                     action=parse.GlobInputFilenames,
                                      help='''
         Binary or text file containing a seismic-like signal. If not specified
         then a synthetic earthquake is generated.
@@ -271,23 +190,23 @@ USAGE
         Output file format. Default value is 'binary'.
         ''')
         parser.add_argument("-n", "--n-events",
-                                     type=positive_int,
+                                     type=parse.positive_int,
                                      default=1,
                                      help='''
         Number of events generated, one file for each event.
         ''')
-        parser.add_argument("-f", "--frequency", type=positive_float,
+        parser.add_argument("-f", "--frequency", type=parse.positive_float,
                                      default=50.0,
                                      dest='fs',
                                      help="Signal frequency.")
         parser.add_argument("-l", "--length",
-                                     type=positive_int,
+                                     type=parse.positive_int,
                                      default=600.0,
                                      help='''
         Length of the generated sequence. Default value is 600 seconds.
         ''')
         parser.add_argument("-t", "--t-event",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      required=True,
                                      help='''
         Point in time at which the event will be generated.
@@ -306,14 +225,14 @@ USAGE
         Background noise power. Default value is 0 dB.
         ''')
         parser.add_argument("--gen-noise-coefficients",
-                                     type=filein,
+                                     type=parse.filein,
                                      help='''
         Binary or text file containing the coefficients that characterize
         the noise. If not specified then unfiltered white noise is used for
         modeling the background noise.
         ''')
         parser.add_argument("--gen-low-period",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='low_period',
                                      default=50.0,
                                      help='''
@@ -321,7 +240,7 @@ USAGE
         Default value is 50.
         ''')
         parser.add_argument("--gen-high-period",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='high_period',
                                      default=10.0,
                                      help='''
@@ -329,7 +248,7 @@ USAGE
         Default value is 10.
         ''')
         parser.add_argument("--gen-bandwidth",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='bandwidth',
                                      default=4.0,
                                      help='''
@@ -337,7 +256,7 @@ USAGE
         the synthetic earthquake. Default value is 4 Hz.
         ''')
         parser.add_argument("--gen-overlap",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='overlap',
                                      default=1.0,
                                      help='''
@@ -345,7 +264,7 @@ USAGE
         synthetic earthquake. Default value is 1 Hz.
         ''')
         parser.add_argument("--gen-f-low",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='f_low',
                                      default=2.0,
                                      help='''
@@ -353,7 +272,7 @@ USAGE
         the synthetic earthquake. Default value is 2Hz.
         ''')
         parser.add_argument("--gen-f-high",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='f_high',
                                      default=18.0,
                                      help='''
@@ -361,7 +280,7 @@ USAGE
         the synthetic earthquake. Default value is 18Hz.
         ''')
         parser.add_argument("--gen-low-amp",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='low_amp',
                                      default=0.2,
                                      help='''
@@ -369,7 +288,7 @@ USAGE
         the synthetic earthquake. Default value is 0.2.
         ''')
         parser.add_argument("--gen-high-amp",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='high_amp',
                                      default=0.1,
                                      help='''

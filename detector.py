@@ -18,121 +18,17 @@ It defines classes_and_methods
 
 import matplotlib.pyplot as pl
 import argparse
-import numpy as np
 import os
-import picking
 import sys
-import utils
-import yaml
-import glob
-from scipy import signal
+
+from lib import picking
+from lib import utils
+from lib import parse
 
 __all__ = []
 __version__ = '0.0.1'
 __date__ = '2013-06-24'
 __updated__ = '2013-06-24'
-
-
-_max_segment_length = 12 * 3600  # Default 12 hours
-
-
-def print_msg(msg):
-    sys.stdout.write(msg)
-    sys.stdout.flush()
-
-
-def filein(arg):
-    if not os.path.isfile(arg):
-        msg = "%r is not a regular file" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return arg
-
-
-def positive_float(arg):
-    value = float(arg)
-    if value <= 0:
-        msg = "%r is not a positive float number" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-def positive_int(arg):
-    value = int(arg)
-    if value <= 0:
-        msg = "%r is not a positive integer number" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-def percentile(arg):
-    value = float(arg)
-    if value < 0 or value > 100:
-        msg = "%r is not a percentile" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-def fraction(arg):
-    value = float(arg)
-    if value < 0 or value > 1:
-        msg = "%r must be a value between [0,1)" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-def segment_length(arg):
-    value = float(arg)
-    if value < 1 or value > 168:
-        msg = "%r must be a value between 1 and 168 hours (one week)" % arg
-        raise argparse.ArgumentTypeError(msg)
-    return value * 3600
-
-
-def generated_sequence_length(arg):
-    value = float(arg)
-    if value < 1 or value > _max_segment_length:
-        msg = ("%r must be a value between 1 and %r seconds (12 hours)" %
-               (arg, _max_segment_length))
-        raise argparse.ArgumentTypeError(msg)
-    return value
-
-
-class LoadDefaultFromYAMLFile(argparse.Action):
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        config = utils.flatten_dict(yaml.load(values))
-        for key, value in config.items():
-            setattr(namespace, key, value)
-
-
-class GlobInputFilenames(argparse.Action):
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        fnames = []
-        for pname in values:
-            if '*' in pname or '?' in pname:
-                fnames.extend(glob.glob(pname))
-            else:
-                fnames.append(pname)
-        files = [self.fopen(fname) for fname in fnames]
-        setattr(namespace, self.dest, files)
-
-    def fopen(self, fname):
-        ft = argparse.FileType('r') if utils.istextfile(fname) else argparse.FileType('rb')
-        return ft(fname)
-
-
-class CustomArgumentParser(argparse.ArgumentParser):
-    def __init__(self, *args, **kwargs):
-        super(CustomArgumentParser, self).__init__(*args, **kwargs)
-
-    def convert_arg_line_to_args(self, line):
-        for arg in line.split():
-            if not arg.strip():
-                continue
-            if arg[0] == '#':
-                break
-            yield arg
 
 
 def draw_events_table(record, method):
@@ -164,65 +60,62 @@ def draw_results(records, method):
 
 
 def print_settings(args):
-    if args.command == 'pick' or args.command == 'detect':
-        sys.stdout.write("\nGeneral settings:\n")
-        sys.stdout.write("%30s: %s\n" % ("Analysis method",
-                                       args.command.upper()))
-        sys.stdout.write("%30s: %s\n" % ("Signal frequency(Hz)",
-                                       args.fs))
-        if args.func.func_name == 'detect':
-            sys.stdout.write("%30s: %s\n" % ("Threshold",
-                                           args.threshold))
-        sys.stdout.write("%30s: %s\n" % ("Peak checking(s)",
-                                       args.peak_checking))
-        sys.stdout.write("%30s: %s\n" % ("Algorithm used",
-                                       args.method.upper()))
-        sys.stdout.write("%30s: %s\n" % ("Takanami",
-                                       args.takanami))
-        sys.stdout.write("%30s: %s\n" % ("Takanami margin",
-                                       args.takanami_margin))
-        if args.method == 'ampa':
-            sys.stdout.write("\nAMPA settings:\n")
-            sys.stdout.write("%30s: %s\n" % ("Window length(s)",
-                                           args.window))
-            sys.stdout.write("%30s: %s\n" % ("Window overlap",
-                                           args.window_overlap))
-            sys.stdout.write("%30s: %s\n" % ("Noise threshold",
-                                           args.noise_thr))
-            sys.stdout.write("%30s: %s\n" % ("Length of the filters used(s)",
-                                           args.L))
-            sys.stdout.write("%30s: %s\n" % ("Negative response coefficient",
-                                           args.L_coef))
-            sys.stdout.write("%30s: %s\n" % ("Coefficient U",
-                                           args.U))
-            sys.stdout.write("\nAMPA filter bank settings:\n")
-            sys.stdout.write("%30s: %s\n" % ("Start frequency(Hz)",
-                                           args.f_start))
-            sys.stdout.write("%30s: %s\n" % ("End frequency(Hz)",
-                                           args.f_end))
-            sys.stdout.write("%30s: %s\n" % ("Subband bandwidth(Hz)",
-                                           args.bandwidth))
-            sys.stdout.write("%30s: %s\n" % ("Subband overlap(Hz)",
-                                           args.overlap))
-        if args.method == 'stalta':
-            sys.stdout.write("\nSTA-LTA settings:\n")
-            sys.stdout.write("%30s: %s\n" % ("STA window length(s)",
-                                           args.sta_window))
-            sys.stdout.write("%30s: %s\n" % ("LTA window length(s)",
-                                           args.lta_window))
+    sys.stdout.write("\nGeneral settings:\n")
+    sys.stdout.write("%30s: %s\n" % ("Signal frequency(Hz)",
+                                   args.fs))
+    if args.threshold:
+        sys.stdout.write("%30s: %s\n" % ("Threshold",
+                                       args.threshold))
+    sys.stdout.write("%30s: %s\n" % ("Peak checking(s)",
+                                   args.peak_checking))
+    sys.stdout.write("%30s: %s\n" % ("Algorithm used",
+                                   args.method.upper()))
+    sys.stdout.write("%30s: %s\n" % ("Takanami",
+                                   args.takanami))
+    sys.stdout.write("%30s: %s\n" % ("Takanami margin",
+                                   args.takanami_margin))
+    if args.method == 'ampa':
+        sys.stdout.write("\nAMPA settings:\n")
+        sys.stdout.write("%30s: %s\n" % ("Window length(s)",
+                                       args.window))
+        sys.stdout.write("%30s: %s\n" % ("Window overlap",
+                                       args.window_overlap))
+        sys.stdout.write("%30s: %s\n" % ("Noise threshold",
+                                       args.noise_thr))
+        sys.stdout.write("%30s: %s\n" % ("Length of the filters used(s)",
+                                       args.L))
+        sys.stdout.write("%30s: %s\n" % ("Negative response coefficient",
+                                       args.L_coef))
+        sys.stdout.write("%30s: %s\n" % ("Coefficient U",
+                                       args.U))
+        sys.stdout.write("\nAMPA filter bank settings:\n")
+        sys.stdout.write("%30s: %s\n" % ("Start frequency(Hz)",
+                                       args.f_start))
+        sys.stdout.write("%30s: %s\n" % ("End frequency(Hz)",
+                                       args.f_end))
+        sys.stdout.write("%30s: %s\n" % ("Subband bandwidth(Hz)",
+                                       args.bandwidth))
+        sys.stdout.write("%30s: %s\n" % ("Subband overlap(Hz)",
+                                       args.overlap))
+    if args.method == 'stalta':
+        sys.stdout.write("\nSTA-LTA settings:\n")
+        sys.stdout.write("%30s: %s\n" % ("STA window length(s)",
+                                       args.sta_window))
+        sys.stdout.write("%30s: %s\n" % ("LTA window length(s)",
+                                       args.lta_window))
     sys.stdout.write("\n")
     sys.stdout.flush()
 
 
 class Analysis(object):
 
-    def run(self, FILEIN, csv=False, html=False, **kwargs):
+    def run(self, FILEIN, csv=False, **kwargs):
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         takanami = kwargs.get('takanami', False)
         # Create a list of records from input files
-        factory = picking.RecordFactory(notif=print_msg, **kwargs)
-        factory.on_notify = print_msg
+        factory = picking.RecordFactory(notif=utils.print_msg, **kwargs)
+        factory.on_notify = utils.print_msg
         records = []
         for f in FILEIN:
             records.append(factory.create_record(f, method=method))
@@ -253,11 +146,6 @@ class Analysis(object):
         if csv:
             self.on_notify("Generating CSV report in %s... " % csv.name)
             picking.generate_csv(records, csv)
-            self.on_notify("Done\n")
-
-        if html:
-            self.on_notify("Generating HTML report in %s... " % html.name)
-            picking.generate_html(records, html, **kwargs)
             self.on_notify("Done\n")
 
     def _do_analysis(self, records, supervised=False, **kwargs):
@@ -399,15 +287,12 @@ class Picker(Analysis):
         return response
 
 
-def detect(**kwargs):
-    analysis = Detector()
-    analysis.on_notify = print_msg
-    analysis.run(**kwargs)
-
-
-def pick(**kwargs):
-    analysis = Picker()
-    analysis.on_notify = print_msg
+def analysis(**kwargs):
+    if 'threshold' in kwargs:
+        analysis = Detector()
+    else:
+        analysis = Picker()
+    analysis.on_notify = utils.print_msg
     analysis.run(**kwargs)
 
 
@@ -448,63 +333,53 @@ USAGE
 
     try:
         # Setup argument parser
-        parser = CustomArgumentParser(description=program_license,
+        parser = parse.CustomArgumentParser(description=program_license,
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 fromfile_prefix_chars='@')
-        subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 
         #Create common arguments for all commands
-        common_parser = argparse.ArgumentParser(add_help=False)
-        common_parser.add_argument('-V', '--version', action='version',
+        parser = argparse.ArgumentParser()
+        parser.set_defaults(func=analysis)
+        parser.add_argument('-V', '--version', action='version',
                             version=program_version_message)
-        common_parser.add_argument("--datatype",
+        parser.add_argument("--datatype",
                             choices=['float16', 'float32', 'float64'],
                             default='float64',
                             help='''
         If the input files are in binary format this will be
         the datatype used for reading it.
                             ''')
-        common_parser.add_argument("--byteorder",
+        parser.add_argument("--byteorder",
                                    choices=['little-endian', 'big-endian', 'native'],
                                    default='native',
                                    help='''
         If the input files are in binary format this will be the byte-order
         of the selected datatype. Default choice is hardware native.
                                    ''')
-        # This parser defines common arguments for "detect" and "pick" commands
-        analysis_parser = argparse.ArgumentParser(add_help=False)
 
         # Create common arguments for "detect" and "pick" commands
-        analysis_parser.add_argument("FILEIN", nargs='+',
-                                     action=GlobInputFilenames,
+        parser.add_argument("FILEIN", nargs='+',
+                                     action=parse.GlobInputFilenames,
                                      help='''
         Binary or text file containing a seismic-like signal.
         ''')
-        analysis_parser.add_argument("--csv", type=argparse.FileType('w'),
+        parser.add_argument("--csv", type=argparse.FileType('w'),
                                      default="output.csv",
                                      help='''
         Generates an report in csv format. If none is specified will generate
         a csv file named output.csv containing the list of events found.
         ''')
-        analysis_parser.add_argument("--html", type=argparse.FileType('w'),
-                                    help='''
-        Generates an report in html.
-        ''')
-        analysis_parser.add_argument("-f", "--frequency", type=positive_float,
+        parser.add_argument("-f", "--frequency", type=parse.positive_float,
                                      default=50.0,
                                      dest='fs',
                                      help="Signal frequency.")
-        analysis_parser.add_argument("--max-segment-length",
-                                     type=segment_length,
-                                     default=_max_segment_length,
-                                     help="Signal frequency.")
-        analysis_parser.add_argument("-m", "--method",
+        parser.add_argument("-m", "--method",
                                    choices=['ampa', 'stalta'],
                                    help='''
                                    Available methods. Default method is AMPA.
                                    ''', default='ampa')
-        analysis_parser.add_argument("--peak-checking",
-                                   type=positive_float,
+        parser.add_argument("--peak-checking",
+                                   type=parse.positive_float,
                                    default=5.0,
                                    help='''
         How many seconds need to be examined before and after
@@ -512,9 +387,9 @@ USAGE
         Default value is 5 seconds.
         ''')
         # STA-LTA arguments
-        sta_lta_options = analysis_parser.add_argument_group("STA-LTA options")
+        sta_lta_options = parser.add_argument_group("STA-LTA options")
         sta_lta_options.add_argument("--sta-window",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='sta_length',
                                      default=5.0,
                                      help='''
@@ -522,17 +397,17 @@ USAGE
         Default value is 5 seconds.
         ''')
         sta_lta_options.add_argument("--lta-window",
-                                     type=positive_float,
+                                     type=parse.positive_float,
                                      dest='lta_length',
-                                     default=60.0,
+                                     default=600.0,
                                      help='''
         Length of LTA window (in seconds) when using the STA-LTA method.
-        Default value is 60 seconds.
+        Default value is 600 seconds.
         ''')
         # AMPA arguments
-        ampa_options = analysis_parser.add_argument_group("AMPA options")
+        ampa_options = parser.add_argument_group("AMPA options")
         ampa_options.add_argument("--ampa-window",
-                                  type=positive_float,
+                                  type=parse.positive_float,
                                   dest='window',
                                   default=150.0,
                                   help='''
@@ -541,7 +416,7 @@ USAGE
         of the events we are looking for. Default value is 100 seconds.
         ''')
         ampa_options.add_argument("--ampa-window-overlap",
-                                  type=fraction,
+                                  type=parse.fraction,
                                   dest='window_overlap',
                                   default=0.5,
                                   help='''
@@ -549,7 +424,7 @@ USAGE
         Must be in range [0,1). Default value is 0.5.
         ''')
         ampa_options.add_argument("--ampa-L",
-                                  type=positive_float,
+                                  type=parse.positive_float,
                                   dest='L',
                                   default=[30.0, 20.0, 10.0, 5.0, 2.5],
                                   nargs='+',
@@ -568,14 +443,14 @@ USAGE
         Default value is 3.0.
         ''')
         ampa_options.add_argument("--ampa-noise-threshold",
-                                  type=percentile,
+                                  type=parse.percentile,
                                   dest='noise_thr',
                                   default=90.0,
                                   help='''
         Percentile used in the noise reduction stage. Default value is 90.0.
         ''')
         ampa_options.add_argument("--ampa-f-start",
-                                  type=positive_float,
+                                  type=parse.positive_float,
                                   dest='f_start',
                                   default=2.0,
                                   help='''
@@ -583,7 +458,7 @@ USAGE
         processing stage. Default value is 2Hz.
         ''')
         ampa_options.add_argument("--ampa-f-end",
-                                  type=positive_float,
+                                  type=parse.positive_float,
                                   dest='f_end',
                                   default=12.0,
                                   help='''
@@ -591,7 +466,7 @@ USAGE
         processing stage. Default value is 12Hz.
         ''')
         ampa_options.add_argument("--ampa-bandwidth",
-                                  type=positive_float,
+                                  type=parse.positive_float,
                                   dest='bandwidth',
                                   default=3.0,
                                   help='''
@@ -599,7 +474,7 @@ USAGE
         processing stage. Default value is 3Hz.
         ''')
         ampa_options.add_argument("--ampa-overlap",
-                                  type=positive_float,
+                                  type=parse.positive_float,
                                   dest='overlap',
                                   default=1.0,
                                   help='''
@@ -615,7 +490,7 @@ USAGE
         characteristic function. Default value is 12.0.
         ''')
         # Takanami arguments
-        takanami_options = analysis_parser.add_argument_group("Takanami options")
+        takanami_options = parser.add_argument_group("Takanami options")
         takanami_options.add_argument("--takanami",
                                  action='store_true',
                                  default=False,
@@ -624,7 +499,7 @@ USAGE
         ''')
 
         takanami_options.add_argument("--takanami-margin",
-                                 type=positive_float,
+                                 type=parse.positive_float,
                                  default=5.0,
                                  help='''
         When using the Takanami method how many seconds
@@ -632,7 +507,7 @@ USAGE
         ''')
 
         # Create arguments for the supervised mode
-        supervised_options = analysis_parser.add_argument_group("Supervised mode")
+        supervised_options = parser.add_argument_group("Supervised mode")
         supervised_options.add_argument("-s", "--supervised",
                                         action="store_true", default=False,
                                         help='''
@@ -659,35 +534,26 @@ USAGE
         Display signal envelope in supervised mode.
         ''')
         supervised_options.add_argument("--show-len",
-                                        type=positive_float,
+                                        type=parse.positive_float,
                                         default=5.0,
                                         help='''
-        Length of the input signal to be displayed in the supervised mode.
+        How many seconds of the input signal will be displayed before and after
+        of a possible event.
         Default value is 5.0 seconds.
         ''')
-        # Create a parser for any command
-        parser_detect = subparsers.add_parser('detect',
-                                              parents=[common_parser,
-                                                       analysis_parser],
-                                              help='detect help')
-        parser_detect.set_defaults(func=detect)
-        parser_pick = subparsers.add_parser('pick', parents=[common_parser,
-                                                             analysis_parser],
-                                            help='pick help')
-        parser_pick.set_defaults(func=pick)
         # Create arguments for "detect" command
-        parser_detect.add_argument("--sort", choices=['td', 'ta', 'vd', 'va'],
+        parser.add_argument("--sort", choices=['td', 'ta', 'vd', 'va'],
                                    help='''
         How the results are sorted. Choices are
         time descending/ascending and characteristic
         function value descending/ascending. Default
         value is time ascending.
                                    ''', default='ta')
-        parser_detect.add_argument("-t", "--threshold", type=positive_float,
+        parser.add_argument("-t", "--threshold", type=parse.positive_float,
                                    help='''
         Characteristic Function value from which a local maximum
         can be considered a P-phase arrival event. Default value is 2.0.
-        ''', default=2.0)
+        ''')
 
         # Parse the args and call whatever function was selected
         args, _ = parser.parse_known_args()

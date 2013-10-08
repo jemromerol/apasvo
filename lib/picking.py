@@ -656,7 +656,7 @@ class Record(object):
 
 class RecordFactory(object):
 
-    def __init__(self, max_segment_length, fs=50.0, dtype='float64', byteorder='native',
+    def __init__(self, max_segment_length=24*3600, fs=50.0, dtype='float64', byteorder='native',
                  notif=None, **kwargs):
         self.fs = fs
         self.dtype = dtype

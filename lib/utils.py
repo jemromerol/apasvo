@@ -11,6 +11,11 @@ import os
 from struct import pack
 
 
+def print_msg(msg):
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+
+
 # A function that takes an integer in the 8-bit range and returns
 # a single-character byte object in py3 / a single-character string
 # in py2.
