@@ -2,7 +2,7 @@
 #encoding utf-8
 
 import unittest
-import picking
+from lib import picking
 import numpy as np
 import scipy.io as sio
 

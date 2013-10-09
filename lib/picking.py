@@ -11,12 +11,8 @@ import csv
 import os
 import matplotlib.pyplot as pl
 from matplotlib.ticker import FuncFormatter
-import jinja2
 import datetime
 import collections
-
-template_dir = os.path.join(os.path.dirname(__file__),'templates')
-jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
 
 
 def prctile(x, p):
@@ -547,6 +543,10 @@ class Record(object):
             event.cf_value = self.cf[et]
         return self.events
 
+    def save_cf(self, fname, fmt='binary', dtype='float64', byteorder='native'):
+        fout_handler = utils.TextFile(fname, dtype=dtype, byteorder=byteorder) if fmt == 'text' else utils.BinFile(fname, dtype=dtype, byteorder=byteorder)
+        fout_handler.write(self.cf)
+
     def plot_signal(self, t_start=0.0, t_end=np.inf, show_events=True,
                     show_x=True, show_cf=True, show_specgram=True,
                     show_envelope=True, threshold=None, num=None, **kwargs):
@@ -656,7 +656,7 @@ class Record(object):
 
 class RecordFactory(object):
 
-    def __init__(self, max_segment_length=24*3600, fs=50.0, dtype='float64', byteorder='native',
+    def __init__(self, max_segment_length=24*7*3600, fs=50.0, dtype='float64', byteorder='native',
                  notif=None, **kwargs):
         self.fs = fs
         self.dtype = dtype
@@ -665,27 +665,27 @@ class RecordFactory(object):
         self.notif = notif
 
     def create_record(self, fileobj, **kwargs):
-        segment_n = np.ceil(utils.getSize(fileobj) / self.max_record_length)
-        if segment_n > 1:
-            fhandler = utils.get_file_handler(fileobj, dtype=self.dtype, byteorder=self.byteorder)
-            self.on_notify("File %s is too long, it will be divided into %i parts up to %g seconds each\n"
-                           % (fhandler.filename, segment_n, self.max_record_length / self.fs))
-            basename, ext = os.path.splitext(fhandler.filename)
-            fileno = 0
-            records = []
-            for segment in fhandler.read_in_blocks(self.max_record_length):
-                filename_out = "%s%02.0i%s" % (basename, fileno, ext)
-                fout_handler = utils.TextFile(filename_out, self.dtype, self.byteorder) if isinstance(fhandler, utils.TextFile) else utils.BinFile(filename_out, self.dtype, self.byteorder)
-                fileno += 1
-                fout_handler.write(segment)
-                self.on_notify("%s generated.\n" % fout_handler.filename)
-                records.append(fout_handler.filename, self.fs,
-                                      dtype=self.dtype, byteorder=self.byteorder,
-                                      **kwargs)
-            return records
-        else:
-            return Record(fileobj, self.fs, dtype=self.dtype, byteorder=self.byteorder,
-                          **kwargs)
+#         segment_n = np.ceil(utils.getSize(fileobj) / self.max_record_length)
+#         if segment_n > 1:
+#             fhandler = utils.get_file_handler(fileobj, dtype=self.dtype, byteorder=self.byteorder)
+#             self.on_notify("File %s is too long, it will be divided into %i parts up to %g seconds each\n"
+#                            % (fhandler.filename, segment_n, self.max_record_length / self.fs))
+#             basename, ext = os.path.splitext(fhandler.filename)
+#             fileno = 0
+#             records = []
+#             for segment in fhandler.read_in_blocks(self.max_record_length):
+#                 filename_out = "%s%02.0i%s" % (basename, fileno, ext)
+#                 fout_handler = utils.TextFile(filename_out, self.dtype, self.byteorder) if isinstance(fhandler, utils.TextFile) else utils.BinFile(filename_out, self.dtype, self.byteorder)
+#                 fileno += 1
+#                 fout_handler.write(segment)
+#                 self.on_notify("%s generated.\n" % fout_handler.filename)
+#                 records.append(fout_handler.filename, self.fs,
+#                                       dtype=self.dtype, byteorder=self.byteorder,
+#                                       **kwargs)
+#             return records
+#         else:
+        return Record(fileobj, self.fs, dtype=self.dtype, byteorder=self.byteorder,
+                      **kwargs)
 
     def on_notify(self, msg):
         pass
@@ -709,50 +709,3 @@ def generate_csv(records, out, delimiter='\t', lineterminator='\n'):
     for row in rows:
         writer.writerow(row)
 
-
-def generate_html(records, out, show_len=30.0, takanami=False, filetype='png',
-                  dpi=200, thumbnail_dpi=20, show_all=False, show_cf=False,
-                  show_specgram=False, show_envelope=False, **kwargs):
-    show_cf = True if show_all else show_cf
-    show_specgram = True if show_all else show_specgram
-    show_envelope = True if show_all else show_envelope
-    basename, _ = os.path.splitext(out.name)
-    content_dir = basename + '_files'
-    if not os.path.isdir(content_dir):
-        os.mkdir(content_dir)
-    static_content_dir = content_dir + '/static'
-    utils.copytree(template_dir + '/static', static_content_dir)
-    n_events = 0
-    for record in records:
-        for e in record.events:
-            event = e.__dict__
-            n_events += 1
-            fig = record.plot_signal(t_start=event['time'] - show_len,
-                                     t_end=event['time'] + show_len,
-                                     threshold=0.0 if kwargs['command'] == 'pick' else kwargs['threshold'],
-                                     show_cf=show_cf,
-                                     show_specgram=show_specgram,
-                                     show_envelope=show_envelope)
-            event['img_filename'] = "%s/%s_%i.%s" % (content_dir, record.label,
-                                                       event['time'], filetype)
-            event['thumb_filename'] = "%s/%s_%i_thumbnail.%s" % (content_dir, record.label,
-                                                       event['time'], filetype)
-            fig.savefig(event['img_filename'], dpi=dpi)
-            fig.savefig(event['thumb_filename'], dpi=thumbnail_dpi)
-            if takanami:
-                fig = record.plot_aic(event, show_envelope=show_envelope)
-                event['img_aic_filename'] = "%s/%s_%i_aic.%s" % (content_dir,
-                                                                   record.label,
-                                                                   event['time'],
-                                                                   filetype)
-                event['thumb_aic_filename'] = "%s/%s_%i_aic_thumbnail.%s" % (content_dir,
-                                                                   record.label,
-                                                                   event['time'],
-                                                                   filetype)
-                fig.savefig(event['img_aic_filename'], dpi=dpi)
-                fig.savefig(event['thumb_aic_filename'], dpi=thumbnail_dpi)
-    template = jinja_env.get_template('report.html')
-    out.write(template.render(records=records, static=static_content_dir,
-                              content=content_dir,
-                              takanami=takanami, time=datetime.datetime.now(),
-                              n_events=n_events, **kwargs))

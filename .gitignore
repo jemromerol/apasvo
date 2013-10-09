@@ -2,4 +2,6 @@
 *.out
 *.pyc
 examples/*
-
+build/*
+dist/*
+*.egg-info/*

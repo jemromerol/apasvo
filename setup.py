@@ -1,8 +1,18 @@
-#!/usr/bin/python2.7
-# encoding: utf-8
-from distutils.core import setup
-import py2exe
-import matplotlib
+'''
+Created on 08/10/2013
 
-setup(console=['detector.py'],
-	  data_files=matplotlib.get_py2exe_datafiles())
+@author: Jose Emilio Romero Lopez
+'''
+
+from setuptools import setup, find_packages
+
+setup(name = "AMPA Command Line Tool",
+      version = "0.0.1",
+      description = "AMPA Command Line Tool",
+      author = "Jose Emilio Romero Lopez",
+      author_email = "jemromerol@gmail.com",
+      license = "LGPL",
+      scripts = ["detector.py", "generator.py"],
+      packages = find_packages(),
+      install_requires = ['numpy', 'scipy', 'matplotlib']
+      )

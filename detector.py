@@ -109,7 +109,7 @@ def print_settings(args):
 
 class Analysis(object):
 
-    def run(self, FILEIN, csv=False, **kwargs):
+    def run(self, FILEIN, csv=False, cf=False, **kwargs):
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         takanami = kwargs.get('takanami', False)
@@ -147,6 +147,14 @@ class Analysis(object):
             self.on_notify("Generating CSV report in %s... " % csv.name)
             picking.generate_csv(records, csv)
             self.on_notify("Done\n")
+
+        # Save cf
+        if cf:
+            for record in records:
+                fname = "%s.cf" % record.filename 
+                self.on_notify("Saving CF for input file %s in %s... " % (record.filename, fname))
+                record.save_cf(fname, fmt=kwargs.get('cff', 'binary'), dtype=kwargs.get('cfd', 'float64'), byteorder=kwargs.get('cfb', 'native'))
+                self.on_notify("Done\n")
 
     def _do_analysis(self, records, supervised=False, **kwargs):
         raise NotImplementedError
@@ -357,7 +365,6 @@ USAGE
         of the selected datatype. Default choice is hardware native.
                                    ''')
 
-        # Create common arguments for "detect" and "pick" commands
         parser.add_argument("FILEIN", nargs='+',
                                      action=parse.GlobInputFilenames,
                                      help='''
@@ -369,6 +376,27 @@ USAGE
         Generates an report in csv format. If none is specified will generate
         a csv file named output.csv containing the list of events found.
         ''')
+        # Arguments to store the characteristic function
+        parser.add_argument("--cf", action="store_true", default=False,
+                            help='''
+                            If selected a file containing the corresponding characteristic function
+                            will be generated for each of the input files. The name of the new file
+                            will be the same of the input file followed by '.cf'.''')
+        parser.add_argument("--cff", choices=["binary", "text"],
+                            default="binary",
+                            help='''
+                            Output format for the characteristic function.
+                            Default value is 'binary'.''')
+        parser.add_argument("--cfd", choices=['float16', 'float32', 'float64'],
+                            default='float64',
+                            help='''
+        If the characteristic function is saved in binary format, this will be the selected datatype.
+        Default choice is hardware native.''')
+        parser.add_argument("--cfb", choices=['little-endian', 'big-endian', 'native'],
+                            default='native',
+                            help='''
+        If the characteristic function is saved in binary format, this will be the byte-order
+        of the selected datatype. Default choice is hardware native.''')
         parser.add_argument("-f", "--frequency", type=parse.positive_float,
                                      default=50.0,
                                      dest='fs',
