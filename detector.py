@@ -1,11 +1,9 @@
 #!/usr/bin/python2.7
 # encoding: utf-8
 '''
-detector -- shortdesc
+detector
 
 detector is a description
-
-It defines classes_and_methods
 
 @author:     Jose Emilio Romero Lopez
 
@@ -14,6 +12,22 @@ It defines classes_and_methods
 @license:    LGPL
 
 @contact:    jemromerol@gmail.com
+
+  This file is part of AMPAPicker.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 '''
 
 import matplotlib.pyplot as pl
@@ -21,14 +35,10 @@ import argparse
 import os
 import sys
 
-from lib import picking
-from lib import utils
-from lib import parse
-
-__all__ = []
-__version__ = '0.0.1'
-__date__ = '2013-06-24'
-__updated__ = '2013-06-24'
+from _version import __version__
+from utils import clt, parse, collections
+from picking import stalta, ampa
+from picking import record as rc
 
 
 def draw_events_table(record, method):
@@ -39,9 +49,9 @@ def draw_events_table(record, method):
     cf_val = [e.cf_value for e in record.events]
     if len(et) > 0:
         sys.stdout.write("\n%s\n\n" %
-                         utils.Table(utils.Column("No.", range(1, len(et) + 1)),
-                                     utils.Column("Time(s)", et),
-                                     utils.Column("%s CF Value" % method.upper(), cf_val)))
+                         clt.Table(clt.Column("No.", range(1, len(et) + 1)),
+                                     clt.Column("Time(s)", et),
+                                     clt.Column("%s CF Value" % method.upper(), cf_val)))
         sys.stdout.flush()
 
 
@@ -53,9 +63,9 @@ def draw_results(records, method):
                                             for event in record.events]
     sys.stdout.write("Summary of events:\n")
     sys.stdout.write("\n%s\n\n" %
-                     utils.Table(utils.Column("File Name", [e['file_name'] for e in data], fmt='%s'),
-                                 utils.Column("Time(s)", [e['time'] for e in data]),
-                                 utils.Column("%s CF Value" % method.upper(), [e['cf_value'] for e in data])))
+                     clt.Table(clt.Column("File Name", [e['file_name'] for e in data], fmt='%s'),
+                                 clt.Column("Time(s)", [e['time'] for e in data]),
+                                 clt.Column("%s CF Value" % method.upper(), [e['cf_value'] for e in data])))
     sys.stdout.flush()
 
 
@@ -114,18 +124,18 @@ class Analysis(object):
         method = kwargs.get('method', 'ampa')
         takanami = kwargs.get('takanami', False)
         # Create a list of records from input files
-        factory = picking.RecordFactory(notif=utils.print_msg, **kwargs)
-        factory.on_notify = utils.print_msg
+        factory = rc.RecordFactory(notif=clt.print_msg, **kwargs)
+        factory.on_notify = clt.print_msg
         records = []
         for f in FILEIN:
             records.append(factory.create_record(f, method=method))
-        records = utils.flatten_list(records)
+        records = collections.flatten_list(records)
         # Configure method
         self.on_notify('Configuring %s method... ' % method.upper())
         if method == 'stalta':
-            alg = picking.StaLta(**kwargs)
+            alg = stalta.StaLta(**kwargs)
         else:
-            alg = picking.Ampa(**kwargs)
+            alg = ampa.Ampa(**kwargs)
         self.on_notify("Done\n")
         # Run analysis
         pl.ion()
@@ -138,14 +148,14 @@ class Analysis(object):
                    ('ampa', False): 3, ('ampa', True): 4}
         for record in records:
             for event in record.events:
-                event.method = picking.Event.methods[methods.get((method, takanami), 0)]
+                event.method = rc.Event.methods[methods.get((method, takanami), 0)]
         # Show results
         draw_results(records, method=method)
 
         # Generate reports
         if csv:
             self.on_notify("Generating CSV report in %s... " % csv.name)
-            picking.generate_csv(records, csv)
+            rc.generate_csv(records, csv)
             self.on_notify("Done\n")
 
         # Save cf
@@ -216,7 +226,7 @@ class Detector(Analysis):
             if takanami:
                 record.plot_aic(event, num=2, show_envelope=show_envelope)
             # Query user and process its response
-            response = utils.query_custom_answers(detect_q, detect_a,
+            response = clt.query_custom_answers(detect_q, detect_a,
                                                   default=detect_da)
             if response == "yes":
                 accepted_events.append(i)
@@ -282,7 +292,7 @@ class Picker(Analysis):
             if takanami:
                 record.plot_aic(event, num=2, show_envelope=show_envelope)
             # Query user and process its response
-            response = utils.query_custom_answers(pick_q, pick_a,
+            response = clt.query_custom_answers(pick_q, pick_a,
                                                   default=pick_da)
             if response == "yes" or response == 'all':
                 accepted_events.append(i)
@@ -300,7 +310,7 @@ def analysis(**kwargs):
         analysis = Detector()
     else:
         analysis = Picker()
-    analysis.on_notify = utils.print_msg
+    analysis.on_notify = clt.print_msg
     analysis.run(**kwargs)
 
 
@@ -314,13 +324,11 @@ def main(argv=None):
 
     program_name = os.path.basename(sys.argv[0])
     program_version = "v%s" % __version__
-    program_build_date = str(__updated__)
-    program_version_message = '%%(prog)s %s (%s)' % (program_version,
-                                                     program_build_date)
+    program_version_message = '%%(prog)s %s' % program_version
     program_shortdesc = __import__('__main__').__doc__.split("\n")[1]
     program_license = '''%s
 
-  Created by Jose Emilio Romero Lopez on %s.
+  Created by Jose Emilio Romero Lopez.
   Copyright 2013. All rights reserved.
 
   This program is free software: you can redistribute it and/or modify
@@ -337,7 +345,7 @@ def main(argv=None):
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 USAGE
-''' % (program_shortdesc, str(__date__))
+''' % program_shortdesc
 
     try:
         # Setup argument parser

@@ -1,13 +1,35 @@
-'''
-Created on 15/08/2013
+#!/usr/bin/python2.7
+# encoding: utf-8
 
-@author: Jose Emilio Romero Lopez
+'''
+@author:     Jose Emilio Romero Lopez
+
+@copyright:  2013 organization_name. All rights reserved.
+
+@license:    LGPL
+
+@contact:    jemromerol@gmail.com
+
+  This file is part of AMPAPicker.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 import sys
 from PySide import QtGui, QtCore
 import matplotlib
-from ui_settingsdialog import Ui_SettingsDialog
+from gui.ui_settingsdialog import Ui_SettingsDialog
 matplotlib.use('Qt4Agg')
 matplotlib.rcParams['backend.qt4'] = 'PySide'
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -17,16 +39,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
-from ui_mainwindow import Ui_MainWindow
-from ui_loaddialog import Ui_LoadDialog
+from gui.ui_mainwindow import Ui_MainWindow
+from gui.ui_loaddialog import Ui_LoadDialog
 
-import utils
-import picking
-
-__version__ = '0.0.1'
-__date__ = '2013-08-15'
-__updated__ = '2013-08-15'
-
+from _version import __version__
+from utils import futils
+from utils.formats import rawfile
+from picking import stalta, ampa
+from picking import record as rc
 
 _organization = 'UGR'
 _application_name = 'P-phase Picker'
@@ -544,7 +564,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.fig.axes[0].lines = []
         self._signal_data = self.fig.axes[0].plot(self.time, self.record.signal, color='black', rasterized=True)[0]
         # Plot envelope
-        self._envelope_data = self.fig.axes[0].plot(self.time, picking.envelope(self.record.signal), color='red', rasterized=True)[0]
+        self._envelope_data = self.fig.axes[0].plot(self.time, record.envelope(self.record.signal), color='red', rasterized=True)[0]
         # Plot CF
         self.set_cf_visible(self.record.cf.size != 0)
         self.fig.axes[1].cla()
@@ -657,11 +677,11 @@ class LoadDialog(QtGui.QDialog, Ui_LoadDialog):
         self.ByteOrderComboBox.currentIndexChanged.connect(self.load_preview)
 
         # Set Defaults
-        if utils.istextfile(self.filename):
+        if futils.istextfile(self.filename):
             self.FileFormatComboBox.setCurrentIndex(1)
         else:
             self.FileFormatComboBox.setCurrentIndex(0)
-        if utils.is_little_endian():
+        if futils.is_little_endian():
             self.ByteOrderComboBox.setCurrentIndex(0)
         else:
             self.ByteOrderComboBox.setCurrentIndex(1)
@@ -685,7 +705,7 @@ class LoadDialog(QtGui.QDialog, Ui_LoadDialog):
         # Load parameters
         values = self.get_values()
         # Set up a file handler according to the type of raw data (binary or text)
-        fhandler = utils.get_file_handler(self.filename, **values)
+        fhandler = rawfile.get_file_handler(self.filename, **values)
         # Print data preview
         array = fhandler.read_in_blocks().next()
         data = ''
@@ -967,7 +987,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.saved_filename = None
         self.picking_task = None
 
-        stateDelegate = ComboBoxDelegate(self.EventsTableView, picking.Event.states)
+        stateDelegate = ComboBoxDelegate(self.EventsTableView, rc.Event.states)
         self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
         self.EventsTableView.clicked.connect(self.goToEventPosition)
 
@@ -1021,7 +1041,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     values = dialog.get_values()
                     # Load and visualize the opened record
                     QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                    self.record = picking.Record(filename, **values)
+                    self.record = rc.Record(filename, **values)
                     self._model = EventListModel(self.record, ['name', 'time', 'cf_value', 'mode', 'method', 'state', 'comments'])
                     self._model.emptyList.connect(self.set_modified)
                     ########
@@ -1068,7 +1088,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
     def save_events(self, filename):
         with open(filename, 'w') as f:
-            picking.generate_csv([self.record], f)
+            rc.generate_csv([self.record], f)
             self.saved_filename = filename
 
     def close(self):
@@ -1205,7 +1225,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         lta_length = float(settings.value('lta_window_len', 100.0))
         settings.endGroup()
         threshold = self.thresholdSpinBox.value() if self.thresholdCheckBox.checkState() else None
-        alg = picking.StaLta(sta_length, lta_length)
+        alg = stalta.StaLta(sta_length, lta_length)
         return_code = PickingTaskDialog(self.record, alg, threshold).exec_()
         if return_code == QtGui.QDialog.Accepted:
             self.onPickingFinished()
@@ -1226,7 +1246,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         settings.endGroup()
         settings.endGroup()
         threshold = self.thresholdSpinBox.value() if self.thresholdCheckBox.checkState() else None
-        alg = picking.Ampa(wlen, woverlap, filters, noise_thr=nthres, bandwidth=bandwidth, overlap=overlap, f_start=startf, f_end=endf)
+        alg = ampa.Ampa(wlen, woverlap, filters, noise_thr=nthres, bandwidth=bandwidth, overlap=overlap, f_start=startf, f_end=endf)
         return_code = PickingTaskDialog(self.record, alg, threshold).exec_()
         if return_code == QtGui.QDialog.Accepted:
             self.onPickingFinished()

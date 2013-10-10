@@ -1,5 +1,4 @@
 # encoding: utf-8
-
 '''
 @author:     Jose Emilio Romero Lopez
 
@@ -25,15 +24,27 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from setuptools import setup, find_packages
 
-setup(name = "AMPAPicker",
-      version = execfile('_version.py'),
-      description = "AMPA Command Line Tool",
-      author = "Jose Emilio Romero Lopez",
-      author_email = "jemromerol@gmail.com",
-      license = "LGPL",
-      scripts = ["detector.py", "generator.py"],
-      packages = find_packages(),
-      install_requires = ['numpy', 'scipy', 'matplotlib']
-      )
+def flatten_dict(d, sep='_'):
+    out = {}
+    nodes = [(k, v) for k, v in d.iteritems()]
+    while nodes:
+        (k, v) = nodes.pop()
+        if isinstance(v, dict):
+            prefix = str(k)
+            nodes.extend([("%s%s%s" % (prefix, sep, k), v) for k, v in v.iteritems()])
+        else:
+            out[k] = v
+    return out
+
+
+def flatten_list(l):
+    out = []
+    nodes = [v for v in l]
+    while nodes:
+        v = nodes.pop()
+        if isinstance(v, list):
+            nodes.extend(v)
+        else:
+            out.append(v)
+    return out[::-1]

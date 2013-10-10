@@ -1,5 +1,4 @@
 # encoding: utf-8
-
 '''
 @author:     Jose Emilio Romero Lopez
 
@@ -25,15 +24,4 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from setuptools import setup, find_packages
-
-setup(name = "AMPAPicker",
-      version = execfile('_version.py'),
-      description = "AMPA Command Line Tool",
-      author = "Jose Emilio Romero Lopez",
-      author_email = "jemromerol@gmail.com",
-      license = "LGPL",
-      scripts = ["detector.py", "generator.py"],
-      packages = find_packages(),
-      install_requires = ['numpy', 'scipy', 'matplotlib']
-      )
+__version__ = '0.0.1'

@@ -1,13 +1,34 @@
+# encoding: utf-8
 '''
-Created on 08/10/2013
+@author:     Jose Emilio Romero Lopez
 
-@author: alcapaya
+@copyright:  2013 organization_name. All rights reserved.
+
+@license:    LGPL
+
+@contact:    jemromerol@gmail.com
+
+  This file is part of AMPAPicker.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 import argparse
 import os
 import glob
-import utils
+
+from utils import futils
 
 
 def filein(arg):
@@ -70,7 +91,7 @@ class GlobInputFilenames(argparse.Action):
         setattr(namespace, self.dest, files)
 
     def fopen(self, fname):
-        ft = argparse.FileType('r') if utils.istextfile(fname) else argparse.FileType('rb')
+        ft = argparse.FileType('r') if futils.istextfile(fname) else argparse.FileType('rb')
         return ft(fname)
 
 

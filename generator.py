@@ -12,6 +12,21 @@ A tool to generate synthetic seismic signal
 @license:    LGPL
 
 @contact:    jemromerol@gmail.com
+
+  This file is part of AMPAPicker.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 import argparse
@@ -19,14 +34,10 @@ import os
 import sys
 from scipy import signal
 
-from lib import utils
-from lib import parse
-from lib import picking
-
-__all__ = []
-__version__ = '0.0.1'
-__date__ = '2013-10-05'
-__updated__ = '2013-10-06'
+from _version import __version__
+from utils import clt, parse, futils
+from utils.formats import rawfile
+from picking import eqgenerator
 
 
 def print_settings(args):
@@ -68,47 +79,47 @@ def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
              gen_noise_coefficients=False, output_format='binary',
              datatype='float64', byteorder='native', **kwargs):
     # Configure generator
-    utils.print_msg("Configuring generator... ")
-    generator = picking.EarthquakeGenerator(**kwargs)
-    utils.print_msg("Done\n")
+    clt.print_msg("Configuring generator... ")
+    generator = eqgenerator.EarthquakeGenerator(**kwargs)
+    clt.print_msg("Done\n")
     # Load noise coefficients
     if gen_noise_coefficients:
-        f = open(gen_noise_coefficients, 'r') if utils.istextfile(gen_noise_coefficients) else open(gen_noise_coefficients, 'rb')
-        utils.print_msg("Loading noise coefficients from %s... " %
+        f = open(gen_noise_coefficients, 'r') if futils.istextfile(gen_noise_coefficients) else open(gen_noise_coefficients, 'rb')
+        clt.print_msg("Loading noise coefficients from %s... " %
                          f.name)
         generator.load_noise_coefficients(f, dtype=datatype, byteorder=byteorder)
-        utils.print_msg("Done\n")
+        clt.print_msg("Done\n")
     # Process input files
     basename, ext = os.path.splitext(output)
     filename_out = output
     if FILEIN:
         fileno = 0
         for f in FILEIN:
-            fin_handler = utils.get_file_handler(f, dtype=datatype, byteorder=byteorder)
-            utils.print_msg("Loading seismic signal from %s... " % fin_handler.filename)
+            fin_handler = rawfile.get_file_handler(f, dtype=datatype, byteorder=byteorder)
+            clt.print_msg("Loading seismic signal from %s... " % fin_handler.filename)
             signal = fin_handler.read()
-            utils.print_msg("Done\n")
+            clt.print_msg("Done\n")
             if len(FILEIN) > 1:
                 filename_out = "%s%02.0i%s" % (basename, fileno, ext)
                 fileno += 1
-            utils.print_msg("Generating artificial signal in %s... " %
+            clt.print_msg("Generating artificial signal in %s... " %
                              filename_out)
             eq = generator.generate_earthquake(length, t_event,
                                                gen_event_power, signal)
-            fout_handler = utils.TextFile(filename_out, dtype=datatype, byteorder=byteorder) if output_format is 'text' else utils.BinFile(filename_out, dtype=datatype, byteorder=byteorder)
+            fout_handler = rawfile.TextFile(filename_out, dtype=datatype, byteorder=byteorder) if output_format is 'text' else rawfile.BinFile(filename_out, dtype=datatype, byteorder=byteorder)
             fout_handler.write(eq)
-            utils.print_msg("Done\n")
+            clt.print_msg("Done\n")
     else:
         for i in xrange(n_events):
             if n_events > 1:
                 filename_out = "%s%02.0i%s" % (basename, i, ext)
-            utils.print_msg("Generating artificial signal in %s... " %
+            clt.print_msg("Generating artificial signal in %s... " %
                              filename_out)
             eq = generator.generate_earthquake(length, t_event,
                                                gen_event_power)
-            fout_handler = utils.TextFile(filename_out, dtype=datatype, byteorder=byteorder) if output_format is 'text' else utils.BinFile(filename_out, dtype=datatype, byteorder=byteorder)
+            fout_handler = rawfile.TextFile(filename_out, dtype=datatype, byteorder=byteorder) if output_format is 'text' else rawfile.BinFile(filename_out, dtype=datatype, byteorder=byteorder)
             fout_handler.write(eq)
-            utils.print_msg("Done\n")
+            clt.print_msg("Done\n")
 
 
 def main(argv=None):
@@ -121,13 +132,11 @@ def main(argv=None):
 
     program_name = os.path.basename(sys.argv[0])
     program_version = "v%s" % __version__
-    program_build_date = str(__updated__)
-    program_version_message = '%%(prog)s %s (%s)' % (program_version,
-                                                     program_build_date)
+    program_version_message = '%%(prog)s %s' % program_version
     program_shortdesc = __import__('__main__').__doc__.split("\n")[1]
     program_license = '''%s
 
-  Created by Jose Emilio Romero Lopez on %s.
+  Created by Jose Emilio Romero Lopez.
   Copyright 2013. All rights reserved.
 
   This program is free software: you can redistribute it and/or modify
@@ -144,7 +153,7 @@ def main(argv=None):
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 USAGE
-''' % (program_shortdesc, str(__date__))
+''' % program_shortdesc
 
     try:
         # Setup argument parser

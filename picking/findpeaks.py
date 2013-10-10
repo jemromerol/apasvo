@@ -1,5 +1,4 @@
 # encoding: utf-8
-
 '''
 @author:     Jose Emilio Romero Lopez
 
@@ -25,15 +24,17 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from setuptools import setup, find_packages
+import numpy as np
+from scipy import signal
 
-setup(name = "AMPAPicker",
-      version = execfile('_version.py'),
-      description = "AMPA Command Line Tool",
-      author = "Jose Emilio Romero Lopez",
-      author_email = "jemromerol@gmail.com",
-      license = "LGPL",
-      scripts = ["detector.py", "generator.py"],
-      packages = find_packages(),
-      install_requires = ['numpy', 'scipy', 'matplotlib']
-      )
+
+def find_peaks(x, threshold=None, order=1):
+    if threshold is not None:
+        event_peaks = signal.argrelmax(x, order=int(order))[0]
+        if event_peaks.size > 0:
+            return event_peaks[x[event_peaks] > threshold]
+        return event_peaks
+    else:
+        if x.size > 0:
+            return np.array([np.argmax(x)])
+        return np.array([])
