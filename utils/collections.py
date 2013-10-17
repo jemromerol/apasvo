@@ -26,19 +26,22 @@
 
 
 def flatten_dict(d, sep='_'):
+    """"""
     out = {}
     nodes = [(k, v) for k, v in d.iteritems()]
     while nodes:
         (k, v) = nodes.pop()
         if isinstance(v, dict):
             prefix = str(k)
-            nodes.extend([("%s%s%s" % (prefix, sep, k), v) for k, v in v.iteritems()])
+            nodes.extend([("%s%s%s" % (prefix, sep, k), v)
+                          for k, v in v.iteritems()])
         else:
             out[k] = v
     return out
 
 
 def flatten_list(l):
+    """"""
     out = []
     nodes = [v for v in l]
     while nodes:

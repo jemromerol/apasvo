@@ -100,7 +100,7 @@ class Check_sta_lta(unittest.TestCase):
 
 	def test_signal_returns_correct_results(self):
 		et, cf = stalta.sta_lta(self.x, 50.0, sta_length=5.0, lta_length=100.0)
-		self.assertTrue(np.all(cf == self.cf))
+		print cf, self.cf;self.assertTrue(np.all(cf == self.cf))
 		self.assertTrue(np.all((et / 50.0) == self.et))
 
 	def test_empty_signal_returns_empty(self):

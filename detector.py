@@ -42,6 +42,7 @@ from picking import record as rc
 
 
 def draw_events_table(record, method):
+    """"""
     sys.stdout.write("%i possible events found in %s:\n" %
                      (len(record.events), record.filename))
     sys.stdout.flush()
@@ -51,11 +52,13 @@ def draw_events_table(record, method):
         sys.stdout.write("\n%s\n\n" %
                          clt.Table(clt.Column("No.", range(1, len(et) + 1)),
                                      clt.Column("Time(s)", et),
-                                     clt.Column("%s CF Value" % method.upper(), cf_val)))
+                                     clt.Column("%s CF Value" % method.upper(),
+                                                cf_val)))
         sys.stdout.flush()
 
 
 def draw_results(records, method):
+    """"""
     # Extract data from records
     data = [{'file_name':record.filename,
              'time':event.time,
@@ -63,13 +66,18 @@ def draw_results(records, method):
                                             for event in record.events]
     sys.stdout.write("Summary of events:\n")
     sys.stdout.write("\n%s\n\n" %
-                     clt.Table(clt.Column("File Name", [e['file_name'] for e in data], fmt='%s'),
-                                 clt.Column("Time(s)", [e['time'] for e in data]),
-                                 clt.Column("%s CF Value" % method.upper(), [e['cf_value'] for e in data])))
+                     clt.Table(clt.Column("File Name",
+                                          [e['file_name'] for e in data],
+                                          fmt='%s'),
+                                 clt.Column("Time(s)",
+                                            [e['time'] for e in data]),
+                                 clt.Column("%s CF Value" % method.upper(),
+                                            [e['cf_value'] for e in data])))
     sys.stdout.flush()
 
 
 def print_settings(args):
+    """"""
     sys.stdout.write("\nGeneral settings:\n")
     sys.stdout.write("%30s: %s\n" % ("Signal frequency(Hz)",
                                    args.fs))
@@ -118,8 +126,11 @@ def print_settings(args):
 
 
 class Analysis(object):
+    """
+    """
 
     def run(self, FILEIN, csv=False, cf=False, **kwargs):
+        """"""
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         takanami = kwargs.get('takanami', False)
@@ -148,12 +159,13 @@ class Analysis(object):
                    ('ampa', False): 3, ('ampa', True): 4}
         for record in records:
             for event in record.events:
-                event.method = rc.Event.methods[methods.get((method, takanami), 0)]
+                event.method = rc.Event.methods[methods.get((method, takanami),
+                                                            0)]
         # Show results
         draw_results(records, method=method)
 
         # Generate reports
-        if csv:
+        if csv is True:
             self.on_notify("Generating CSV report in %s... " % csv.name)
             rc.generate_csv(records, csv)
             self.on_notify("Done\n")
@@ -161,26 +173,36 @@ class Analysis(object):
         # Save cf
         if cf:
             for record in records:
-                fname = "%s.cf" % record.filename 
-                self.on_notify("Saving CF for input file %s in %s... " % (record.filename, fname))
-                record.save_cf(fname, fmt=kwargs.get('cff', 'binary'), dtype=kwargs.get('cfd', 'float64'), byteorder=kwargs.get('cfb', 'native'))
+                fname = "%s.cf" % record.filename
+                self.on_notify("Saving CF for input file %s in %s... " %
+                               (record.filename, fname))
+                record.save_cf(fname, fmt=kwargs.get('cff', 'binary'),
+                               dtype=kwargs.get('cfd', 'float64'),
+                               byteorder=kwargs.get('cfb', 'native'))
                 self.on_notify("Done\n")
 
     def _do_analysis(self, records, supervised=False, **kwargs):
+        """"""
         raise NotImplementedError
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
-                          show_cf=False, show_specgram=False, show_envelope=False,
+                          show_cf=False, show_specgram=False,
+                          show_envelope=False,
                           show_all=False, **kwargs):
+        """"""
         raise NotImplementedError
 
     def on_notify(self, msg):
+        """"""
         pass
 
 
 class Detector(Analysis):
+    """
+    """
 
     def _do_analysis(self, records, alg, supervised=False, **kwargs):
+        """"""
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         for record in records:
@@ -197,8 +219,10 @@ class Detector(Analysis):
                     pl.close('all')
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
-                          show_cf=False, show_specgram=False, show_envelope=False,
+                          show_cf=False, show_specgram=False,
+                          show_envelope=False,
                           show_all=False, **kwargs):
+        """"""
         # Define Q&A for each mode
         detect_q = "Accept this event?"
         detect_a = ["&yes", "&no", "&accept all",
@@ -243,8 +267,11 @@ class Detector(Analysis):
 
 
 class Picker(Analysis):
+    """
+    """
 
     def _do_analysis(self, records, alg, supervised=False, **kwargs):
+        """"""
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         for record in records:
@@ -265,8 +292,10 @@ class Picker(Analysis):
                 draw_events_table(record, method)
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
-                          show_cf=False, show_specgram=False, show_envelope=False,
+                          show_cf=False, show_specgram=False,
+                          show_envelope=False,
                           show_all=False, **kwargs):
+        """"""
         # Define Q&A for each mode
         pick_q = "Accept this event?"
         pick_a = ["&yes", "&no", "&all", "&quit"]
@@ -306,12 +335,13 @@ class Picker(Analysis):
 
 
 def analysis(**kwargs):
+    """"""
     if 'threshold' in kwargs:
-        analysis = Detector()
+        task = Detector()
     else:
-        analysis = Picker()
-    analysis.on_notify = clt.print_msg
-    analysis.run(**kwargs)
+        task = Picker()
+    task.on_notify = clt.print_msg
+    task.run(**kwargs)
 
 
 def main(argv=None):
@@ -366,7 +396,8 @@ USAGE
         the datatype used for reading it.
                             ''')
         parser.add_argument("--byteorder",
-                                   choices=['little-endian', 'big-endian', 'native'],
+                                   choices=['little-endian', 'big-endian',
+                                            'native'],
                                    default='native',
                                    help='''
         If the input files are in binary format this will be the byte-order

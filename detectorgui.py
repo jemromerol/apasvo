@@ -29,7 +29,6 @@
 import sys
 from PySide import QtGui, QtCore
 import matplotlib
-from gui.ui_settingsdialog import Ui_SettingsDialog
 matplotlib.use('Qt4Agg')
 matplotlib.rcParams['backend.qt4'] = 'PySide'
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -39,8 +38,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
-from gui.ui_mainwindow import Ui_MainWindow
-from gui.ui_loaddialog import Ui_LoadDialog
+from gui import ui_settingsdialog
+from gui import ui_mainwindow
+from gui import ui_loaddialog
 
 from _version import __version__
 from utils import futils
@@ -53,9 +53,13 @@ _application_name = 'P-phase Picker'
 
 
 class ComboBoxDelegate(QtGui.QStyledItemDelegate):
+    """
+    """
 
-    def __init__(self, parent=None, values=[]):
+    def __init__(self, parent=None, values=None):
         QtGui.QStyledItemDelegate.__init__(self, parent)
+        if values is None:
+            values = []
         self._values = values
 
     def createEditor(self, parent, option, index):
@@ -80,11 +84,12 @@ class ComboBoxDelegate(QtGui.QStyledItemDelegate):
 
 
 class DoubleSpinBoxDelegate(QtGui.QStyledItemDelegate):
+    """"""
 
-    def __init__(self, parent=None, min=0.0, max=100.0, step=0.01):
+    def __init__(self, parent=None, minimum=0.0, maximum=100.0, step=0.01):
         QtGui.QStyledItemDelegate.__init__(self, parent)
-        self._min = min
-        self._max = max
+        self._min = minimum
+        self._max = maximum
         self._step = step
 
     def createEditor(self, parent, option, index):
@@ -109,6 +114,8 @@ class DoubleSpinBoxDelegate(QtGui.QStyledItemDelegate):
 
 
 class EventListModel(QtCore.QAbstractTableModel):
+    """
+    """
 
     emptyList = QtCore.Signal(bool)
 
@@ -145,7 +152,8 @@ class EventListModel(QtCore.QAbstractTableModel):
 
     def sort(self, column, order=QtCore.Qt.AscendingOrder):
         self.layoutAboutToBeChanged.emit()
-        self._record.sort_events(key=self._header[column], reverse=(order == QtCore.Qt.DescendingOrder))
+        self._record.sort_events(key=self._header[column],
+                                 reverse=(order == QtCore.Qt.DescendingOrder))
         self._list = self._record.events
         self.layoutChanged.emit()
 
@@ -160,7 +168,8 @@ class EventListModel(QtCore.QAbstractTableModel):
         attr_name = self._header[index.column()]
         if attr_name in ['time', 'cf_value', 'mode', 'method']:
             return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
-        return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled
+        return (QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable |
+                QtCore.Qt.ItemIsEnabled)
 
     def removeRows(self, row, count, parent=QtCore.QModelIndex()):
         if row < 0 or row > len(self._list):
@@ -173,18 +182,22 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.endRemoveRows()
 
     def addEvent(self, event):
-        self.beginInsertRows(QtCore.QModelIndex(), len(self._list), len(self._list))
+        """"""
+        self.beginInsertRows(QtCore.QModelIndex(), len(self._list),
+                             len(self._list))
         self._list.append(event)
         self._setEmpty()
         self.endInsertRows()
 
     def _setEmpty(self):
+        """"""
         empty = (len(self._list) != 0)
         if self.empty != empty:
             self.empty = empty
             self.emptyList.emit(empty)
 
     def updateList(self):
+        """"""
         self.modelAboutToBeReset.emit()
         self._list = self._record.events
         self._setEmpty()
@@ -192,6 +205,8 @@ class EventListModel(QtCore.QAbstractTableModel):
 
 
 class SpanSelector(QtCore.QObject):
+    """
+    """
 
     toogled = QtCore.Signal(bool)
     valueChanged = QtCore.Signal(float, float)
@@ -206,7 +221,8 @@ class SpanSelector(QtCore.QObject):
         self.active = False
         self.minstep = minstep
 
-        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5) for ax in self.fig.axes]
+        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5)
+                          for ax in self.fig.axes]
         for s in self.selectors:
             s.set_visible(False)
 
@@ -277,6 +293,7 @@ class SpanSelector(QtCore.QObject):
         return self.xmin, self.xmax
 
     def set_active(self, value):
+        """"""
         if value != self.active:
             self.active = value
             self.toogled.emit(value)
@@ -285,6 +302,8 @@ class SpanSelector(QtCore.QObject):
 
 
 class EventMarker(QtCore.QObject):
+    """
+    """
 
     valueChanged = QtCore.Signal(float)
 
@@ -302,6 +321,8 @@ class EventMarker(QtCore.QObject):
 
 
 class ThresholdMarker(QtCore.QObject):
+    """
+    """
 
     thresholdChanged = QtCore.Signal(float)
 
@@ -385,6 +406,8 @@ class ThresholdMarker(QtCore.QObject):
 
 
 class MiniMap(QtGui.QWidget):
+    """
+    """
 
     def __init__(self, parent, ax, record=None):
         super(MiniMap, self).__init__(parent)
@@ -400,11 +423,18 @@ class MiniMap(QtGui.QWidget):
         self.minimapFig.add_axes((0, 0, 1, 1))
         self.minimapCanvas = FigureCanvas(self.minimapFig)
         self.minimapCanvas.setMinimumSize(self.minimapCanvas.size())
-        self.minimapSelector = self.minimapFig.axes[0].axvspan(0, self.step, color='gray', alpha=0.5, animated=True)
-        self.minimapSelection = self.minimapFig.axes[0].axvspan(0, self.step, color='LightCoral', alpha= 0.5, animated=True)
+        self.minimapSelector = self.minimapFig.axes[0].axvspan(0, self.step,
+                                                               color='gray',
+                                                               alpha=0.5,
+                                                               animated=True)
+        self.minimapSelection = self.minimapFig.axes[0].axvspan(0, self.step,
+                                                                color = 'LightCoral',
+                                                                alpha = 0.5,
+                                                                animated=True)
         self.minimapSelection.set_visible(False)
         self.minimapBackground = []
-        self.minimapSize = self.minimapFig.bbox.width, self.minimapFig.bbox.height
+        self.minimapSize = (self.minimapFig.bbox.width,
+                            self.minimapFig.bbox.height)
 
         self.press_selector = None
         self.minimapCanvas.mpl_connect('button_press_event', self.onpress)
@@ -420,6 +450,7 @@ class MiniMap(QtGui.QWidget):
             self.set_record(record)
 
     def set_record(self, record, step):
+        """"""
         self.record = record
         self.step = step
         self.time = np.arange(len(self.record.signal)) / self.record.fs
@@ -428,7 +459,8 @@ class MiniMap(QtGui.QWidget):
 
         ax = self.minimapFig.axes[0]
         ax.lines = []
-        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x))))
+        formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
+        ax.xaxis.set_major_formatter(formatter)
         ax.grid(True, which='both')
         ax.plot(self.time, self.record.signal, color='black', rasterized=True)
         ax.set_xlim(self.xmin, self.xmax)
@@ -505,6 +537,8 @@ class MiniMap(QtGui.QWidget):
 
 
 class SignalViewerWidget(QtGui.QWidget):
+    """
+    """
 
     def __init__(self, parent, record=None):
         super(SignalViewerWidget, self).__init__(parent)
@@ -531,7 +565,8 @@ class SignalViewerWidget(QtGui.QWidget):
         self.selector = SpanSelector(self.fig)
         self.minimap = MiniMap(self, self.fig.axes[0], record)
 
-        self.spinbox = QtGui.QTimeEdit(QtCore.QTime.currentTime(), parent=self.toolbar)
+        self.spinbox = QtGui.QTimeEdit(QtCore.QTime.currentTime(),
+                                       parent=self.toolbar)
         self.toolbar.addWidget(self.spinbox)
         self.toolbar.setVisible(False)
 
@@ -552,6 +587,7 @@ class SignalViewerWidget(QtGui.QWidget):
             self.set_record(record)
 
     def set_record(self, record, step=20.0):
+        """"""
         self.record = record
         self.time = np.arange(len(self.record.signal)) / self.record.fs
         self.xmax = self.time[-1]
@@ -559,24 +595,35 @@ class SignalViewerWidget(QtGui.QWidget):
         self.minimap.set_record(record, step)
         # Plot signal
         #self.fig.axes[0].cla()
-        self.fig.axes[0].xaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x))))
+        formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
+        self.fig.axes[0].xaxis.set_major_formatter(formatter)
         self.fig.axes[0].grid(True, which='both')
         self.fig.axes[0].lines = []
-        self._signal_data = self.fig.axes[0].plot(self.time, self.record.signal, color='black', rasterized=True)[0]
+        self._signal_data = self.fig.axes[0].plot(self.time,
+                                                  self.record.signal,
+                                                  color='black',
+                                                  rasterized=True)[0]
         # Plot envelope
-        self._envelope_data = self.fig.axes[0].plot(self.time, record.envelope(self.record.signal), color='red', rasterized=True)[0]
+        self._envelope_data = self.fig.axes[0].plot(self.time,
+                                                    record.envelope(self.record.signal),
+                                                    color='red',
+                                                    rasterized=True)[0]
         # Plot CF
         self.set_cf_visible(self.record.cf.size != 0)
         self.fig.axes[1].cla()
-        self.fig.axes[1].xaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x))))
+        self.fig.axes[1].xaxis.set_major_formatter(formatter)
         self.fig.axes[1].grid(True, which='both')
         self.fig.axes[1].lines = []
-        self.fig.axes[1].plot(self.time[:len(self.record.cf)], self.record.cf, color = 'black', rasterized=True)
+        self.fig.axes[1].plot(self.time[:len(self.record.cf)], self.record.cf,
+                              color='black', rasterized=True)
         self.thresholdMarker = ThresholdMarker(self.fig.axes[1])
         # Plot espectrogram
         self.fig.axes[2].cla()
-        self.fig.axes[2].xaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x))))
-        self.fig.axes[2].specgram(self.record.signal, Fs=self.record.fs, cmap='jet', xextent=(self.xmin, self.xmax), rasterized=True)
+        self.fig.axes[2].xaxis.set_major_formatter(formatter)
+        self.fig.axes[2].specgram(self.record.signal, Fs=self.record.fs,
+                                  cmap='jet',
+                                  xextent=(self.xmin, self.xmax),
+                                  rasterized=True)
         # Plot events
         self.eventMarkers = []
         for event in self.record.events:
@@ -587,7 +634,8 @@ class SignalViewerWidget(QtGui.QWidget):
         # Set the initial xlimits
         self.set_xlim(0, step)
         # Adjust the space between subplots
-        self.fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.95, hspace=0.1)
+        self.fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05,
+                                 top=0.95, hspace=0.1)
 
     def set_xlim(self, l, r):
         xmin = max(0, l)
@@ -602,6 +650,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.draw_idle()
 
     def set_position(self, pos):
+        """"""
         xmin, xmax = self.fig.axes[0].get_xlim()
         mrange = xmax - xmin
         l, r = pos - mrange / 2.0, pos + mrange / 2.0
@@ -616,40 +665,49 @@ class SignalViewerWidget(QtGui.QWidget):
         self.minimap.draw_animate()
 
     def set_signal_amplitude_visible(self, show_sa):
+        """"""
         if self._signal_data is not None and self._envelope_data is not None:
             self._signal_data.set_visible(show_sa)
-            show_axis = self._signal_data.get_visible() + self._envelope_data.get_visible()
+            show_axis = (self._signal_data.get_visible() +
+                         self._envelope_data.get_visible())
             self.fig.axes[0].set_visible(show_axis)
             self.subplots_adjust()
             self.draw_idle()
 
     def set_signal_envelope_visible(self, show_se):
+        """"""
         if self._signal_data is not None and self._envelope_data is not None:
             self._envelope_data.set_visible(show_se)
-            show_axis = self._signal_data.get_visible() + self._envelope_data.get_visible()
+            show_axis = (self._signal_data.get_visible() +
+                         self._envelope_data.get_visible())
             self.fig.axes[0].set_visible(show_axis)
             self.subplots_adjust()
             self.draw_idle()
 
     def set_cf_visible(self, show_cf):
+        """"""
         self.fig.axes[1].set_visible(show_cf)
         self.subplots_adjust()
         self.draw_idle()
 
     def set_espectrogram_visible(self, show_eg):
+        """"""
         self.fig.axes[2].set_visible(show_eg)
         self.subplots_adjust()
         self.draw_idle()
 
     def set_minimap_visible(self, show_mm):
+        """"""
         self.minimap.set_visible(show_mm)
         self.draw_idle()
 
     def set_threshold_visible(self, show_thr):
+        """"""
         self.thresholdMarker.set_visible(show_thr)
         self.canvas.draw_idle()
 
     def subplots_adjust(self):
+        """"""
         visible_subplots = [ax for ax in self.fig.get_axes() if ax.get_visible()]
         for i, ax in enumerate(visible_subplots):
             ax.change_geometry(len(visible_subplots), 1, i + 1)
@@ -661,7 +719,9 @@ class SignalViewerWidget(QtGui.QWidget):
         self.selector.set_selector_limits(xleft, xright)
 
 
-class LoadDialog(QtGui.QDialog, Ui_LoadDialog):
+class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
+    """
+    """
 
     def __init__(self, parent, filename):
         super(LoadDialog, self).__init__(parent)
@@ -689,6 +749,7 @@ class LoadDialog(QtGui.QDialog, Ui_LoadDialog):
         self.load_preview()
 
     def on_format_change(self, idx):
+        """"""
         fmt = self.formats[self.FileFormatComboBox.currentIndex()]
         if fmt == 'binary':
             self.DataTypeComboBox.setVisible(True)
@@ -702,6 +763,7 @@ class LoadDialog(QtGui.QDialog, Ui_LoadDialog):
             self.ByteOrderLabel.setVisible(False)
 
     def load_preview(self):
+        """"""
         # Load parameters
         values = self.get_values()
         # Set up a file handler according to the type of raw data (binary or text)
@@ -715,6 +777,7 @@ class LoadDialog(QtGui.QDialog, Ui_LoadDialog):
         self.PreviewTextEdit.setText(data)
 
     def get_values(self):
+        """"""
         return {'fmt': self.formats[self.FileFormatComboBox.currentIndex()],
                 'dtype': self.dtypes[self.DataTypeComboBox.currentIndex()],
                 'byteorder': self.byteorders[self.ByteOrderComboBox.currentIndex()],
@@ -722,12 +785,16 @@ class LoadDialog(QtGui.QDialog, Ui_LoadDialog):
 
 
 class FilterListModel(QtCore.QAbstractTableModel):
+    """
+    """
 
     sizeChanged = QtCore.Signal(int)
 
-    def __init__(self, list, header=['Length (in seconds)']):
+    def __init__(self, listobj, header=None):
         QtCore.QAbstractTableModel.__init__(self)
-        self._list = list
+        self._list = listobj
+        if header is None:
+            header = ['Length (in seconds)']
         self._header = header
 
     def rowCount(self, parent=QtCore.QModelIndex()):
@@ -761,7 +828,8 @@ class FilterListModel(QtCore.QAbstractTableModel):
         return False
 
     def flags(self, index):
-        return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled
+        return (QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable |
+                QtCore.Qt.ItemIsEnabled)
 
     def removeRows(self, row, count, parent=QtCore.QModelIndex()):
         if row < 0 or row > len(self._list):
@@ -774,7 +842,8 @@ class FilterListModel(QtCore.QAbstractTableModel):
         self.endRemoveRows()
 
     def addFilter(self, value=10.0):
-        self.beginInsertRows(QtCore.QModelIndex(), len(self._list), len(self._list))
+        self.beginInsertRows(QtCore.QModelIndex(), len(self._list),
+                             len(self._list))
         self._list.append(value)
         self.sizeChanged.emit(len(self._list))
         self.endInsertRows()
@@ -783,7 +852,9 @@ class FilterListModel(QtCore.QAbstractTableModel):
         return self._list
 
 
-class SettingsDialog(QtGui.QDialog, Ui_SettingsDialog):
+class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
+    """
+    """
 
     def __init__(self, parent=None):
         super(SettingsDialog, self).__init__(parent)
@@ -847,6 +918,7 @@ class SettingsDialog(QtGui.QDialog, Ui_SettingsDialog):
             self.actionRemoveFilter.setEnabled(False)
 
     def loadSettings(self):
+        """"""
         self.settings = QtCore.QSettings(_organization, _application_name)
         self.settings.beginGroup("stalta_settings")
         self.staSpinBox.setValue(float(self.settings.value('sta_window_len', 5.0)))
@@ -871,6 +943,7 @@ class SettingsDialog(QtGui.QDialog, Ui_SettingsDialog):
         self.settings.endGroup()
 
     def saveSettings(self):
+        """"""
         self.settings = QtCore.QSettings(_organization, _application_name)
         self.settings.beginGroup("stalta_settings")
         self.settings.setValue('sta_window_len', self.staSpinBox.value())
@@ -899,7 +972,9 @@ class SettingsDialog(QtGui.QDialog, Ui_SettingsDialog):
         if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.Ok:
             self.saveSettings()
 
-    def _load_filters(self, default=[30.0, 20.0, 10.0, 5.0, 2.5]):
+    def _load_filters(self, default=None):
+        if default is None:
+            default = [30.0, 20.0, 10.0, 5.0, 2.5]
         settings = QtCore.QSettings(_organization, _application_name)
         filters = settings.value('ampa_settings/filters', default)
         if filters:
@@ -911,6 +986,7 @@ class SettingsDialog(QtGui.QDialog, Ui_SettingsDialog):
 
 
 class PickingTask(QtCore.QObject):
+    """"""
 
     finished = QtCore.Signal()
 
@@ -921,14 +997,19 @@ class PickingTask(QtCore.QObject):
         self.threshold = threshold
 
     def run(self):
+        """"""
         settings = QtCore.QSettings(_organization, _application_name)
         takanami = int(settings.value('takanami_settings/takanami', False))
         takanami_margin = float(settings.value('takanami_margin', 5.0))
-        self.record.detect(self.alg, threshold=self.threshold, takanami=takanami, takanami_margin=takanami_margin)
+        self.record.detect(self.alg, threshold=self.threshold,
+                           takanami=takanami,
+                           takanami_margin=takanami_margin)
         self.finished.emit()
 
 
 class PickingTaskDialog(QtGui.QDialog):
+    """
+    """
 
     def __init__(self, record, alg, threshold=None):
         QtGui.QDialog.__init__(self)
@@ -972,7 +1053,9 @@ class PickingTaskDialog(QtGui.QDialog):
         return QtGui.QDialog.reject(self)
 
 
-class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
+class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
+    """"""
+
     windowList = []
     MaxRecentFiles = 10
 
@@ -1003,7 +1086,8 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
 
         self.signalViewer = SignalViewerWidget(self.splitter)
         self.splitter.addWidget(self.signalViewer)
-        self.toolBarNavigation = NavigationToolbar(self.signalViewer.canvas, self)
+        self.toolBarNavigation = NavigationToolbar(self.signalViewer.canvas,
+                                                   self)
         self.toolBarNavigation.setEnabled(False)
         self.toolBarMain.setObjectName("toolBarNavigation")
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarNavigation)
@@ -1030,6 +1114,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.set_recent_menu()
 
     def open(self, filename=None):
+        """"""
         if filename is None:
             filename, _ = QtGui.QFileDialog.getOpenFileName(self, "Open Data File", ".",
                                                             "Binary Files (*.bin *.raw);;Text Files (*.txt);;All Files (*.*)")
@@ -1042,7 +1127,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
                     # Load and visualize the opened record
                     QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                     self.record = rc.Record(filename, **values)
-                    self._model = EventListModel(self.record, ['name', 'time', 'cf_value', 'mode', 'method', 'state', 'comments'])
+                    self._model = EventListModel(self.record, ['name', 'time',
+                                                               'cf_value',
+                                                               'mode',
+                                                               'method',
+                                                               'state',
+                                                               'comments'])
                     self._model.emptyList.connect(self.set_modified)
                     ########
                     self.EventsTableView.setModel(self._model)
@@ -1070,28 +1160,33 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
                 other.show()
 
     def open_recent(self):
+        """"""
         action = self.sender()
         if action:
             self.open(action.data())
 
     def save(self):
+        """"""
         if self.saved_filename is None:
             return self.save_as()
         else:
             return self.save_events(self.saved_filename)
 
     def save_as(self):
+        """"""
         filename, _ = QtGui.QFileDialog.getSaveFileName(self, "Open Data File", ".",
                                                         "CSV Files (*.csv);;Text Files (*.txt);;All Files (*.*)")
         if filename != '':
             self.save_events(filename)
 
     def save_events(self, filename):
+        """"""
         with open(filename, 'w') as f:
             rc.generate_csv([self.record], f)
             self.saved_filename = filename
 
     def close(self):
+        """"""
         if self.maybeSave():
             self.record = None
             self._model.emptyList.disconnect(self.set_modified)
@@ -1113,10 +1208,12 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.set_title()
 
     def edit_settings(self):
+        """"""
         dialog = SettingsDialog(self)
         dialog.exec_()
 
     def push_recent_list(self, filename):
+        """"""
         settings = QtCore.QSettings(_organization, _application_name)
         files = self.get_recent_list()
         if filename in files:
@@ -1126,6 +1223,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.set_recent_menu()
 
     def get_recent_list(self):
+        """"""
         settings = QtCore.QSettings(_organization, _application_name)
         files = settings.value('recentFileList')
         if files:
@@ -1136,18 +1234,21 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         return []
 
     def clear_recent_list(self):
+        """"""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.setValue('recentFileList', [])
         self.set_recent_menu()
 
     def set_recent_menu(self):
+        """"""
         files = self.get_recent_list()
         files_no = len(files)
         num_recent_files = min(files_no, MainWindow.MaxRecentFiles)
 
         self.menuOpen_Recent.clear()
         for i in xrange(num_recent_files):
-            action = QtGui.QAction("&%d %s" % (i + 1, self.strippedName(files[i])), self)
+            action = QtGui.QAction("&%d %s" %
+                                   (i + 1, self.strippedName(files[i])), self)
             action.setData(files[i])
             action.triggered.connect(self.open_recent)
             self.menuOpen_Recent.addAction(action)
@@ -1159,6 +1260,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             self.actionClearRecent.setEnabled(True)
 
     def on_close(self):
+        """"""
         self.centralwidget.setVisible(False)
         self.actionClose.setEnabled(False)
         self.actionSelect_All.setEnabled(False)
@@ -1170,6 +1272,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.set_title()
 
     def maybeSave(self):
+        """"""
         if self.isModified:
             ret = QtGui.QMessageBox.warning(self, "Save changes",
                     "The document has been modified.\nDo you want to save "
@@ -1189,6 +1292,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
             event.ignore()
 
     def set_modified(self, value):
+        """"""
         self.isModified = value
         self.actionSave.setEnabled(value)
         self.actionSave_As.setEnabled(value)
@@ -1207,6 +1311,7 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         self.signalViewer.thresholdMarker.set_visible(value)
 
     def onPickingFinished(self):
+        """"""
         self.signalViewer.set_record(self.record)
         self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
         self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
@@ -1219,24 +1324,30 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         msgBox.exec_()
 
     def doSTALTA(self):
+        """"""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup('stalta_settings')
         sta_length = float(settings.value('sta_window_len', 5.0))
         lta_length = float(settings.value('lta_window_len', 100.0))
         settings.endGroup()
-        threshold = self.thresholdSpinBox.value() if self.thresholdCheckBox.checkState() else None
+        if self.thresholdCheckBox.checkState():
+            threshold = self.thresholdSpinBox.value()
+        else:
+            threshold = None
         alg = stalta.StaLta(sta_length, lta_length)
         return_code = PickingTaskDialog(self.record, alg, threshold).exec_()
         if return_code == QtGui.QDialog.Accepted:
             self.onPickingFinished()
 
     def doAMPA(self):
+        """"""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup('ampa_settings')
         wlen = float(settings.value('window_len', 100.0))
         woverlap = float(settings.value('overlap', 0.5))
         nthres = float(settings.value('noise_threshold', 90))
-        filters = settings.value('ampa_settings/filters', [30.0, 20.0, 10.0, 5.0, 2.5])
+        filters = settings.value('ampa_settings/filters', [30.0, 20.0, 10.0,
+                                                           5.0, 2.5])
         filters = list(filters) if isinstance(filters, list) else [filters]
         settings.beginGroup('filter_bank_settings')
         startf = float(settings.value('startf', 2.0))
@@ -1245,18 +1356,20 @@ class MainWindow(QtGui.QMainWindow, Ui_MainWindow):
         overlap = float(settings.value('overlap', 1.0))
         settings.endGroup()
         settings.endGroup()
-        threshold = self.thresholdSpinBox.value() if self.thresholdCheckBox.checkState() else None
-        alg = ampa.Ampa(wlen, woverlap, filters, noise_thr=nthres, bandwidth=bandwidth, overlap=overlap, f_start=startf, f_end=endf)
+        if self.thresholdCheckBox.checkState():
+            threshold = self.thresholdSpinBox.value()
+        else:
+            threshold = None
+        alg = ampa.Ampa(wlen, woverlap, filters, noise_thr=nthres,
+                        bandwidth=bandwidth, overlap=overlap,
+                        f_start=startf, f_end=endf)
         return_code = PickingTaskDialog(self.record, alg, threshold).exec_()
         if return_code == QtGui.QDialog.Accepted:
             self.onPickingFinished()
 
     def goToEventPosition(self, index):
+        """"""
         self.signalViewer.set_position(self.record.events[index.row()].time)
-
-
-
-
 
 
 if __name__ == '__main__':

@@ -28,6 +28,8 @@ import numpy as np
 
 
 def takanami(x, n0, n1, p=1, k=5):
+    """
+    """
     l = (n1 - n0) / float(p)  # l + 1 models
     # Noise Model
     noise_aic = takanami_aic(x, n0, l, k, p)
@@ -45,6 +47,8 @@ def takanami(x, n0, n1, p=1, k=5):
 
 
 def takanami_aic(x, n0, l, k=5, p=1):
+    """
+    """
     if p <= 0:
         raise ValueError("p should be a positive value")
     if k <= 0:
@@ -95,13 +99,17 @@ def takanami_aic(x, n0, l, k=5, p=1):
 
 
 class Takanami(object):
+    """
+    """
 
     def __init__(self, p=1, k=5):
+        """"""
         super(Takanami, self).__init__()
         self.p = p
         self.k = k
 
     def run(self, x, fs, t_start=0.0, t_end=np.inf):
+        """"""
         i_from = int(max(0, t_start * fs))
         i_to = int(min(len(x), t_end * fs))
         n0 = (self.k + 1) * 2

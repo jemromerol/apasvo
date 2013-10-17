@@ -29,18 +29,21 @@ from scipy import signal
 import csv
 import os
 import matplotlib.pyplot as pl
-from matplotlib.ticker import FuncFormatter
+from matplotlib import ticker
 import datetime
 
-from takanami import Takanami
+from picking import takanami
 from utils.formats import rawfile
 
 
 def envelope(x):
+    """"""
     return np.abs(signal.hilbert(x))
 
 
 def generate_csv(records, out, delimiter='\t', lineterminator='\n'):
+    """
+    """
     # Extract data from records
     rows = [{'file_name': record.filename,
              'time': str(datetime.timedelta(seconds=event.time)),
@@ -52,7 +55,8 @@ def generate_csv(records, out, delimiter='\t', lineterminator='\n'):
              'comments': event.comments} for record in records
                                          for event in record.events]
     # Write data to csv
-    writer = csv.DictWriter(out, ['file_name', 'time', 'cf_value', 'name', 'method', 'mode', 'state', 'comments'],
+    writer = csv.DictWriter(out, ['file_name', 'time', 'cf_value', 'name',
+                                  'method', 'mode', 'state', 'comments'],
                             delimiter=delimiter, lineterminator=lineterminator)
     writer.writeheader()
     for row in rows:
@@ -60,13 +64,17 @@ def generate_csv(records, out, delimiter='\t', lineterminator='\n'):
 
 
 class Event(object):
+    """
+    """
 
     methods = ['other', 'STA-LTA', 'STA-LTA+Takanami', 'AMPA', 'AMPA+Takanami']
     modes = ['manual', 'automatic', 'undefined']
     states = ['reported', 'revised', 'confirmed', 'rejected', 'undefined']
 
     def __init__(self, time, cf_value, name='', comments='', method='other',
-                 mode='automatic', state='reported', aic=None, n0_aic=None, **kwargs):
+                 mode='automatic', state='reported', aic=None, n0_aic=None,
+                 **kwargs):
+        """"""
         super(Event, self).__init__()
         self.time = time
         self.cf_value = cf_value
@@ -84,14 +92,18 @@ class Event(object):
 
 
 class Record(object):
+    """"""
 
-    def __init__(self, fileobj, fs, label='', description='', fmt='', dtype='float64', byteorder='native', **kwargs):
+    def __init__(self, fileobj, fs, label='', description='', fmt='',
+                 dtype='float64', byteorder='native', **kwargs):
+        """"""
         super(Record, self).__init__()
         if isinstance(fileobj, file):
             self.filename = fileobj.name
         else:
             self.filename = fileobj
-        fhandler = rawfile.get_file_handler(fileobj, fmt=fmt, dtype=dtype, byteorder=byteorder)
+        fhandler = rawfile.get_file_handler(fileobj, fmt=fmt, dtype=dtype,
+                                            byteorder=byteorder)
         self.signal = fhandler.read()
         self.fs = fs
         self.cf = np.array([])
@@ -104,6 +116,8 @@ class Record(object):
 
     def detect(self, alg, threshold=None, peak_checking=1.0, sort='vd',
                takanami=False, takanami_margin=5.0, **kwargs):
+        """
+        """
         et, self.cf = alg.run(self.signal, self.fs, threshold=threshold,
                                 peak_window=peak_checking)
         # Build event list
@@ -121,12 +135,16 @@ class Record(object):
         return self.events
 
     def sort_events(self, key='time', reverse=False):
+        """"""
         if key == 'aic':
             raise ValueError("Sorting not allowed using key 'aic'")
-        self.events = sorted(self.events, key=lambda e: e.__dict__.get(key, None), reverse=reverse)
+        self.events = sorted(self.events,
+                             key=lambda e: e.__dict__.get(key, None),
+                             reverse=reverse)
 
     def _refine_events(self, takanami_margin=5.0):
-        taka = Takanami()
+        """"""
+        taka = takanami.Takanami()
         for event in self.events:
             t_start = event.time - takanami_margin
             t_end = event.time + takanami_margin
@@ -136,13 +154,22 @@ class Record(object):
             event.cf_value = self.cf[et]
         return self.events
 
-    def save_cf(self, fname, fmt='binary', dtype='float64', byteorder='native'):
-        fout_handler = rawfile.TextFile(fname, dtype=dtype, byteorder=byteorder) if fmt == 'text' else rawfile.BinFile(fname, dtype=dtype, byteorder=byteorder)
+    def save_cf(self, fname, fmt='binary', dtype='float64',
+                byteorder='native'):
+        """"""
+        if fmt == 'text':
+            fout_handler = rawfile.TextFile(fname, dtype=dtype,
+                                            byteorder=byteorder)
+        else:
+            fout_handler = rawfile.BinFile(fname, dtype=dtype,
+                                           byteorder=byteorder)
         fout_handler.write(self.cf)
 
     def plot_signal(self, t_start=0.0, t_end=np.inf, show_events=True,
                     show_x=True, show_cf=True, show_specgram=True,
                     show_envelope=True, threshold=None, num=None, **kwargs):
+        """
+        """
         # Set limits
         i_from = int(max(0.0, t_start * self.fs))
         if show_cf:
@@ -160,7 +187,8 @@ class Record(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%.0f' % x))
+            formatter = ticker.FuncFormatter(lambda x, pos: '%.0f' % x)
+            ax.xaxis.set_major_formatter(formatter)
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw axes
@@ -169,7 +197,8 @@ class Record(object):
         if show_x:
             fig.axes[ax_idx].set_title("Signal Amplitude (%gHz)" % self.fs)
             fig.axes[ax_idx].set_ylabel('Amplitude')
-            fig.axes[ax_idx].plot(t, self.signal[i_from:i_to], color='b', label='Signal')
+            fig.axes[ax_idx].plot(t, self.signal[i_from:i_to], color='b',
+                                  label='Signal')
             # Draw signal envelope
             if show_envelope:
                 fig.axes[ax_idx].plot(t, envelope(self.signal[i_from:i_to]),
@@ -208,6 +237,8 @@ class Record(object):
         return fig
 
     def plot_aic(self, event, show_envelope=True, num=None, **kwargs):
+        """
+        """
         # Set limits
         i_from = int(max(0, event.n0_aic))
         i_to = int(min(len(self.signal), event.n0_aic + len(event.aic)))
@@ -221,13 +252,15 @@ class Record(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: '%.0f' % x))
+            formatter = ticker.FuncFormatter(lambda x, pos: '%.0f' % x)
+            ax.xaxis.set_major_formatter(formatter)
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw signal
         fig.axes[0].set_title('Signal Amplitude')
         fig.axes[0].set_ylabel('Amplitude')
-        fig.axes[0].plot(t, self.signal[i_from:i_to], color='b', label='Signal')
+        fig.axes[0].plot(t, self.signal[i_from:i_to], color='b',
+                         label='Signal')
         # Draw envelope
         if show_envelope:
             fig.axes[0].plot(t, envelope(self.signal[i_from:i_to]),
@@ -248,9 +281,13 @@ class Record(object):
 
 
 class RecordFactory(object):
+    """
+    """
 
-    def __init__(self, max_segment_length=24*7*3600, fs=50.0, dtype='float64', byteorder='native',
+    def __init__(self, max_segment_length=24 * 7 * 3600, fs=50.0,
+                 dtype='float64', byteorder='native',
                  notif=None, **kwargs):
+        """"""
         self.fs = fs
         self.dtype = dtype
         self.byteorder = byteorder
@@ -258,6 +295,7 @@ class RecordFactory(object):
         self.notif = notif
 
     def create_record(self, fileobj, **kwargs):
+        """"""
 #         segment_n = np.ceil(utils.getSize(fileobj) / self.max_record_length)
 #         if segment_n > 1:
 #             fhandler = utils.get_file_handler(fileobj, dtype=self.dtype, byteorder=self.byteorder)
@@ -281,4 +319,5 @@ class RecordFactory(object):
                       **kwargs)
 
     def on_notify(self, msg):
+        """"""
         pass

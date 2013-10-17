@@ -62,6 +62,7 @@ def istextfile(filename, blocksize=512):
 
 
 def is_little_endian():
+    """"""
     if pack('@h', 1) == pack('<h', 1):
         return True
     return False
@@ -79,6 +80,7 @@ def read_in_chunks(file_object, chunk_size=1024):
 
 
 def read_txt_in_chunks(file_object, n=1024):
+    """"""
     numeric_pattern = r'[+-]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[Ee][+-]?\d+)?'
     data = []
     for line in file_object.xreadlines():
@@ -90,6 +92,7 @@ def read_txt_in_chunks(file_object, n=1024):
 
 
 def getSize(f):
+    """"""
     f.seek(0, 2)  # move the cursor to the end of the file
     size = f.tell()
     f.seek(0)
@@ -97,14 +100,15 @@ def getSize(f):
 
 
 def get_delimiter(fileobject, lines=16):
-    integer = '[+-]?\d+'
-    decimal = '\d+(e[+-]\d+)?'
-    number = '{integer}\.{decimal}'.format(integer=integer, decimal=decimal)
-    comment = '\s*#.*'
-    pattern = ('{comment}|({number}((?P<sep>[\W]+){number})*({comment})?)'.
+    """"""
+    integer = r'[+-]?\d+'
+    decimal = r'\d+(e[+-]\d+)?'
+    number = r'{integer}\.{decimal}'.format(integer=integer, decimal=decimal)
+    comment = r'\s*#.*'
+    pattern = (r'{comment}|({number}((?P<sep>[\W]+){number})*({comment})?)'.
                format(number=number, comment=comment))
     delimiters = {}
-    for i in range(lines):
+    for i in xrange(lines):
         line = fileobject.readline()
         if line == '':
             break
@@ -125,6 +129,7 @@ def get_delimiter(fileobject, lines=16):
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
+    """"""
     if not os.path.exists(dst):
         os.makedirs(dst)
     for item in os.listdir(src):

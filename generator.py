@@ -32,7 +32,6 @@ A tool to generate synthetic seismic signal
 import argparse
 import os
 import sys
-from scipy import signal
 
 from _version import __version__
 from utils import clt, parse, futils
@@ -41,6 +40,7 @@ from picking import eqgenerator
 
 
 def print_settings(args):
+    """"""
     sys.stdout.write("\nGeneral settings:\n")
     sys.stdout.write("%30s: %s\n" % ("Signal frequency(Hz)",
                                      args.fs))
@@ -78,16 +78,21 @@ def print_settings(args):
 def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
              gen_noise_coefficients=False, output_format='binary',
              datatype='float64', byteorder='native', **kwargs):
+    """"""
     # Configure generator
     clt.print_msg("Configuring generator... ")
     generator = eqgenerator.EarthquakeGenerator(**kwargs)
     clt.print_msg("Done\n")
     # Load noise coefficients
     if gen_noise_coefficients:
-        f = open(gen_noise_coefficients, 'r') if futils.istextfile(gen_noise_coefficients) else open(gen_noise_coefficients, 'rb')
+        if futils.istextfile(gen_noise_coefficients):
+            f = open(gen_noise_coefficients, 'r')
+        else:
+            f = open(gen_noise_coefficients, 'rb')
         clt.print_msg("Loading noise coefficients from %s... " %
                          f.name)
-        generator.load_noise_coefficients(f, dtype=datatype, byteorder=byteorder)
+        generator.load_noise_coefficients(f, dtype=datatype,
+                                          byteorder=byteorder)
         clt.print_msg("Done\n")
     # Process input files
     basename, ext = os.path.splitext(output)
@@ -95,8 +100,10 @@ def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
     if FILEIN:
         fileno = 0
         for f in FILEIN:
-            fin_handler = rawfile.get_file_handler(f, dtype=datatype, byteorder=byteorder)
-            clt.print_msg("Loading seismic signal from %s... " % fin_handler.filename)
+            fin_handler = rawfile.get_file_handler(f, dtype=datatype,
+                                                   byteorder=byteorder)
+            clt.print_msg("Loading seismic signal from %s... " %
+                          fin_handler.filename)
             signal = fin_handler.read()
             clt.print_msg("Done\n")
             if len(FILEIN) > 1:
@@ -106,7 +113,12 @@ def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
                              filename_out)
             eq = generator.generate_earthquake(length, t_event,
                                                gen_event_power, signal)
-            fout_handler = rawfile.TextFile(filename_out, dtype=datatype, byteorder=byteorder) if output_format is 'text' else rawfile.BinFile(filename_out, dtype=datatype, byteorder=byteorder)
+            if output_format == 'text':
+                fout_handler = rawfile.TextFile(filename_out, dtype=datatype,
+                                            byteorder=byteorder)
+            else:
+                fout_handler = rawfile.BinFile(filename_out, dtype=datatype,
+                                              byteorder=byteorder)
             fout_handler.write(eq)
             clt.print_msg("Done\n")
     else:
@@ -117,7 +129,12 @@ def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
                              filename_out)
             eq = generator.generate_earthquake(length, t_event,
                                                gen_event_power)
-            fout_handler = rawfile.TextFile(filename_out, dtype=datatype, byteorder=byteorder) if output_format is 'text' else rawfile.BinFile(filename_out, dtype=datatype, byteorder=byteorder)
+            if output_format == 'text':
+                fout_handler = rawfile.TextFile(filename_out, dtype=datatype,
+                                                byteorder=byteorder)
+            else:
+                rawfile.BinFile(filename_out, dtype=datatype,
+                                byteorder=byteorder)
             fout_handler.write(eq)
             clt.print_msg("Done\n")
 
@@ -172,7 +189,8 @@ USAGE
         the datatype used for reading it.
                             ''')
         parser.add_argument("--byteorder",
-                                   choices=['little-endian', 'big-endian', 'native'],
+                                   choices=['little-endian', 'big-endian',
+                                            'native'],
                                    default='native',
                                    help='''
         If the input files are in binary format this will be the byte-order

@@ -28,6 +28,7 @@ import sys
 
 
 def print_msg(msg):
+    """"""
     sys.stdout.write(msg)
     sys.stdout.flush()
 
@@ -67,7 +68,8 @@ def query_yes_no_all_quit(question, default="yes"):
         elif choice in valid.keys():
             return valid[choice]
         else:
-            sys.stdout.write("Please respond with 'yes', 'no', 'all' or 'quit'.\n")
+            sys.stdout.write("Please respond with "
+                             "'yes', 'no', 'all' or 'quit'.\n")
 
 
 def query_custom_answers(question, answers, default=None):
@@ -79,7 +81,7 @@ def query_custom_answers(question, answers, default=None):
         "&quit"]. All answer strings should be lowercase.
     @param default {str, optional} A default answer. If no default is
         given, then the user must provide an answer. With a default,
-        just hitting <Enter> is sufficient to choose. 
+        just hitting <Enter> is sufficient to choose.
     """
     prompt_bits = []
     answer_from_valid_choice = {
@@ -87,10 +89,10 @@ def query_custom_answers(question, answers, default=None):
     }
     clean_answers = []
     for answer in answers:
-        if '&' in answer and not answer.index('&') == len(answer)-1:
-            head, sep, tail = answer.partition('&')
-            prompt_bits.append(head.lower()+'('+tail[0].lower()+')'+tail[1:].lower())
-            clean_answer = head+tail
+        if '&' in answer and not answer.index('&') == len(answer) - 1:
+            head, _, tail = answer.partition('&')
+            prompt_bits.append(head.lower() + '(' + tail[0].lower() + ')' + tail[1:].lower())
+            clean_answer = head + tail
             shortcut = tail[0].lower()
         else:
             prompt_bits.append(answer.lower())
@@ -129,14 +131,17 @@ def query_custom_answers(question, answers, default=None):
         elif choice in answer_from_valid_choice:
             return answer_from_valid_choice[choice]
         else:
-            sys.stdout.write("\n"+admonishment+"\n\n\n")
+            sys.stdout.write("\n" + admonishment + "\n\n\n")
 
 
 class ALIGN:
+    """"""
     LEFT, RIGHT = '-', ''
 
 
 class Column():
+    """
+    """
 
     def __init__(self, name, data, align=ALIGN.RIGHT, fmt='%.6g'):
         self.data = [fmt % x for x in data]
@@ -146,12 +151,15 @@ class Column():
 
 
 class Table:
+    """
+    """
 
     def __init__(self, *columns):
         self.columns = columns
         self.length = max(len(column.data) for column in columns)
 
     def get_row(self, i=None):
+        """"""
         for x in self.columns:
             if i is None:
                 yield x.format % x.name
@@ -159,13 +167,16 @@ class Table:
                 yield x.format % x.data[i]
 
     def get_line(self):
+        """"""
         for x in self.columns:
             yield '-' * (x.width + 2)
 
     def join_n_wrap(self, char, elements):
+        """"""
         return ' ' + char + char.join(elements) + char
 
     def get_rows(self):
+        """"""
         yield self.join_n_wrap('+', self.get_line())
         yield self.join_n_wrap('|', self.get_row(None))
         yield self.join_n_wrap('+', self.get_line())
@@ -178,7 +189,8 @@ class Table:
 
 
 class ProgressBar:
-
+    """
+    """
     def __init__(self, minValue=0, maxValue=10, totalWidth=12):
         self.progBar = "[]"   # This holds the progress bar string
         self.min = minValue
@@ -189,6 +201,7 @@ class ProgressBar:
         self.updateAmount(0)  # Build progress bar string
 
     def updateAmount(self, newAmount=0):
+        """"""
         if newAmount < self.min:
             newAmount = self.min
         if newAmount > self.max:

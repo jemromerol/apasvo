@@ -31,6 +31,8 @@ from utils.formats import rawfile
 
 
 def gutenberg_richter(b=1.0, size=None, m_min=2.0, m_max=None):
+    """
+    """
     if m_max:
         bound_term = 1.0 - 10 ** (-b * (m_max - m_min))
     else:
@@ -42,6 +44,8 @@ def generate_artificial_earthquake(tmax, t0, fs, P_signal_db, P_noise_db,
                                    bfirls, low_period=50., high_period=10.,
                                    bandwidth=4., overlap=1., f_low=2.,
                                    f_high=18., low_amp=.2, high_amp=.1):
+    """
+    """
     # Earthquake generation
     artificial_earthquake = generate_seismic_earthquake(tmax, t0, fs,
                                                         P_signal_db,
@@ -59,6 +63,8 @@ def generate_artificial_earthquake(tmax, t0, fs, P_signal_db, P_noise_db,
 def generate_seismic_earthquake(tmax, t0, fs, P_signal_db, low_period,
                                    high_period, bandwidth, overlap,
                                    f_low, f_high, low_amp, high_amp):
+    """
+    """
     L = tmax * fs
     # Value from which the exponential function truncates its fall
     betta = high_amp / 100.
@@ -105,6 +111,8 @@ def generate_seismic_earthquake(tmax, t0, fs, P_signal_db, low_period,
 
 
 def generate_seismic_noise(tmax, fs, P_noise_db, bfirls):
+    """
+    """
     L = tmax * fs
     # White noise generation for polluting the earthquake
     # We add noise according to Peterson's Model
@@ -118,11 +126,14 @@ def generate_seismic_noise(tmax, fs, P_noise_db, bfirls):
 
 
 class EarthquakeGenerator(object):
+    """
+    """
 
     def __init__(self, bfirls=np.array([1]), fs=50.0, P_noise_db=0.0,
                  low_period=50.0, high_period=10.0, bandwidth=4.0,
                  overlap=1.0, f_low=2.0, f_high=18.0,
                  low_amp=0.2, high_amp=0.1, **kwargs):
+        """"""
         super(EarthquakeGenerator, self).__init__()
         self.bfirls = bfirls
         self.fs = fs
@@ -136,12 +147,15 @@ class EarthquakeGenerator(object):
         self.low_amp = low_amp
         self.high_amp = high_amp
 
-    def load_noise_coefficients(self, file, dtype, byteorder):
-        fhandler = rawfile.get_file_handler(file, dtype=dtype, byteorder=byteorder)
+    def load_noise_coefficients(self, fileobj, dtype, byteorder):
+        """"""
+        fhandler = rawfile.get_file_handler(fileobj, dtype=dtype,
+                                            byteorder=byteorder)
         self.bfirls = fhandler.read()
 
     def generate_events(self, t_average, t_max, b=1.0,
                                m_min=2.0, m_max=7.0):
+        """"""
         event_t = []
         t = np.random.poisson(t_average)
         while t < t_max:
@@ -152,13 +166,14 @@ class EarthquakeGenerator(object):
 
     def generate_nevents(self, t_average, event_n, b=1.0,
                                m_min=2.0, m_max=7.0):
+        """"""
         event_t = np.cumsum(np.random.poisson(t_average, event_n))
         event_m = gutenberg_richter(b, event_n, m_min, m_max)
         return event_t, event_m
 
     def generate_sequence(self, t_max, event_t, event_m):
         event_n = len(event_t)
-
+        """"""
         out = generate_seismic_noise(t_max, self.fs, self.P_noise_db,
                                      self.bfirls)
 
@@ -178,10 +193,12 @@ class EarthquakeGenerator(object):
         return out
 
     def generate_earthquake(self, t_max, t0, p_eq, eq=None):
+        """"""
         if eq == None:
             return generate_artificial_earthquake(t_max, t0, self.fs, p_eq,
                                                   self.P_noise_db, self.bfirls,
-                                                  self.low_period, self.high_period,
+                                                  self.low_period,
+                                                  self.high_period,
                                                   self.bandwidth, self.overlap,
                                                   self.f_low, self.f_high,
                                                   self.low_amp, self.high_amp)

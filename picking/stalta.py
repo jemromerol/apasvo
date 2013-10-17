@@ -27,11 +27,13 @@
 
 import numpy as np
 
-from findpeaks import find_peaks
+from picking import findpeaks
 
 
 def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
             peak_window=1.):
+    """
+    """
     # Check arguments
     if fs <= 0:
         raise ValueError("fs must be a positive value")
@@ -50,19 +52,23 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
         sta_to = int(min(len(x_norm), i + sta + 1))
         lta_to = int(min(len(x_norm), i + lta + 1))
         cf[i] = np.mean(x_norm[i:sta_to]) / np.mean(x_norm[i:lta_to])
-    event_t = find_peaks(cf, threshold, order=peak_window * fs)
+    event_t = findpeaks.find_peaks(cf, threshold, order=peak_window * fs)
     return event_t, cf
 
 
 class StaLta(object):
+    """
+    """
 
     def __init__(self, sta_length=10.0, lta_length=600.0, **kwargs):
+        """"""
         super(StaLta, self).__init__()
         self.sta_length = sta_length
         self.lta_length = lta_length
         self.name = 'STA-LTA'
 
     def run(self, x, fs, threshold=None, peak_window=1.0):
+        """"""
         et, cf = sta_lta(x, fs, threshold=threshold,
                          sta_length=self.sta_length,
                          lta_length=self.lta_length,

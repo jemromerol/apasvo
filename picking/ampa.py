@@ -28,10 +28,12 @@ import numpy as np
 from scipy import signal
 import collections
 
-from findpeaks import find_peaks
+from picking import findpeaks
 
 
 def prctile(x, p):
+    """
+    """
     # Check range of p values
     if isinstance(p, collections.Iterable):
         iterable = True
@@ -51,14 +53,18 @@ def prctile(x, p):
     # If p == 50 make the median fast
     if p == 50:
         return np.median(sorted_x)
-    q = np.hstack([0, 100 * np.linspace(0.5, len(x) - 0.5, len(x)) / len(x), 100])
+    q = np.hstack([0,
+                   100 * np.linspace(0.5, len(x) - 0.5, len(x)) / len(x),
+                   100])
     xx = np.hstack([sorted_x[0], sorted_x, sorted_x[-1]])
     return np.interp(p, q, xx)
 
 
-def ampa(x, fs, threshold=None, L=[30., 20., 10., 5., 2.5], L_coef=3.,
+def ampa(x, fs, threshold=None, L=None, L_coef=3.,
          noise_thr=90, bandwidth=3., overlap=1., f_start=2., max_f_end=12.,
          U=12., peak_window=1.):
+    """
+    """
     # Check arguments
     if fs <= 0:
         raise ValueError("fs must be a positive value")
@@ -76,13 +82,14 @@ def ampa(x, fs, threshold=None, L=[30., 20., 10., 5., 2.5], L_coef=3.,
         raise ValueError("max_f_end must be greater than f_start")
     if U <= 0:
         raise ValueError("U must be a positive value")
-    if not isinstance(L, collections.Iterable):
-        L = [L]
+    if L is None:
+        L = [30., 20., 10., 5., 2.5]
     for v in L:
         if v <= 0:
             raise ValueError("L should be a positive value")
         if v >= len(x) / fs:
-            raise ValueError("Length of x must be greater than the longest of the values of L")
+            raise ValueError("Length of x must be greater than the longest "
+                             "of the values of L")
     fs = float(fs)
     peak_window = round(peak_window * fs / 2.)
     t = np.arange(0, len(x) / fs, 1. / fs)
@@ -91,7 +98,8 @@ def ampa(x, fs, threshold=None, L=[30., 20., 10., 5., 2.5], L_coef=3.,
     # Several options can be chosen
     f_end = min(fs / 2. - bandwidth, max_f_end)
     if f_end <= f_start:
-        raise ValueError("The end frequency of the filter bank must be greater than its start frequency")
+        raise ValueError("The end frequency of the filter bank must be greater"
+                         " than its start frequency")
     step = bandwidth - overlap
     flo = np.arange(f_start, f_end + step, step)
     fhi = flo + bandwidth
@@ -136,20 +144,25 @@ def ampa(x, fs, threshold=None, L=[30., 20., 10., 5., 2.5], L_coef=3.,
         Ztot[i, :-l] = np.roll(Zt, -l)[:-l]
     ZTOT = np.prod(Ztot, 0)[:-(np.max(L) * fs)]
     ZTOT = U + np.log10(np.abs(ZTOT) + (10 ** -U))
-    event_t = find_peaks(ZTOT, threshold, order=peak_window * fs)
+    event_t = findpeaks.find_peaks(ZTOT, threshold, order=peak_window * fs)
     return event_t, ZTOT
 
 
 class Ampa(object):
+    """
+    """
 
     def __init__(self, window=100., window_overlap=0.5,
-                 L=[30., 20., 10., 5., 2.5], L_coef=3., noise_thr=90.,
+                 L=None, L_coef=3., noise_thr=90.,
                  bandwidth=3., overlap=1., f_start=2.,
                  f_end=12., U=12., **kwargs):
+        """"""
         super(Ampa, self).__init__()
         self.window = window
         self.window_overlap = window_overlap
         self.L = L
+        if self.L is None:
+            self.L = [30., 20., 10., 5., 2.5]
         self.L_coef = L_coef
         self.noise_thr = noise_thr
         self.bandwidth = bandwidth
@@ -160,6 +173,7 @@ class Ampa(object):
         self.name = 'AMPA'
 
     def run(self, x, fs, threshold=None, peak_window=1.0):
+        """"""
         tail = int(np.max(self.L) * fs)
         out = np.zeros(len(x) - tail)
         step = int(self.window * (1. - self.window_overlap) * fs)
@@ -174,5 +188,5 @@ class Ampa(object):
             out[i: i + overlapped] = ((out[i: i + overlapped] +
                                        cf[:overlapped]) / 2.)
             out[i + overlapped: i + size - tail] = cf[overlapped:]
-        et = find_peaks(out, threshold, order=peak_window * fs)
+        et = findpeaks.find_peaks(out, threshold, order=peak_window * fs)
         return et, out
