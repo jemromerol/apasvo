@@ -26,7 +26,16 @@
 
 
 def flatten_dict(d, sep='_'):
-    """"""
+    """Flattens a dict.
+
+    E.g. given:
+
+        mdict = {'a': 1, 'b':{'a': 1, 'b': {'a': 1}, 'c': 3}, 'c': 3}
+
+    The output of flatten_dict(mdict) will be:
+
+        {'a': 1, 'b_a': 1, 'b_b_a': 1, 'b_c': 3, 'c': 3}
+    """
     out = {}
     nodes = [(k, v) for k, v in d.iteritems()]
     while nodes:
@@ -41,7 +50,14 @@ def flatten_dict(d, sep='_'):
 
 
 def flatten_list(l):
-    """"""
+    """Flattens a list.
+
+    E.g. given:
+
+        mlist = [1, 2, [[3], [4, 5, [6]], 7, []], 8]
+
+        The output will be [1, 2, 3, 4, 5, 6, 7, 8]
+    """
     out = []
     nodes = [v for v in l]
     while nodes:

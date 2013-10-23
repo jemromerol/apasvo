@@ -605,7 +605,7 @@ class SignalViewerWidget(QtGui.QWidget):
                                                   rasterized=True)[0]
         # Plot envelope
         self._envelope_data = self.fig.axes[0].plot(self.time,
-                                                    record.envelope(self.record.signal),
+                                                    rc.envelope(self.record.signal),
                                                     color='red',
                                                     rasterized=True)[0]
         # Plot CF

@@ -32,7 +32,17 @@ from picking import findpeaks
 
 
 def prctile(x, p):
-    """
+    """Computes a percentile of a vector.
+
+    MATLAB like implementation of the percentile algorithm.
+
+    Args:
+        x: An unidimensional data array.
+        p: A percentage in the range [0,100].
+
+    Returns:
+        If 'x' is not empty returns the 'p' percentile of x,
+        else returns nan.
     """
     # Check range of p values
     if isinstance(p, collections.Iterable):
@@ -63,7 +73,77 @@ def prctile(x, p):
 def ampa(x, fs, threshold=None, L=None, L_coef=3.,
          noise_thr=90, bandwidth=3., overlap=1., f_start=2., max_f_end=12.,
          U=12., peak_window=1.):
-    """
+    """Event picking/detection using AMPA algorithm.
+
+    An implementation of the Adaptive Multi-Band Picking Algorithm (AMPA),
+    as described in:
+
+    Álvarez, I., García, L., Mota, S., Cortés, G., Benítez, C.,
+    & De la Torre, A. (2013).
+    An Automatic P-Phase Picking Algorithm Based on Adaptive Multiband Processing.
+    Geoscience and Remote Sensing Letters, IEEE,
+    Volume: 10, Issue: 6, pp. 1488 - 1492
+
+    The AMPA method consists on an adaptive multi-band analysis that includes
+    envelope detection, noise reduction for each band, and finally a
+    filter stage that enhances the response to an earthquake arrival.
+    This approach provides accurate estimation of phase arrivals in
+    seismic signals strongly affected by background and non-stationary noises.
+
+    Args:
+        x: Seismic data, numpy array type.
+        fs: Sampling rate in Hz.
+        threshold: Local maxima found in the characteristic function above
+            this value will be returned by the function as possible events
+            (detection mode).
+            If threshold is None, the function will return only the global
+            maximum (picking mode).
+            Default value is None.
+        L: A list of filter lengths (in seconds).
+            At the filter stage, the signal is processed by using a set of
+            enhancement filters of different length L=[l1, l2, ..., ln].
+            The length of a filter is related to the duration of the detected
+            events. An enhancement filter for long duration events can negate
+            short duration events and vice versa. Combining several filters of
+            different length the algorithm achieves to deal with this issue.
+            Default: [30.0, 20.0, 10.0, 5.0, 2.5]
+        L_coef: A parameter that measures the portion of negative response of
+            an enhancement filter in order to minimize the response to emerging
+            or impulsive noises.
+            Default value is 3.0.
+        noise_thr: A percentile of the amplitude of the envelope that measures
+            the noise reduction level for each band at the noise reduction
+            stage.
+            Default value is 90.
+        bandwidth: Bandwidth of each band of the adaptive multi-band analysis.
+            Default: 3 Hz.
+        overlap: Overlap between bands of the adaptive multi-band analysis.
+            Default: 1 Hz.
+        f_start: Start frequency of the adaptive multi-band analysis.
+            Default: 2 Hz.
+        max_f_end: End frequency of the adaptive multi-band analysis.
+            Default: 12 Hz.
+        U: A parameter used at the end of the enhancement filter stage to avoid
+            logarithm of zero and to shift the characteristic function to zero.
+            Given y(n) the product of the outputs of the different filters used
+            at the end of the enhancement stage, the characteristic function is
+            then calculated as:
+
+                cf(n) = U + log10(y(n) + 10 ** (-U))
+
+            Default value is 12.
+        peak_window: How many seconds on each side of a point of the
+            characteristic function to use for the comparison to consider the
+            point to be a local maximum.
+            If 'threshold' is None, this parameter has no effect.
+            Default value is 1 s.
+
+    Returns:
+        event_t: A list of possible event locations, given in samples from the
+            start of the signal, that correspond to the local maxima of the
+            characteristic function. If threshold is None, the list contains
+            only the global maximum of the function.
+        ztot: Characteristic function, numpy array type.
     """
     # Check arguments
     if fs <= 0:
@@ -149,17 +229,45 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
 
 
 class Ampa(object):
-    """
+    """A class to configure an instance of the AMPA algorithm and
+    apply it over a given array containing seismic data.
+
+    Given some overlap and window sizes, this class applies the AMPA method
+    by using a sliding window approach.
+
+    Attributes:
+        window: Size of the window in seconds. Default: 100 seconds.
+        window_overlap: Step size. Default: 50 seconds.
+        L: A list of filter lengths (in seconds) at the enhancement filter
+            stage. Default: [30.0, 20.0, 10.0, 5.0, 2.5]
+        L_coef: A parameter that measures the portion of negative response of
+            an enhancement filter in order to minimize the response to emerging
+            or impulsive noises.
+            Default value is 3.0.
+        noise_thr: A percentile of the amplitude of the envelope that measures
+            the noise reduction level for each band at the noise reduction
+            stage.
+            Default value is 90.
+        bandwidth: Bandwidth of each band of the adaptive multi-band analysis.
+            Default: 3 Hz.
+        overlap: Overlap between bands of the adaptive multi-band analysis.
+            Default: 1 Hz.
+        f_start: Start frequency of the adaptive multi-band analysis.
+            Default: 2 Hz.
+        max_f_end: End frequency of the adaptive multi-band analysis.
+            Default: 12 Hz.
+        U: A parameter used at the end of the enhancement filter stage to avoid
+            logarithm of zero and to shift the characteristic function to zero.
+            Default value is 12.
     """
 
-    def __init__(self, window=100., window_overlap=0.5,
+    def __init__(self, window=100., step=50.,
                  L=None, L_coef=3., noise_thr=90.,
                  bandwidth=3., overlap=1., f_start=2.,
                  f_end=12., U=12., **kwargs):
-        """"""
         super(Ampa, self).__init__()
         self.window = window
-        self.window_overlap = window_overlap
+        self.step = step
         self.L = L
         if self.L is None:
             self.L = [30., 20., 10., 5., 2.5]
@@ -170,13 +278,36 @@ class Ampa(object):
         self.f_start = f_start
         self.max_f_end = f_end
         self.U = U
-        self.name = 'AMPA'
+        self._name = 'AMPA'
 
     def run(self, x, fs, threshold=None, peak_window=1.0):
-        """"""
+        """Executes AMPA algorithm over a given array of data
+
+        Args:
+            x: Seismic data, numpy array type.
+            fs: Sample rate in Hz.
+            threshold: Local maxima found in the characteristic function above
+                this value will be returned by the function as possible events
+                (detection mode).
+                If threshold is None, the function will return only the global
+                maximum (picking mode).
+                Default value is None.
+            peak_window: How many seconds on each side of a point of the
+                characteristic function to use for the comparison to consider
+                the point to be a local maximum.
+                If 'threshold' is None, this parameter has no effect.
+                Default value is 1 s.
+
+        Returns:
+            et: A list of possible event locations, given in samples from the
+                start of the signal, that correspond to the local maxima of the
+                characteristic function. If threshold is None, the list contains
+                only the global maximum of the function.
+            out: Characteristic function, numpy array type.
+        """
         tail = int(np.max(self.L) * fs)
         out = np.zeros(len(x) - tail)
-        step = int(self.window * (1. - self.window_overlap) * fs)
+        step = self.step * fs
         overlapped = max(0, int(self.window * self.window_overlap * fs) - tail)
         for i in xrange(0, len(out), step):
             size = min(self.window * fs, len(x) - i)

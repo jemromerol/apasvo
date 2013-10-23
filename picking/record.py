@@ -25,7 +25,7 @@
 '''
 
 import numpy as np
-from scipy import signal
+from scipy import fftpack
 import csv
 import os
 import matplotlib.pyplot as pl
@@ -38,7 +38,7 @@ from utils.formats import rawfile
 
 def envelope(x):
     """"""
-    return np.abs(signal.hilbert(x))
+    return (x ** 2 + fftpack.hilbert(x) ** 2) ** 0.5
 
 
 def generate_csv(records, out, delimiter='\t', lineterminator='\n'):

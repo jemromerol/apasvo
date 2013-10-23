@@ -28,7 +28,7 @@ import sys
 
 
 def print_msg(msg):
-    """"""
+    """Prints 'msg' in standard output"""
     sys.stdout.write(msg)
     sys.stdout.flush()
 
@@ -135,12 +135,38 @@ def query_custom_answers(question, answers, default=None):
 
 
 class ALIGN:
-    """"""
+    """Use with Column class to specify the alignment mode of a column.
+
+    >>> tb = clt.Table(clt.Column('Column A', [1, 2, 3, 4, 5],
+                                  align=clt.ALIGN.LEFT),
+                       clt.Column('Column B', [10, 20, 30, 40, 50],
+                                  align=clt.ALIGN.RIGHT))
+    >>> print tb
+     +----------+----------+
+     | Column A | Column B |
+     +----------+----------+
+     | 1        |       10 |
+     | 2        |       20 |
+     | 3        |       30 |
+     | 4        |       40 |
+     | 5        |       50 |
+     +----------+----------+
+    """
     LEFT, RIGHT = '-', ''
 
 
 class Column():
-    """
+    """A class that represents a column in a table.
+
+    Use with Table class to draw tables in a CLI.
+
+    Attributes:
+        data: List of numeric data stored in the column, where each element
+            corresponds to a row in the column.
+        name: Header of the column.
+        width: Column width in characters.
+        format: A specific format string for the elements of 'data'.
+            Default format is '%.6g'.
     """
 
     def __init__(self, name, data, align=ALIGN.RIGHT, fmt='%.6g'):
@@ -151,7 +177,25 @@ class Column():
 
 
 class Table:
-    """
+    """A class for drawing tabular numeric data in a CLI application.
+
+    >>> tb = clt.Table(clt.Column('Column A', [1, 2, 3, 4, 5]),
+                       clt.Column('Column B', [10, 20, 30, 40, 50]))
+    >>> print tb
+     +----------+----------+
+     | Column A | Column B |
+     +----------+----------+
+     |        1 |       10 |
+     |        2 |       20 |
+     |        3 |       30 |
+     |        4 |       40 |
+     |        5 |       50 |
+     +----------+----------+
+
+    Attributes:
+        columns: A list of column objects corresponding
+            to the columns of the table.
+        length: Number of rows of the table.
     """
 
     def __init__(self, *columns):
@@ -159,7 +203,6 @@ class Table:
         self.length = max(len(column.data) for column in columns)
 
     def get_row(self, i=None):
-        """"""
         for x in self.columns:
             if i is None:
                 yield x.format % x.name
@@ -167,16 +210,13 @@ class Table:
                 yield x.format % x.data[i]
 
     def get_line(self):
-        """"""
         for x in self.columns:
             yield '-' * (x.width + 2)
 
     def join_n_wrap(self, char, elements):
-        """"""
         return ' ' + char + char.join(elements) + char
 
     def get_rows(self):
-        """"""
         yield self.join_n_wrap('+', self.get_line())
         yield self.join_n_wrap('|', self.get_row(None))
         yield self.join_n_wrap('+', self.get_line())
@@ -189,9 +229,31 @@ class Table:
 
 
 class ProgressBar:
+    """A class for drawing a command line progress bar.
+
+    >>> pbar = clt.ProgressBar(totalWidth=30)
+    >>> print pbar
+    [             0%             ]
+    >>> pbar.updateAmount(40)
+    >>> print pbar
+    [########### 40%             ]
+    >>> pbar.updateAmount(80)
+    >>> print pbar
+    [############80%#######      ]
+    >>> pbar.updateAmount(100)
+    >>> print pbar
+    [###########100%#############]
+
+    Attributes:
+        min: Initial value of the progress. Default value is 0.
+        max: Final value of the progress, which corresponds to a complete task.
+            Default value is 100.
+        span: Length of the range for the progress value. i.e. max - min.
+        width: The number of steps of the progress bar.
+        amount: A value in the range [min..max] indicating the current progress.
     """
-    """
-    def __init__(self, minValue=0, maxValue=10, totalWidth=12):
+
+    def __init__(self, minValue=0, maxValue=100, totalWidth=12):
         self.progBar = "[]"   # This holds the progress bar string
         self.min = minValue
         self.max = maxValue
@@ -201,7 +263,7 @@ class ProgressBar:
         self.updateAmount(0)  # Build progress bar string
 
     def updateAmount(self, newAmount=0):
-        """"""
+        """Sets the value of the current progress."""
         if newAmount < self.min:
             newAmount = self.min
         if newAmount > self.max:

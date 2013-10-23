@@ -28,6 +28,7 @@
 import numpy as np
 
 from picking import findpeaks
+from numpy.lib import stride_tricks
 
 
 def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
@@ -48,10 +49,16 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
     peak_window = int(peak_window * fs / 2.)
     x_norm = np.abs(x - np.mean(x))
     cf = np.zeros(len(x))
-    for i in xrange(len(x_norm)):
-        sta_to = int(min(len(x_norm), i + sta + 1))
-        lta_to = int(min(len(x_norm), i + lta + 1))
-        cf[i] = np.mean(x_norm[i:sta_to]) / np.mean(x_norm[i:lta_to])
+    # FASTER VERSION USING STRIDES
+    sta_win = stride_tricks.as_strided(x_norm, shape=(len(x_norm) - lta + 1, sta),
+                                       strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
+    lta_win = stride_tricks.as_strided(x_norm, shape=(len(x_norm) - lta + 1, lta),
+                                       strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
+    cf[:len(x_norm) - lta + 1] = sta_win.mean(axis=1) / lta_win.mean(axis=1)
+#     for i in xrange(len(x_norm)):
+#         sta_to = int(min(len(x_norm), i + sta))
+#         lta_to = int(min(len(x_norm), i + lta))
+#         cf[i] = np.mean(x_norm[i:sta_to]) / np.mean(x_norm[i:lta_to])
     event_t = findpeaks.find_peaks(cf, threshold, order=peak_window * fs)
     return event_t, cf
 
@@ -65,7 +72,7 @@ class StaLta(object):
         super(StaLta, self).__init__()
         self.sta_length = sta_length
         self.lta_length = lta_length
-        self.name = 'STA-LTA'
+        self._name = 'STA-LTA'
 
     def run(self, x, fs, threshold=None, peak_window=1.0):
         """"""

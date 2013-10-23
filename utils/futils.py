@@ -34,7 +34,6 @@ from struct import pack
 # a single-character byte object in py3 / a single-character string
 # in py2.
 #
-
 _text_characters = (
         b''.join(chr(i) for i in range(32, 127)) +
         b'\n\r\t\f\b')
@@ -62,7 +61,7 @@ def istextfile(filename, blocksize=512):
 
 
 def is_little_endian():
-    """"""
+    """Checks whether the current architecture is little-endian or not"""
     if pack('@h', 1) == pack('<h', 1):
         return True
     return False
@@ -80,7 +79,8 @@ def read_in_chunks(file_object, chunk_size=1024):
 
 
 def read_txt_in_chunks(file_object, n=1024):
-    """"""
+    """Lazy function (generator) to read a text file in chunks.
+    Default chunk size: 1024 characters"""
     numeric_pattern = r'[+-]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[Ee][+-]?\d+)?'
     data = []
     for line in file_object.xreadlines():
@@ -92,7 +92,7 @@ def read_txt_in_chunks(file_object, n=1024):
 
 
 def getSize(f):
-    """"""
+    """Gets the size of a file in bytes."""
     f.seek(0, 2)  # move the cursor to the end of the file
     size = f.tell()
     f.seek(0)
@@ -100,7 +100,27 @@ def getSize(f):
 
 
 def get_delimiter(fileobject, lines=16):
-    """"""
+    """Infers the delimiter used in a text file containing a list of numbers.
+
+    The text file must contain on each line a list of numbers separated
+    by a delimiter character, e.g.:
+
+    # Example comment
+    12.5,10,12
+    30,5,3
+    3,5,0.5,2.3
+
+    In this case the function will return ',' as delimiter
+
+    Args:
+        fileobject: A text file like object.
+        lines: The maximum number of lines to be read from the beginning
+            of the file in order to detect the delimiter.
+
+    Returns:
+        A character corresponding to the delimiter detected.
+        An empty string if nothing was found.
+    """
     integer = r'[+-]?\d+'
     decimal = r'\d+(e[+-]\d+)?'
     number = r'{integer}\.{decimal}'.format(integer=integer, decimal=decimal)
@@ -129,7 +149,9 @@ def get_delimiter(fileobject, lines=16):
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
-    """"""
+    """Recursively copy an entire directory tree.
+    The destination directory must not already exist.
+    """
     if not os.path.exists(dst):
         os.makedirs(dst)
     for item in os.listdir(src):
