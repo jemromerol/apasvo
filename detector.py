@@ -118,9 +118,9 @@ def print_settings(args):
     if args.method == 'stalta':
         sys.stdout.write("\nSTA-LTA settings:\n")
         sys.stdout.write("%30s: %s\n" % ("STA window length(s)",
-                                       args.sta_window))
+                                       args.sta_length))
         sys.stdout.write("%30s: %s\n" % ("LTA window length(s)",
-                                       args.lta_window))
+                                       args.lta_length))
     sys.stdout.write("\n")
     sys.stdout.flush()
 

@@ -29,6 +29,7 @@ from scipy import signal
 
 
 def find_peaks(x, threshold=None, order=1):
+    """"""
     if threshold is not None:
         event_peaks = signal.argrelmax(x, order=int(order))[0]
         if event_peaks.size > 0:

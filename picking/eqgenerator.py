@@ -30,8 +30,24 @@ from scipy import signal
 from utils.formats import rawfile
 
 
-def gutenberg_richter(b=1.0, size=None, m_min=2.0, m_max=None):
-    """
+def gutenberg_richter(b=1.0, size=1, m_min=2.0, m_max=None):
+    """Generates a random sequence of earthquake magnitudes
+    according to Gutenberg-Richter law.
+
+    See:
+    BAKER, Jack W. An introduction to probabilistic seismic hazard analysis (PSHA).
+    White paper, version, 2008, vol. 1.
+
+    Args:
+        b: A parameter that measures the relative ratio between small and large
+            magnitudes in a region. Default value is 1.0.
+        size: Size of the generated sequence. Default value is 1.
+        m_min: Minimum magnitude considered. Default: 2.0.
+        m_max: Upper bound of earthquake magnitudes.
+            Default value is None, which means no upper limit is considered.
+
+    Returns:
+        out: A list of random earthquake magnitudes.
     """
     if m_max:
         bound_term = 1.0 - 10 ** (-b * (m_max - m_min))
@@ -41,10 +57,56 @@ def gutenberg_richter(b=1.0, size=None, m_min=2.0, m_max=None):
 
 
 def generate_artificial_earthquake(tmax, t0, fs, P_signal_db, P_noise_db,
-                                   bfirls, low_period=50., high_period=10.,
+                                   bfirls=None, low_period=50., high_period=10.,
                                    bandwidth=4., overlap=1., f_low=2.,
                                    f_high=18., low_amp=.2, high_amp=.1):
-    """
+    """Generates a synthetic earthquake signal with background noise.
+
+    An artificial earthquake is generated at the desired start point from
+    white noise band-filtered and modulated by using different envelope
+    functions for each band.
+    Similarly, background noise is modeled from white noise and finally
+    added to the previously generated sequence that contains the synthetic
+    earthquake.
+
+    Args:
+        tmax: Length of the generated signal in seconds.
+        t0: Start time of the earthquake in seconds from the beginning
+            of the signal.
+        fs: Sample rate in Hz.
+        P_signal_db: Earthquake power in dB.
+        P_noise_db: Background noise power in dB.
+        bfirls: A list of coefficients of a FIR filter that models the
+            background noise. See:
+
+            Peterson, J. (1993). Observations and modeling of seismic
+            background noise.
+
+            Default value is None, which means unfiltered white noise is used
+                to model the background noise.
+        low_period: Start value of the range of noise envelope lengths
+            for the different bands at the multi-band synthesis.
+            Default: 50 seconds.
+        high_period: End value of the range of noise envelope lengths
+            for the different bands at the multi-band synthesis.
+            Default: 10 seconds.
+        bandwidth: Bandwidth of each band at the multi-band synthesis.
+            Default: 4 Hz.
+        overlap: Overlap between bands at the multi-band synthesis.
+            Default: 1 Hz.
+        f_low: Start frequency at the multi-band synthesis.
+            Default: 2 Hz.
+        f_high: End frequency at the multi-band synthesis.
+            Default: 18 Hz.
+        low_amp: Start value of the range of noise envelope amplitudes
+            for the different bands at the multi-band synthesis.
+            Default: 0.2.
+        high_amp: End value of the range of noise envelope amplitudes
+            for the different bands at the multi-band synthesis.
+            Default: 0.1.
+
+    Returns:
+        out: A numpy array containing the generated signal.
     """
     # Earthquake generation
     artificial_earthquake = generate_seismic_earthquake(tmax, t0, fs,
@@ -63,7 +125,33 @@ def generate_artificial_earthquake(tmax, t0, fs, P_signal_db, P_noise_db,
 def generate_seismic_earthquake(tmax, t0, fs, P_signal_db, low_period,
                                    high_period, bandwidth, overlap,
                                    f_low, f_high, low_amp, high_amp):
-    """
+    """Generates a synthetic earthquake signal.
+
+    An artificial earthquake is generated at the desired start point from
+    white noise band-filtered and modulated by using different envelope
+    functions for each band.
+
+    Args:
+        tmax: Length of the generated signal in seconds.
+        t0: Start time of the earthquake in seconds from the beginning
+            of the signal.
+        fs: Sample rate in Hz.
+        P_signal_db: Earthquake power in dB.
+        low_period: Start value of the range of noise envelope lengths
+            for the different bands at the multi-band synthesis.
+        high_period: End value of the range of noise envelope lengths
+            for the different bands at the multi-band synthesis.
+        bandwidth: Bandwidth of each band at the multi-band synthesis.
+        overlap: Overlap between bands at the multi-band synthesis.
+        f_low: Start frequency at the multi-band synthesis.
+        f_high: End frequency at the multi-band synthesis.
+        low_amp: Start value of the range of noise envelope amplitudes
+            for the different bands at the multi-band synthesis.
+        high_amp: End value of the range of noise envelope amplitudes
+            for the different bands at the multi-band synthesis.
+
+    Returns:
+        out: A numpy array containing the generated signal.
     """
     L = tmax * fs
     # Value from which the exponential function truncates its fall
@@ -110,9 +198,27 @@ def generate_seismic_earthquake(tmax, t0, fs, P_signal_db, low_period,
     return artificial_earthquake
 
 
-def generate_seismic_noise(tmax, fs, P_noise_db, bfirls):
+def generate_seismic_noise(tmax, fs, P_noise_db, bfirls=None):
+    """Generates a seismic background noise signal.
+
+    Args:
+        tmax: Length of the generated signal in seconds.
+        fs: Sample rate in Hz.
+        P_noise_db: Background noise power in dB.
+        bfirls: A list of coefficients of a FIR filter that models the
+            background noise. See:
+
+            Peterson, J. (1993). Observations and modeling of seismic
+            background noise.
+
+            Default value is None, which means unfiltered white noise is used
+                to model the background noise.
+
+    Returns:
+        out: A numpy array containing the generated signal.
     """
-    """
+    if bfirls is None:
+        bfirls = np.array([1])
     L = tmax * fs
     # White noise generation for polluting the earthquake
     # We add noise according to Peterson's Model
@@ -126,14 +232,45 @@ def generate_seismic_noise(tmax, fs, P_noise_db, bfirls):
 
 
 class EarthquakeGenerator(object):
-    """
+    """A class that generates synthetic earthquake signals.
+
+    Attributes:
+        bfirls: A list of coefficients of a FIR filter that models the
+            background noise. See:
+
+            Peterson, J. (1993). Observations and modeling of seismic
+            background noise.
+
+            Default value is None, which means unfiltered white noise is used
+                to model the background noise.
+        fs: Sample rate in Hz.
+        P_noise_db: Background noise power in dB.
+        low_period: Start value of the range of noise envelope lengths
+            for the different bands at the multi-band synthesis.
+            Default: 50 seconds.
+        high_period: End value of the range of noise envelope lengths
+            for the different bands at the multi-band synthesis.
+            Default: 10 seconds.
+        bandwidth: Bandwidth of each band at the multi-band synthesis.
+            Default: 4 Hz.
+        overlap: Overlap between bands at the multi-band synthesis.
+            Default: 1 Hz.
+        f_low: Start frequency at the multi-band synthesis.
+            Default: 2 Hz.
+        f_high: End frequency at the multi-band synthesis.
+            Default: 18 Hz.
+        low_amp: Start value of the range of noise envelope amplitudes
+            for the different bands at the multi-band synthesis.
+            Default: 0.2.
+        high_amp: End value of the range of noise envelope amplitudes
+            for the different bands at the multi-band synthesis.
+            Default: 0.1.
     """
 
-    def __init__(self, bfirls=np.array([1]), fs=50.0, P_noise_db=0.0,
+    def __init__(self, bfirls=None, fs=50.0, P_noise_db=0.0,
                  low_period=50.0, high_period=10.0, bandwidth=4.0,
                  overlap=1.0, f_low=2.0, f_high=18.0,
                  low_amp=0.2, high_amp=0.1, **kwargs):
-        """"""
         super(EarthquakeGenerator, self).__init__()
         self.bfirls = bfirls
         self.fs = fs
@@ -147,15 +284,48 @@ class EarthquakeGenerator(object):
         self.low_amp = low_amp
         self.high_amp = high_amp
 
-    def load_noise_coefficients(self, fileobj, dtype, byteorder):
-        """"""
+    def load_noise_coefficients(self, fileobj, dtype='float64',
+                                byteorder='native'):
+        """Loads 'bfirls' attribute from a given file.
+
+        File must be on binary or plain text format.
+
+        Args:
+            fileobj: A binary or text file object containing a list of numeric
+                coefficients.
+            dtype: Data-type of the numeric data stored into the file.
+            byteorder: Byte-order of the numeric data stored into the file.
+        """
         fhandler = rawfile.get_file_handler(fileobj, dtype=dtype,
                                             byteorder=byteorder)
         self.bfirls = fhandler.read()
 
     def generate_events(self, t_average, t_max, b=1.0,
                                m_min=2.0, m_max=7.0):
-        """"""
+        """Generates a random sequence of seismic events from initial
+        time zero to a given maximum time.
+
+        Events are described by their time of occurrence and magnitude.
+
+        The time interval between events is generated by using a Poisson
+        distribution, while their magnitudes are generated according to
+        Gutenberg-Richter's law. The number of generated events may vary
+        between function calls even if the same parameters are used.
+
+        Args:
+            t_average: Average time between two consecutive events.
+            t_max: Maximum time.
+            b: A parameter that measures the relative ratio between small and
+                large magnitudes in a region. Default value is 1.0.
+            m_min: Minimum magnitude considered. Default: 2.0.
+            m_max: Upper bound of earthquake magnitudes.
+                If value is None then no upper limit is considered.
+                Default: 7.0.
+
+        Returns:
+            event_t: Times list of the generated events.
+            event_m: Magnitudes list of the generated events.
+        """
         event_t = []
         t = np.random.poisson(t_average)
         while t < t_max:
@@ -166,47 +336,61 @@ class EarthquakeGenerator(object):
 
     def generate_nevents(self, t_average, event_n, b=1.0,
                                m_min=2.0, m_max=7.0):
-        """"""
+        """Generates a random list of seismic events of a given size.
+
+        Events are described by their time of occurrence and magnitude.
+
+        The time interval between events is generated by using a Poisson
+        distribution, while their magnitudes are generated according to
+        Gutenberg-Richter's law.
+
+        Args:
+            t_average: Average time between two consecutive events.
+            event_n: Number of events generated.
+            b: A parameter that measures the relative ratio between small and
+                large magnitudes in a region. Default value is 1.0.
+            m_min: Minimum magnitude considered. Default: 2.0.
+            m_max: Upper bound of earthquake magnitudes.
+                If value is None then no upper limit is considered.
+                Default: 7.0.
+
+        Returns:
+            event_t: Times list of the generated events.
+            event_m: Magnitudes list of the generated events.
+        """
         event_t = np.cumsum(np.random.poisson(t_average, event_n))
         event_m = gutenberg_richter(b, event_n, m_min, m_max)
         return event_t, event_m
 
-    def generate_sequence(self, t_max, event_t, event_m):
-        event_n = len(event_t)
-        """"""
-        out = generate_seismic_noise(t_max, self.fs, self.P_noise_db,
-                                     self.bfirls)
+    def generate_earthquake(self, t_max, t0, p_eq):
+        """Generates a synthetic earthquake with background noise.
 
-        eq_len = max(self.low_period, self.high_period)
-        for i in xrange(event_n):
-            size = min(eq_len, t_max - event_t[i])
-            eq = generate_seismic_earthquake(eq_len, 0.,
-                                             self.fs, event_m[i],
-                                             self.low_period, self.high_period,
-                                             self.bandwidth, self.overlap,
-                                             self.f_low, self.f_high,
-                                             self.low_amp, self.high_amp)
-            i_from = int(event_t[i] * self.fs)
-            i_to = int((event_t[i] + size) * self.fs)
-            out[i_from:i_to] += eq[:size * self.fs]
+        Args:
+            t_max: Length of the generated signal in seconds.
+            t0: Start time of the earthquake in seconds from the beginning
+                of the signal in seconds.
+            p_eq: Earthquake power in dB.
 
-        return out
+        Returns:
+            out: A numpy array containing the generated signal.
+        """
+        return generate_artificial_earthquake(t_max, t0, self.fs, p_eq,
+                                              self.P_noise_db, self.bfirls,
+                                              self.low_period,
+                                              self.high_period,
+                                              self.bandwidth, self.overlap,
+                                              self.f_low, self.f_high,
+                                              self.low_amp, self.high_amp)
 
-    def generate_earthquake(self, t_max, t0, p_eq, eq=None):
-        """"""
-        if eq == None:
-            return generate_artificial_earthquake(t_max, t0, self.fs, p_eq,
-                                                  self.P_noise_db, self.bfirls,
-                                                  self.low_period,
-                                                  self.high_period,
-                                                  self.bandwidth, self.overlap,
-                                                  self.f_low, self.f_high,
-                                                  self.low_amp, self.high_amp)
-        else:
-            out = generate_seismic_noise(t_max, self.fs, self.P_noise_db,
-                                         self.bfirls)
-            size = int(min(len(eq), (t_max - t0) * self.fs))
-            i_from = int(t0 * self.fs)
-            i_to = int(t0 * self.fs + size)
-            out[i_from:i_to] += eq[:size]
-            return out
+    def generate_noise(self, eq):
+        """Adds background noise to a given seismic signal.
+
+        Args:
+            eq: A seismic signal, numpy array type.
+
+        Returns:
+            out: Generated signal, numpy array type.
+        """
+        noise = generate_seismic_noise(len(eq), self.fs, self.P_noise_db,
+                                       self.bfirls)
+        return noise + eq

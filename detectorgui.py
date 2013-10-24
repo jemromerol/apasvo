@@ -1032,7 +1032,7 @@ class PickingTaskDialog(QtGui.QDialog):
     def init_ui(self):
         self.setWindowTitle('Signal processing')
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
-        self.label = QtGui.QLabel("Applying %s..." % self.alg.name, self)
+        self.label = QtGui.QLabel("Applying %s..." % self.alg._name, self)
         self.pbarWidget = QtGui.QWidget(self)
         self.pbar = QtGui.QProgressBar(self.pbarWidget)
         self.pbar.setMinimum(0)

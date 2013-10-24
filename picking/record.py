@@ -123,7 +123,7 @@ class Record(object):
         # Build event list
         self.events = []
         for t in et:
-            self.events.append(Event(t / self.fs, self.cf[t], method=alg.name,
+            self.events.append(Event(t / self.fs, self.cf[t], method=alg._name,
                                      mode='automatic', state='reported'))
         # Sort results
         key = 'cf_value' if sort[0] == 'v' else 'time'

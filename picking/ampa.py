@@ -115,13 +115,13 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
             the noise reduction level for each band at the noise reduction
             stage.
             Default value is 90.
-        bandwidth: Bandwidth of each band of the adaptive multi-band analysis.
+        bandwidth: Bandwidth of each band at the adaptive multi-band analysis.
             Default: 3 Hz.
-        overlap: Overlap between bands of the adaptive multi-band analysis.
+        overlap: Overlap between bands at the adaptive multi-band analysis.
             Default: 1 Hz.
-        f_start: Start frequency of the adaptive multi-band analysis.
+        f_start: Start frequency at the adaptive multi-band analysis.
             Default: 2 Hz.
-        max_f_end: End frequency of the adaptive multi-band analysis.
+        max_f_end: End frequency at the adaptive multi-band analysis.
             Default: 12 Hz.
         U: A parameter used at the end of the enhancement filter stage to avoid
             logarithm of zero and to shift the characteristic function to zero.
@@ -307,8 +307,8 @@ class Ampa(object):
         """
         tail = int(np.max(self.L) * fs)
         out = np.zeros(len(x) - tail)
-        step = self.step * fs
-        overlapped = max(0, int(self.window * self.window_overlap * fs) - tail)
+        step = int(self.step * fs)
+        overlapped = max(0, int((self.window - self.step) * fs) - tail)
         for i in xrange(0, len(out), step):
             size = min(self.window * fs, len(x) - i)
             _, cf = ampa(x[i:i + size], fs, L=self.L,
