@@ -28,16 +28,46 @@ import numpy as np
 
 
 def takanami(x, n0, n1, p=1, k=5):
-    """
+    """Event picking using Takanami AR algorithm.
+
+    The Takanami algorithm estimates the arrival time of a seismic signal
+    by using two autoregressive models: a model that fits the earthquake and
+    a noise model. Assuming that the characteristics before and after the
+    arrival of the earthquake are quite different, the arrival time is
+    estimated by searching the time point where the minimum value of the
+    Akaike's Information Criterion is reached.
+
+    See:
+    Takanami, T., & Kitagawa, G. (1988).
+    A new efficient procedure for the estimation of onset times of seismic
+    waves. Journal of Physics of the Earth, 36(6), 267-290.
+
+    Args:
+        x: A seismic signal, numpy array type.
+        n0: Initial point of the interval [n0,n1] where the method assumes
+            the arrival time is in.
+            The value is given in samples from the beginning of 'x'.
+        n1: Final point of the interval [n0,n1] where the method assumes that
+            the arrival time is on it.
+            The value is given in samples from the beginning of 'x'.
+        p: Step of the autoregressive model.
+            Default: 1.
+        k: Order of the autoregressive model.
+            Default: 5.
+
+    Returns:
+        n_pick: Arrival time.
+            The value is given in samples from the beginning of 'x'.
+        total_aic: List of AIC values from 'n0' to 'n1'
     """
     l = (n1 - n0) / float(p)  # l + 1 models
     # Noise Model
-    noise_aic = takanami_aic(x, n0, l, k, p)
+    noise_aic = _takanami_aic(x, n0, l, k, p)
     # Earthquake Model
     # Invert the signal, so the procedure is similar to the noise model's one
     x = x[::-1]
     new_n0 = len(x) - (n1 + 1) + 1  # n0's value changes
-    earthquake_aic = takanami_aic(x, new_n0, l, k, p)
+    earthquake_aic = _takanami_aic(x, new_n0, l, k, p)
     earthquake_aic = earthquake_aic[::-1]
     # Picking time estimation
     total_aic = noise_aic + earthquake_aic
@@ -46,8 +76,22 @@ def takanami(x, n0, n1, p=1, k=5):
     return n_pick, total_aic
 
 
-def takanami_aic(x, n0, l, k=5, p=1):
-    """
+def _takanami_aic(x, n0, l, k=5, p=1):
+    """Computes AIC values of an autoregressive model.
+
+    Args:
+        x: A seismic signal, numpy array type.
+        n0: Initial point of the interval [n0,n1] where the method assumes
+            the arrival time is in.
+            The value is given in samples from the beginning of 'x'.
+        l: Number of possible models in the interval [n0,n1].
+        k: Order of the autoregressive model.
+            Default: 5.
+        p: Step of the autoregressive model.
+            Default: 1.
+
+    Returns:
+        aic_values: List of AIC values from n0 to n1.
     """
     if p <= 0:
         raise ValueError("p should be a positive value")
@@ -99,17 +143,43 @@ def takanami_aic(x, n0, l, k=5, p=1):
 
 
 class Takanami(object):
-    """
+    """A class to configure an instance of Takanami AR algorithm and
+    apply it over a given seismic signal.
+
+    Attributes:
+        p: Step of the autoregressive model.
+            Default: 1.
+        k: Order of the autoregressive model.
+            Default: 5.
     """
 
     def __init__(self, p=1, k=5):
-        """"""
         super(Takanami, self).__init__()
         self.p = p
         self.k = k
 
     def run(self, x, fs, t_start=0.0, t_end=np.inf):
-        """"""
+        """Executes Takanami AR algorithm over a given array of data.
+
+        The function searches an arrival time between two time points 't_start'
+        and 't_end'. The Takanami method assumes that the characteristics before
+        and after the arrival of the earthquake are quite different, so it's
+        important to choose a narrow interval in order to get good results.
+
+        Args:
+            x: Seismic data, numpy array type.
+            fs: Sample rate in Hz.
+            t_start: Start time point of the interval [t_start,t_end] where the
+                arrival time is supposed to be.
+            t_end: End time point of the interval [t_start, t_end] where the
+                arrival time is supposed to be.
+
+        Return:
+            et: Arrival time, given in samples from the beginning of 'x'.
+            aic: List of AIC values.
+            n0: Start time point of 'aic'.
+                The value is given in samples from the beginning of 'x'.
+        """
         i_from = int(max(0, t_start * fs))
         i_to = int(min(len(x), t_end * fs))
         n0 = (self.k + 1) * 2

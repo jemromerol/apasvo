@@ -29,7 +29,21 @@ from scipy import signal
 
 
 def find_peaks(x, threshold=None, order=1):
-    """"""
+    """Finds local maxima of a function.
+
+    Args:
+        x: A data vector.
+        threshold: Local maxima under this value will be discarded.
+            If threshold is None, the function will return only the global
+            maximum.
+            Defaut value os None.
+        order: Number of samples before and after a data point that have
+            to be smaller than the data point to be considered a local maximum.
+            If 'threshold' is None, this argument has no effect.
+            Default: 1.
+    Returns:
+        out: A list of local maxima, numpy array type.
+    """
     if threshold is not None:
         event_peaks = signal.argrelmax(x, order=int(order))[0]
         if event_peaks.size > 0:

@@ -33,7 +33,43 @@ from numpy.lib import stride_tricks
 
 def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
             peak_window=1.):
-    """
+    """Event picking/detection using STA-LTA algorithm.
+
+    The STA-LTA algorithm processes seismic signals by using two moving time
+    windows, a short time average window (STA), which measures the instant
+    amplitude of the signal and watches for earthquakes, and a long time
+    average windows, which takes care of the current average of the signal
+    amplitude.
+
+    See:
+    Trnkoczy, A. (2002). Understanding and parameter setting of STA/LTA trigger
+    algorithm. IASPEI New Manual of Seismological Observatory Practice, 2, 1-19.
+
+    Args:
+        x: Seismic data, numpy array type.
+        fs: Sampling rate in Hz.
+        threshold: Local maxima found in the characteristic function above
+            this value will be returned by the function as possible events
+            (detection mode).
+            If threshold is None, the function will return only the global
+            maximum (picking mode).
+            Default value is None.
+        sta_length: Length of STA window, in seconds.
+            Default: 5.0 seconds.
+        lta_length: Length of LTA window, in seconds:
+            Default: 100.0 seconds.
+        peak_window: How many seconds on each side of a point of the
+            characteristic function to use for the comparison to consider the
+            point to be a local maximum.
+            If 'threshold' is None, this parameter has no effect.
+            Default value is 1 s.
+
+    Returns:
+        event_t: A list of possible event locations, given in samples from the
+            start of the signal, that correspond to the local maxima of the
+            characteristic function. If threshold is None, the list contains
+            only the global maximum of the function.
+        cf: Characteristic function, numpy array type.
     """
     # Check arguments
     if fs <= 0:
@@ -64,18 +100,47 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
 
 
 class StaLta(object):
-    """
-    """
+    """A class to configure an instance of the STA-LTA algorithm and
+    apply it over a given seismic signal.
 
-    def __init__(self, sta_length=10.0, lta_length=600.0, **kwargs):
-        """"""
+    Attributes:
+        sta_length: Length of STA window, in seconds.
+            Default: 5.0 seconds.
+        lta_length: length of LTA window, in seconds.
+            Default 100.0 seconds.
+    """
+    _name = 'STA-LTA'
+
+    def __init__(self, sta_length=5.0, lta_length=100.0, **kwargs):
         super(StaLta, self).__init__()
         self.sta_length = sta_length
         self.lta_length = lta_length
-        self._name = 'STA-LTA'
 
     def run(self, x, fs, threshold=None, peak_window=1.0):
-        """"""
+        """Executes STA-LTA algorithm over a given array of data
+
+        Args:
+            x: Seismic data, numpy array type.
+            fs: Sample rate in Hz.
+            threshold: Local maxima found in the characteristic function above
+                this value will be returned by the function as possible events
+                (detection mode).
+                If threshold is None, the function will return only the global
+                maximum (picking mode).
+                Default value is None.
+            peak_window: How many seconds on each side of a point of the
+                characteristic function to use for the comparison to consider
+                the point to be a local maximum.
+                If 'threshold' is None, this parameter has no effect.
+                Default value is 1 s.
+
+        Returns:
+            et: A list of possible event locations, given in samples from the
+                start of the signal, that correspond to the local maxima of the
+                characteristic function. If threshold is None, the list contains
+                only the global maximum of the function.
+            cf: Characteristic function, numpy array type.
+        """
         et, cf = sta_lta(x, fs, threshold=threshold,
                          sta_length=self.sta_length,
                          lta_length=self.lta_length,

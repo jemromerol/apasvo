@@ -260,6 +260,7 @@ class Ampa(object):
             logarithm of zero and to shift the characteristic function to zero.
             Default value is 12.
     """
+    _name = 'AMPA'
 
     def __init__(self, window=100., step=50.,
                  L=None, L_coef=3., noise_thr=90.,
@@ -278,10 +279,9 @@ class Ampa(object):
         self.f_start = f_start
         self.max_f_end = f_end
         self.U = U
-        self._name = 'AMPA'
 
     def run(self, x, fs, threshold=None, peak_window=1.0):
-        """Executes AMPA algorithm over a given array of data
+        """Executes AMPA algorithm over a given array of data.
 
         Args:
             x: Seismic data, numpy array type.
