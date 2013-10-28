@@ -45,7 +45,9 @@ from gui import ui_loaddialog
 from _version import __version__
 from utils import futils
 from utils.formats import rawfile
-from picking import stalta, ampa
+from picking import stalta
+from picking import ampa
+from picking import envelope as env
 from picking import record as rc
 
 _organization = 'UGR'
@@ -605,7 +607,7 @@ class SignalViewerWidget(QtGui.QWidget):
                                                   rasterized=True)[0]
         # Plot envelope
         self._envelope_data = self.fig.axes[0].plot(self.time,
-                                                    rc.envelope(self.record.signal),
+                                                    env.envelope(self.record.signal),
                                                     color='red',
                                                     rasterized=True)[0]
         # Plot CF

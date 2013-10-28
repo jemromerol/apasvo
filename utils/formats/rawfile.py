@@ -32,9 +32,11 @@ from utils import futils
 class RawFile(object):
     """An abstract class representing a binary or plain text file."""
 
+    datatypes = {'float16': 'f2', 'float32': 'f4', 'float64': 'f8'}
+    byteorders = {'little-endian': '<', 'big-endian': '>', 'native': '='}
+
     def __init__(self):
-        self.datatypes = {'float16': 'f2', 'float32': 'f4', 'float64': 'f8'}
-        self.byteorders = {'little-endian': '<', 'big-endian': '>', 'native': '='}
+        super(RawFile, self).__init__()
 
     def read(self):
         raise NotImplementedError

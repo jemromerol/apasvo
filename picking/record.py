@@ -25,7 +25,6 @@
 '''
 
 import numpy as np
-from scipy import fftpack
 import csv
 import os
 import matplotlib.pyplot as pl
@@ -33,30 +32,50 @@ from matplotlib import ticker
 import datetime
 
 from picking import takanami
+from picking import envelope as env
 from utils.formats import rawfile
 
 
-def envelope(x):
-    """"""
-    return (x ** 2 + fftpack.hilbert(x) ** 2) ** 0.5
+def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
+    """Generates a Comma Separated Value (CSV) resume file from a list of
+    Record objects.
 
+    The function stores into a file a resume table of the events found
+    for a given list of records. The table has the following fields:
+        file_name: Name of the file (absolute path) that stores the data
+            signal where the event was found.
+        time: Event arrival time, in seconds from the beginning of the signal.
+        cf_value: Characteristic function value at the event arrival time.
+        name: An arbitrary string that identifies the event.
+        method: A string indicating the algorithm used to find the event.
+            Possible values are: 'STA-LTA', 'STA-LTA+Takanami', 'AMPA',
+            'AMPA+Takanami' and 'other'.
+        mode: Event picking mode. Possible values are: 'manual', 'automatic'
+            and 'undefined'.
+        status: Revision status of the event. Possible values are: 'reported',
+            'revised', 'confirmed', 'rejected' and 'undefined'.
+        comments: Additional comments.
 
-def generate_csv(records, out, delimiter='\t', lineterminator='\n'):
-    """
+    Args:
+        records: A list of record objects.
+        fout: Output file object.
+        delimiter: A delimiter character that separates fields/columns.
+            Default character is ','.
+        lineterminator: A delimiter character that separates records/rows.
     """
     # Extract data from records
     rows = [{'file_name': record.filename,
-             'time': str(datetime.timedelta(seconds=event.time)),
+             'time': str(datetime.timedelta(seconds=event.time / record.fs)),
              'cf_value': event.cf_value,
              'name': event.name,
              'method': event.method,
              'mode': event.mode,
-             'state': event.state,
+             'status': event.state,
              'comments': event.comments} for record in records
                                          for event in record.events]
     # Write data to csv
-    writer = csv.DictWriter(out, ['file_name', 'time', 'cf_value', 'name',
-                                  'method', 'mode', 'state', 'comments'],
+    writer = csv.DictWriter(fout, ['file_name', 'time', 'cf_value', 'name',
+                                  'method', 'mode', 'status', 'comments'],
                             delimiter=delimiter, lineterminator=lineterminator)
     writer.writeheader()
     for row in rows:
@@ -64,18 +83,45 @@ def generate_csv(records, out, delimiter='\t', lineterminator='\n'):
 
 
 class Event(object):
-    """
+    """A seismic event found in a Record instance.
+
+    This class stores several attributes used to describe a possible event
+    found in a seismic signal, as well as data results from the computation
+    of Takanami algorithm in order to refine the arrival time of the event.
+
+    Attributes:
+        record: Record instance where the event was found.
+        time: Event arrival time, given in samples from the beginning of
+            record.signal.
+        cf_value: Characteristic function value at the event arrival time.
+        name: An arbitrary string that identifies the event.
+            Default: ''.
+        comments: Additional comments.
+            Default: ''.
+        method: A string indicating the algorithm used to find the event.
+            Possible values are: 'STA-LTA', 'STA-LTA+Takanami', 'AMPA',
+            'AMPA+Takanami' and 'other'.
+            Default: 'other'.
+        mode: Event picking mode. Possible values are: 'manual', 'automatic'
+            and 'undefined'.
+            Default: 'automatic'.
+        status: Revision status of the event. Possible values are: 'reported',
+            'revised', 'confirmed', 'rejected' and 'undefined'.
+            Default: 'reported'.
+        n0_aic: Start time point of computed AIC values. The value is given in
+            samples from the beginning of record.signal.
+        aic: List of AIC values from n0_aic.
     """
 
     methods = ['other', 'STA-LTA', 'STA-LTA+Takanami', 'AMPA', 'AMPA+Takanami']
     modes = ['manual', 'automatic', 'undefined']
-    states = ['reported', 'revised', 'confirmed', 'rejected', 'undefined']
+    statuses = ['reported', 'revised', 'confirmed', 'rejected', 'undefined']
 
-    def __init__(self, time, cf_value, name='', comments='', method='other',
-                 mode='automatic', state='reported', aic=None, n0_aic=None,
-                 **kwargs):
-        """"""
+    def __init__(self, record, time, cf_value, name='', comments='',
+                 method='other', mode='automatic', status='reported',
+                 aic=None, n0_aic=None, **kwargs):
         super(Event, self).__init__()
+        self.record = record
         self.time = time
         self.cf_value = cf_value
         self.name = name
@@ -84,19 +130,48 @@ class Event(object):
         if mode not in self.modes:
             mode = 'undefined'
         self.mode = mode
-        if state not in self.states:
-            state = 'undefined'
-        self.state = state
+        if status not in self.statuses:
+            status = 'undefined'
+        self.status = status
         self.aic = aic
         self.n0_aic = n0_aic
 
 
 class Record(object):
-    """"""
+    """A seismic data record.
+
+    The class contains a seismic data trace. Provides methods that allows
+
+    Attributes:
+        signal: Seismic data, numpy array type.
+        fs: Sample rate in Hz.
+        cf: Characteristic function, numpy array type, from the beginning
+            of signal.
+        events: A list of events.
+        label: A string that identifies the stored seismic data.
+            Default: ''.
+        description: Additional comments.
+            Default: ''.
+        filename: Name of the file (absolute path) where data is stored.
+    """
 
     def __init__(self, fileobj, fs, label='', description='', fmt='',
                  dtype='float64', byteorder='native', **kwargs):
-        """"""
+        """Initializes a Record instance.
+
+        Args:
+            fileobj: A file (binary or plain text) storing seismic data.
+            fs: Sample rate in Hz.
+            label: A string that identifies the seismic record. Default: ''.
+            description: Additional comments.
+            fmt: A string indicating fileobj's format. Possible values are
+                'binary', 'text' or ''. Default value is ''.
+            dtype: Data-type of the data stored in fileobj. Default value
+                is 'float64'.
+            byteorder: Byte-order of the data stored in fileobj.
+                Valid values are: 'little-endian', 'big-endian' and 'native'.
+                Default: 'native'.
+        """
         super(Record, self).__init__()
         if isinstance(fileobj, file):
             self.filename = fileobj.name
@@ -114,36 +189,78 @@ class Record(object):
         self.label = label
         self.description = description
 
-    def detect(self, alg, threshold=None, peak_checking=1.0, sort='vd',
+    def detect(self, alg, threshold=None, peak_window=1.0,
                takanami=False, takanami_margin=5.0, **kwargs):
-        """
+        """Computes a picking algorithm over self.signal.
+
+        Args:
+            alg: A detection/picking algorithm object, e. g. an
+                picking.ampa.Ampa or picking.stalta.StaLta instance.
+            threshold: Local maxima found in the characteristic function above
+                this value will be returned by the function as possible events
+                (detection mode).
+                If threshold is None, the function will return only the global
+                maximum (picking mode).
+                Default value is None.
+            peak_window: How many seconds on each side of a point of the
+                characteristic function to use for the comparison to consider
+                the point to be a local maximum.
+                If 'threshold' is None, this parameter has no effect.
+                Default value is 1 s.
+            takanami: A boolean parameter to specify whether Takanami AR method
+                will be applied over results or not.
+                Default: False, Takanami wont be applied over results.
+            takanami_margin: How many seconds on each side of an event time to
+                use for the application of Takanami method.
+                If 'takanami' is False, this parameter has no effect.
+                Default: 5.0 seconds.
+
+        Returns:
+            events: A resulting list of Event objects.
         """
         et, self.cf = alg.run(self.signal, self.fs, threshold=threshold,
-                                peak_window=peak_checking)
+                                peak_window=peak_window)
         # Build event list
         self.events = []
         for t in et:
-            self.events.append(Event(t / self.fs, self.cf[t], method=alg._name,
+            self.events.append(Event(self, t, self.cf[t], method=alg._name,
                                      mode='automatic', state='reported'))
-        # Sort results
-        key = 'cf_value' if sort[0] == 'v' else 'time'
-        reverse = True if sort[1] == 'd' else False
-        self.sort_events(key, reverse)
-        # Refine
+        # Refine arrival times
         if takanami:
             self._refine_events(takanami_margin)
         return self.events
 
     def sort_events(self, key='time', reverse=False):
-        """"""
+        """Sort event list.
+
+        Args:
+            key: Name of the attribute of Event class to use as sorting key.
+                Default: 'time'.
+            reverse: Determines whether to sort in reverse order or not.
+                Default: False.
+
+        Returns:
+            events: Sorted event list.
+        """
         if key == 'aic':
             raise ValueError("Sorting not allowed using key 'aic'")
         self.events = sorted(self.events,
                              key=lambda e: e.__dict__.get(key, None),
                              reverse=reverse)
+        return self.events
 
     def _refine_events(self, takanami_margin=5.0):
-        """"""
+        """Computes Takanami AR method over self.events.
+
+        Args:
+            takanami_margin: How many seconds on each side of an event time to
+                use for the application of Takanami method.
+                If 'takanami' is False, this parameter has no effect.
+                Default: 5.0 seconds.
+
+        Returns:
+            events: A resulting list of Event objects.
+        """
         taka = takanami.Takanami()
         for event in self.events:
             t_start = event.time - takanami_margin
@@ -156,7 +273,19 @@ class Record(object):
 
     def save_cf(self, fname, fmt='binary', dtype='float64',
                 byteorder='native'):
-        """"""
+        """Saves characteristic function in a file.
+
+        Args:
+            fname: Output file name.
+            fmt: A string indicating the format to store the CF.
+                Possible values are: 'binary' or 'text'.
+                Default value: 'binary'.
+            dtype: Data-type to represent characteristic function values.
+                Default: 'float64'.
+            byteorder: Byte-order to store characteristic function values.
+                Valid values are: 'little-endian', 'big-endian' or 'native'.
+                Default: 'native'.
+        """
         if fmt == 'text':
             fout_handler = rawfile.TextFile(fname, dtype=dtype,
                                             byteorder=byteorder)
@@ -168,7 +297,46 @@ class Record(object):
     def plot_signal(self, t_start=0.0, t_end=np.inf, show_events=True,
                     show_x=True, show_cf=True, show_specgram=True,
                     show_envelope=True, threshold=None, num=None, **kwargs):
-        """
+        """Plots record data.
+
+        Plots
+
+        Args:
+            t_start: Start time of the plotted data segment, in seconds.
+                Default: 0.0, that is the beginning of 'signal'.
+            t_end: End time of the plotted data segment, in seconds.
+                Default: numpy.inf, that is the end of 'signal'
+            show_events: Boolean value to specify whether to plot
+                event arrival times or not. Arrival times will be
+                indicated by using a vertical line.
+                Default: True.
+            show_x: Boolean value to specify whether to plot the
+                magnitude value of 'signal' or not. This function
+                will be drawn preferably on the first axis.
+                Default: True.
+            show_cf: Boolean value to specify whether to plot the
+                characteristic function or not. This function
+                will be drawn preferably on the second axis.
+                Default: True.
+            show_specgram: Boolean value to specify whether to plot the
+                spectrogram of 'signal' or not. It will be drawn preferably
+                on the third axis.
+                Default: True.
+            show_envelope: Boolean value to specify whether to plot the
+                envelope of 'signal' or not. This function will be drawn
+                preferably on the first axis together with amplitude of
+                'signal'.
+                Default: True.
+            threshold: Boolean value to specify whether to plot threshold
+                or not. Threshold will be drawn as an horizontal dashed line
+                together with characteristic function.
+                Default: True.
+            num: Identifier of the returned MatplotLib figure, integer type.
+                Default None, which means an identifier value will be
+                automatically generated.
+
+        Returns:
+            fig: A MatplotLib Figure instance.
         """
         # Set limits
         i_from = int(max(0.0, t_start * self.fs))
@@ -201,7 +369,7 @@ class Record(object):
                                   label='Signal')
             # Draw signal envelope
             if show_envelope:
-                fig.axes[ax_idx].plot(t, envelope(self.signal[i_from:i_to]),
+                fig.axes[ax_idx].plot(t, env.envelope(self.signal[i_from:i_to]),
                                   color='g', label='Envelope')
                 fig.axes[ax_idx].legend(loc=0, fontsize='small')
             ax_idx += 1
@@ -237,7 +405,23 @@ class Record(object):
         return fig
 
     def plot_aic(self, event, show_envelope=True, num=None, **kwargs):
-        """
+        """Plots AIC values for a given event object.
+
+        
+
+        Args:
+            event: An Event object.
+            show_envelope: Boolean value to specify whether to plot the
+                envelope of 'signal' or not. This function will be drawn
+                preferably on the first axis together with amplitude of
+                'signal'.
+                Default: True.
+            num: Identifier of the returned MatplotLib figure, integer type.
+                Default None, which means an identifier value will be
+                automatically generated.
+
+        Returns:
+            fig: A MatplotLib Figure instance.
         """
         # Set limits
         i_from = int(max(0, event.n0_aic))
@@ -263,7 +447,7 @@ class Record(object):
                          label='Signal')
         # Draw envelope
         if show_envelope:
-            fig.axes[0].plot(t, envelope(self.signal[i_from:i_to]),
+            fig.axes[0].plot(t, env.envelope(self.signal[i_from:i_to]),
                          color='g', label='Envelope')
             fig.axes[0].legend(loc=0, fontsize='small')
         # Draw AIC
@@ -281,21 +465,33 @@ class Record(object):
 
 
 class RecordFactory(object):
-    """
+    """Builder class to create Record objects.
+
+    Attributes:
+        fs: Sample rate in Hz.
+        dtype: Data-type of the data to read.
+        byteorder: Byte-order of the data to read.
+        max_record_length: Maximum signal length allowed, in seconds.
+            Currently this attribute has no effect.
+            Default value: 604800.0 seconds (1 week).
     """
 
     def __init__(self, max_segment_length=24 * 7 * 3600, fs=50.0,
-                 dtype='float64', byteorder='native',
-                 notif=None, **kwargs):
-        """"""
+                 dtype='float64', byteorder='native', **kwargs):
         self.fs = fs
         self.dtype = dtype
         self.byteorder = byteorder
         self.max_record_length = (max_segment_length * fs)
-        self.notif = notif
 
     def create_record(self, fileobj, **kwargs):
-        """"""
+        """Creates a Record object.
+
+        Args:
+            fileobj: A file (binary or plain text) storing seismic data.
+
+        Returns:
+            out: Created Record object.
+        """
 #         segment_n = np.ceil(utils.getSize(fileobj) / self.max_record_length)
 #         if segment_n > 1:
 #             fhandler = utils.get_file_handler(fileobj, dtype=self.dtype, byteorder=self.byteorder)
@@ -318,6 +514,6 @@ class RecordFactory(object):
         return Record(fileobj, self.fs, dtype=self.dtype, byteorder=self.byteorder,
                       **kwargs)
 
-    def on_notify(self, msg):
-        """"""
-        pass
+#     def on_notify(self, msg):
+#         """"""
+#         pass
