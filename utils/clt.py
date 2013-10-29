@@ -229,7 +229,7 @@ class Table:
 
 
 class ProgressBar:
-    """A class for drawing a command line progress bar.
+    """A class to draw a command line progress bar.
 
     >>> pbar = clt.ProgressBar(totalWidth=30)
     >>> print pbar

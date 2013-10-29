@@ -74,7 +74,7 @@ class BinFile(RawFile):
         self.dtype = np.dtype(self.byteorders[byteorder] + self.datatypes[dtype])
         self.filename = filename
 
-    def read(self):
+    def read(self, **kwargs):
         """Constructs a numpy array from the data stored in the file.
 
         Data-type and byte-order of the returned array are the object's same.
@@ -92,7 +92,7 @@ class BinFile(RawFile):
             for data in futils.read_in_chunks(f, chunk_size):
                 yield np.frombuffer(data, dtype=self.dtype)
 
-    def write(self, array):
+    def write(self, array, **kwargs):
         """Stores an array into the binary file."""
         return array.tofile(self.filename)
 

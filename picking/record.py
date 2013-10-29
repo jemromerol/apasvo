@@ -292,14 +292,16 @@ class Record(object):
         else:
             fout_handler = rawfile.BinFile(fname, dtype=dtype,
                                            byteorder=byteorder)
-        fout_handler.write(self.cf)
+        fout_handler.write(self.cf, header="Sample rate: %g Hz." % self.fs)
 
     def plot_signal(self, t_start=0.0, t_end=np.inf, show_events=True,
                     show_x=True, show_cf=True, show_specgram=True,
                     show_envelope=True, threshold=None, num=None, **kwargs):
         """Plots record data.
 
-        Plots
+        Draws a figure containing several plots for data stored and computed
+        by a Record object: magnitude, envelope and spectrogram plots for
+        self.signal, as well as characteristic function if calculated.
 
         Args:
             t_start: Start time of the plotted data segment, in seconds.
@@ -393,10 +395,11 @@ class Record(object):
         # Draw event markers
         if show_events:
             for event in self.events:
+                arrival_time = event.time * self.fs
                 for ax in fig.axes:
                     xmin, xmax = ax.get_xlim()
-                    if event.time > xmin and event.time < xmax:
-                        vline = ax.axvline(event.time, label="Event")
+                    if arrival_time > xmin and arrival_time < xmax:
+                        vline = ax.axvline(arrival_time, label="Event")
                         vline.set(color='r', ls='--', lw=2)
                         ax.legend(loc=0, fontsize='small')
         # Configure limits and draw legend
@@ -407,7 +410,10 @@ class Record(object):
     def plot_aic(self, event, show_envelope=True, num=None, **kwargs):
         """Plots AIC values for a given event object.
 
-        
+        Draws a figure with two axes: the first one plots magnitude and
+        envelope of 'self.signal' and the second one plots AIC values computed
+        after applying Takanami AR method to 'event'. Plotted data goes from
+        'event.n0_aic' to 'event.n0_aic + len(event.aic)'.
 
         Args:
             event: An Event object.
@@ -455,7 +461,7 @@ class Record(object):
         fig.axes[1].plot(t, event.aic)
         # Draw event
         for ax in fig.axes:
-            vline = ax.axvline(event.time, label="Event")
+            vline = ax.axvline(event.time * self.fs, label="Event")
             vline.set(color='r', ls='--', lw=2)
         # Configure limits and draw legend
         for ax in fig.axes:
