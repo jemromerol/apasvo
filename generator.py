@@ -1,7 +1,7 @@
 #!/usr/bin/python2.7
 # encoding: utf-8
 '''Earthquake Generator
-A tool to generate synthetic seismic signals.
+A tool that generates synthetic seismic signals.
 
 @author:     Jose Emilio Romero Lopez
 
@@ -50,7 +50,7 @@ def print_settings(args):
                                      args.length))
     sys.stdout.write("%30s: %s\n" % ("Start time(s)",
                                      args.t_event))
-    sys.stdout.write("%30s: %s\n" % ("Noise power(dB))",
+    sys.stdout.write("%30s: %s\n" % ("Noise power(dB)",
                                      args.P_noise_db))
     if not args.FILEIN:
         sys.stdout.write("%30s: %s\n" % ("Event power(dB)",
@@ -119,7 +119,7 @@ def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
         output_format: Output file format. Possible values are 'binary' or
             'text'. Default: 'binary'.
         datatype: Data-type of generated data. Default value is 'float64'.
-            If FILEIN is not None, this parameter is also the format of
+            If FILEIN is not None, this parameter is also the datatype of
             input data.
         byteorder: Byte-order of generated data. Possible values are
             'little-endian', 'big-endian' and 'native'.
@@ -193,7 +193,7 @@ def generate(FILEIN, length, t_event, output, gen_event_power=5.0, n_events=1,
                 fout_handler = rawfile.TextFile(filename_out, dtype=datatype,
                                                 byteorder=byteorder)
             else:
-                rawfile.BinFile(filename_out, dtype=datatype,
+                fout_handler = rawfile.BinFile(filename_out, dtype=datatype,
                                 byteorder=byteorder)
             fout_handler.write(eq, header="Sample rate: %g Hz." % fs)
             clt.print_msg("Done\n")
@@ -236,7 +236,7 @@ def main(argv=None):
     program_examples = '''
     Examples of use:
 
-    \033[1m>> detector.py -o example.out -f 100 -l 600 -t 200 -ep 5 -np 0\033[0m
+    \033[1m>> python generator.py -o example.out -f 100 -l 600 -t 200 -ep 5 -np 0\033[0m
 
     Generates a synthetic earthquake of the following characteristics:
 
@@ -249,14 +249,53 @@ def main(argv=None):
     Saves result to a file named 'example.out'
 
 
-    \033[1m>> detector.py meq.bin meq2.bin -f 50 -np 2 -fir coeffs.txt\033[0m
+    \033[1m>> python generator.py meq.bin meq2.bin -f 50 -np 2 -fir coeffs.txt\033[0m
 
     Given two seismic signals, 'meq.bin' and 'meq2.txt', sample rate 50 Hz, adds
     background noise of 2.0 dB. Noise is modeled by a FIR filter whose
     coefficients are stored in the file 'coeffs.txt'.
 
-
     Results will be saved to 'eq00.out' and 'eq01.out'.
+
+
+    \033[1m>> python generator.py -o eq.bin -n 500 -l 3600 -t 100 -ep 2 -np 2 --f-low 4.0 --f-high 25.0\033[0m
+
+    Generates a list of 500 synthetic earthquakes of the following
+    characteristics:
+
+        SNR: 0.0 (2.0 dB signal and noise power)
+        Sample rate: 50 Hz. (Default value).
+        Frequency range: 4-25 Hz.
+        Background noise: Gaussian white noise.
+        Length: 3600 seconds.
+        Arrival time: 100.0 seconds.
+
+    Results will be saved to 'eq00.bin', 'eq01.bin', 'eq02.bin', ...,
+    'eq499.bin'.
+
+
+    \033[1m>> python generator.py -o eq.txt -n 30 --output-format text @settings.txt\033[0m
+
+    Generates a list of 30 synthetic earthquakes and takes some settings from a
+    text file named 'settings.txt'
+    Saves them to 'eq00.txt', ..., 'eq29.txt', plain text format.
+
+    Rendered signals has the following characteristics:
+
+        Earthquake power: 10.0 dB.
+        Noise power: 0.0 dB.
+        FIR filter coefficients: 'coeffs.txt'
+        Length: 1200 seconds.
+        Arrival time: 250.0 seconds.
+
+    So, the following is the content of 'settings.txt':
+
+    >> cat settings.txt
+    -ep 10.0
+    -np 0.0
+    -fir coeffs.txt
+    -l 1200
+    -t 250
     '''
     try:
         # Setup argument parser
@@ -269,145 +308,190 @@ def main(argv=None):
         parser.add_argument("--datatype",
                             choices=['float16', 'float32', 'float64'],
                             default='float64',
+                            metavar='x',
                             help='''
-        If the input files are in binary format this will be
-        the datatype used for reading it.
-                            ''')
+    Data-type of generated data. If input files are specified, this parameter
+    is also the data-type of data stored on them.
+    Default value is float64, meaning double-precision floating point format.
+        ''')
         parser.add_argument("--byteorder",
-                                   choices=['little-endian', 'big-endian',
-                                            'native'],
-                                   default='native',
-                                   help='''
-        If the input files are in binary format this will be the byte-order
-        of the selected datatype. Default choice is hardware native.
-                                   ''')
+                            choices=['little-endian', 'big-endian', 'native'],
+                            default='native',
+                            metavar='x',
+                            help='''
+    Byte-ordering for generated data. If input files are specified, this
+    parameter is also the byte-ordering for data stored on them.
+    Default value is 'native', meaning platform native byte-ordering.
+        ''')
         parser.set_defaults(func=generate)
         # Create arguments for "generate" command
         parser.add_argument("FILEIN", nargs='*',
-                                     action=parse.GlobInputFilenames,
-                                     help='''
-        Binary or text file containing a seismic-like signal. If not specified
-        then a synthetic earthquake is generated.
+                            action=parse.GlobInputFilenames,
+                            metavar='x',
+                            help='''
+    Binary or text file containing a seismic-like signal.
         ''')
         parser.add_argument("-o", "--output",
-                                     default='eq.out',
-                                     help='''
-        Output file. If none is specified will generate an output file
-        for each input file.
+                            default='eq.out',
+                            metavar='x',
+                            help='''
+    Output filename. Default: 'eq.out'.
+    If no. of output signals is greater than 1, basename of each
+    generated file will be followed by its ordinal number.
+    E.g. given parameters '-o example.out' and '-n 5', generates 5 files named:
+    'example00.out', 'example01.out', 'example02.out', 'example03.out'
+    and 'example04.out'.
         ''')
         parser.add_argument("--output-format",
-                                     choices=["binary", "text"],
-                                     default="binary",
-                                     help='''
-        Output file format. Default value is 'binary'.
+                            choices=["binary", "text"],
+                            default="binary",
+                            metavar='x',
+                            help='''
+    Output file format. Default value is 'binary'.
         ''')
         parser.add_argument("-n", "--n-events",
-                                     type=parse.positive_int,
-                                     default=1,
-                                     help='''
-        Number of events generated, one file for each event.
+                            type=parse.positive_int,
+                            default=1,
+                            metavar='x',
+                            help='''
+    No. of signals to generate. Default: 1.
+    If input signal is provided, this parameter has no effect.
         ''')
         parser.add_argument("-f", "--frequency", type=parse.positive_float,
-                                     default=50.0,
-                                     dest='fs',
-                                     help="Signal frequency.")
+                            default=50.0,
+                            dest='fs',
+                            metavar='x',
+                            help='''
+    Sample rate in Hz. Default: 50.0 Hz.
+        ''')
         parser.add_argument("-l", "--length",
-                                     type=parse.positive_int,
-                                     default=600.0,
-                                     help='''
-        Length of the generated sequence. Default value is 600 seconds.
+                            type=parse.positive_int,
+                            default=600.0,
+                            metavar='x',
+                            help='''
+    Length of generated data in seconds.
+    If input file is provided, this parameter has no effect.
+    Default: 600.0 seconds.
         ''')
         parser.add_argument("-t", "--t-event",
-                                     type=parse.positive_float,
-                                     required=True,
-                                     help='''
-        Point in time at which the event will be generated.
+                            type=parse.positive_float,
+                            default=0.0,
+                            metavar='x',
+                            help='''
+    Arrival time in seconds from the beginning of rendered signal.
+    If input signal is provided, this parameter has no effect.
+    Default: 0.0 seconds.
         ''')
         parser.add_argument("-ep", "--earthquake-power",
-                                     type=float,
-                                     dest='gen_event_power',
-                                     default=5.0,
-                                     help='''
-        Power of the generated seismic event. Default value is 5 dB.
+                            type=float,
+                            dest='gen_event_power',
+                            default=10.0,
+                            metavar='x',
+                            help='''
+    Earthquake power in dB.
+    If input signal is provided, this parameter has no effect.
+    Default: 10.0 dB.
         ''')
         parser.add_argument("-np", "--noise-power",
-                                     type=float,
-                                     dest='P_noise_db',
-                                     default=0.0,
-                                     help='''
-        Background noise power. Default value is 0 dB.
+                            type=float,
+                            dest='P_noise_db',
+                            default=0.0,
+                            metavar='x',
+                            help='''
+    Background noise power in dB. Default: 0.0 dB.
         ''')
-        parser.add_argument("--fir", "--noise-coefficients",
-                                     type=parse.filein,
-                                     dest='gen_noise_coefficients',
-                                     help='''
-        Binary or text file containing the coefficients that characterize
-        the noise. If not specified then unfiltered white noise is used for
-        modeling the background noise.
+        parser.add_argument("-fir", "--noise-coefficients",
+                            type=parse.filein,
+                            dest='gen_noise_coefficients',
+                            metavar='x',
+                            help='''
+    Binary or text file containing a list of numeric coefficients of a
+    FIR filter that characterizes background noise. If not specified
+    unfiltered white noise is used to model background noise.
         ''')
-        parser.add_argument("--gen-low-period",
-                                     type=parse.positive_float,
-                                     dest='low_period',
-                                     default=50.0,
-                                     help='''
-        Initial length of the noise envelope for the different bands.
-        Default value is 50.
+        parser.add_argument("--period-low",
+                            type=parse.positive_float,
+                            dest='low_period',
+                            default=50.0,
+                            metavar='x',
+                            help='''
+    Start value of the range of noise envelope lengths for the
+    different bands on multi-band earthquake synthesis.
+    If input signal is provided, this parameter has no effect.
+    Default: 50.0 seconds.
         ''')
-        parser.add_argument("--gen-high-period",
-                                     type=parse.positive_float,
-                                     dest='high_period',
-                                     default=10.0,
-                                     help='''
-        Final length of the noise envelope for the different bands.
-        Default value is 10.
+        parser.add_argument("--period-high",
+                            type=parse.positive_float,
+                            dest='high_period',
+                            default=10.0,
+                            metavar='x',
+                            help='''
+    End value of the range of noise envelope lengths for the
+    different bands on multi-band earthquake synthesis.
+    If input signal is provided, this parameter has no effect.
+    Default: 10.0 seconds.
         ''')
-        parser.add_argument("--gen-bandwidth",
-                                     type=parse.positive_float,
-                                     dest='bandwidth',
-                                     default=4.0,
-                                     help='''
-        Channel bandwidth of the filter bank used to generate
-        the synthetic earthquake. Default value is 4 Hz.
+        parser.add_argument("--bandwidth",
+                            type=parse.positive_float,
+                            dest='bandwidth',
+                            default=4.0,
+                            metavar='x',
+                            help='''
+    Channel bandwidth on multi-band earthquake synthesis.
+    If input signal is provided, this parameter has no effect.
+    Default: 4.0 Hz.
         ''')
-        parser.add_argument("--gen-overlap",
-                                     type=parse.positive_float,
-                                     dest='overlap',
-                                     default=1.0,
-                                     help='''
-        Overlap of the filter bank used to generate the
-        synthetic earthquake. Default value is 1 Hz.
+        parser.add_argument("--overlap",
+                            type=parse.positive_float,
+                            dest='overlap',
+                            default=1.0,
+                            metavar='x',
+                            help='''
+    Overlap between channels bank on multi-band earthquake synthesis.
+    If input signal is provided, this parameter has no effect.
+    Default: 1.0 Hz.
         ''')
-        parser.add_argument("--gen-f-low",
-                                     type=parse.positive_float,
-                                     dest='f_low',
-                                     default=2.0,
-                                     help='''
-        Start frequency of the filter bank used to generate
-        the synthetic earthquake. Default value is 2Hz.
+        parser.add_argument("--f-low",
+                            type=parse.positive_float,
+                            dest='f_low',
+                            default=2.0,
+                            metavar='x',
+                            help='''
+    Start frequency on multi-band earthquake synthesis.
+    If input signal is provided, this parameter has no effect.
+    Default: 2.0 Hz.
         ''')
-        parser.add_argument("--gen-f-high",
-                                     type=parse.positive_float,
-                                     dest='f_high',
-                                     default=18.0,
-                                     help='''
-        End frequency of the filter bank used to generate
-        the synthetic earthquake. Default value is 18Hz.
+        parser.add_argument("--f-high",
+                            type=parse.positive_float,
+                            dest='f_high',
+                            default=18.0,
+                            metavar='x',
+                            help='''
+    End frequency on multi-band earthquake synthesis.
+    If input signal is provided, this parameter has no effect.
+    Default: 18.0 Hz.
         ''')
-        parser.add_argument("--gen-low-amp",
-                                     type=parse.positive_float,
-                                     dest='low_amp',
-                                     default=0.2,
-                                     help='''
-        Start amplitude of the filter bank used to generate
-        the synthetic earthquake. Default value is 0.2.
+        parser.add_argument("--amplitude-low",
+                            type=parse.positive_float,
+                            dest='low_amp',
+                            default=0.2,
+                            metavar='x',
+                            help='''
+    Start value of the range of noise envelope amplitudes for the
+    different bands on multi-band earthquake synthesis.
+    If input signal is provided, this parameter has no effect.
+    Default: 0.2.
         ''')
-        parser.add_argument("--gen-high-amp",
-                                     type=parse.positive_float,
-                                     dest='high_amp',
-                                     default=0.1,
-                                     help='''
-        End amplitude of the filter bank used to generate
-        the synthetic earthquake. Default value is 0.1.
+        parser.add_argument("--amplitude-high",
+                            type=parse.positive_float,
+                            dest='high_amp',
+                            default=0.1,
+                            metavar='x',
+                            help='''
+    End value of the range of noise envelope amplitudes for the
+    different bands on multi-band earthquake synthesis.
+    If input signal is provided, this parameter has no effect.
+    Default: 0.1.
         ''')
         # Parse the args and call whatever function was selected
         args, _ = parser.parse_known_args()

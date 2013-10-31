@@ -1,6 +1,7 @@
 *.csv
 *.out
 *.pyc
+*.bin
 examples/*
 build/*
 dist/*

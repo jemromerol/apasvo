@@ -391,6 +391,6 @@ class EarthquakeGenerator(object):
         Returns:
             out: Generated signal, numpy array type.
         """
-        noise = generate_seismic_noise(len(eq), self.fs, self.P_noise_db,
+        noise = generate_seismic_noise(len(eq) / self.fs, self.fs, self.P_noise_db,
                                        self.bfirls)
         return noise + eq
