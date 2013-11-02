@@ -210,7 +210,6 @@ def main(argv=None):
     program_name = __import__('__main__').__doc__.split("\n")[0]
     program_version = "v%s" % __version__
     program_version_message = '%%(prog)s %s' % program_version
-    program_shortdesc = __import__('__main__').__doc__.split("\n")[1]
     program_description = '''
     %s %s
 

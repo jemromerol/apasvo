@@ -1,9 +1,7 @@
 #!/usr/bin/python2.7
 # encoding: utf-8
-'''
-detector
-
-detector is a description
+'''Earthquake Detector
+A tool to detect/pick earthquakes on seismic signals.
 
 @author:     Jose Emilio Romero Lopez
 
@@ -32,21 +30,30 @@ detector is a description
 
 import matplotlib.pyplot as pl
 import argparse
-import os
 import sys
+import os
 
 from _version import __version__
-from utils import clt, parse, collections
-from picking import stalta, ampa
+from utils import clt
+from utils import parse
+from utils import collections
+from picking import stalta
+from picking import ampa
 from picking import record as rc
 
 
 def draw_events_table(record, method):
-    """"""
+    """Draws into a CLI table a summary of the events found for a given seismic
+    record.
+
+    Args:
+        record: A picking.Record object
+        method: Algorithm used, e.g. AMPA or STA-LTA.
+    """
     sys.stdout.write("%i possible events found in %s:\n" %
                      (len(record.events), record.filename))
     sys.stdout.flush()
-    et = [e.time for e in record.events]
+    et = [e.time / record.fs for e in record.events]
     cf_val = [e.cf_value for e in record.events]
     if len(et) > 0:
         sys.stdout.write("\n%s\n\n" %
@@ -58,10 +65,16 @@ def draw_events_table(record, method):
 
 
 def draw_results(records, method):
-    """"""
+    """Draws into a CLI table a summary of the events found for a list of
+    seismic records.
+
+    Args:
+        records: A list of picking.Record objects
+        method: Algorithm used, e.g. AMPA.
+    """
     # Extract data from records
     data = [{'file_name':record.filename,
-             'time':event.time,
+             'time':event.time / record.fs,
              'cf_value': event.cf_value} for record in records
                                             for event in record.events]
     sys.stdout.write("Summary of events:\n")
@@ -77,7 +90,11 @@ def draw_results(records, method):
 
 
 def print_settings(args):
-    """"""
+    """Print settings to stdout.
+
+    Args:
+        args: Command-line input arguments.
+    """
     sys.stdout.write("\nGeneral settings:\n")
     sys.stdout.write("%30s: %s\n" % ("Signal frequency(Hz)",
                                    args.fs))
@@ -126,11 +143,33 @@ def print_settings(args):
 
 
 class Analysis(object):
-    """
+    """An abstract class to detect/pick earthquakes on seismic data.
     """
 
+    _cf_dir = './cf_data'
+
     def run(self, FILEIN, csv=False, cf=False, **kwargs):
-        """"""
+        """Event/picking detection on a given set of seismic signals.
+
+        Reads a list of command-line input arguments, performs event analysis
+        over a given list of seismic data inputs and generates a summary of
+        results.
+        Analysis can be performed in two ways: supervised or unsupervised mode.
+        In supervised mode the function graphs each of the candidate events
+        found and asks the user whether to accept them or not, whereas in
+        unsupervised mode the function just computes results without receiving
+        any feedback from users.
+
+        Args:
+            FILEIN: A list of binary or text file objects containing seismic
+                data.
+            csv: Determines whether to save a summary of results to a CSV
+                file or not. Default value is False, meaning no CSV summary
+                will be saved.
+            cf: Determines whether to save generated characteristic function
+                to a file (binary or text format) or not. Default value is
+                False.
+        """
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         takanami = kwargs.get('takanami', False)
@@ -173,7 +212,13 @@ class Analysis(object):
         # Save cf
         if cf:
             for record in records:
-                fname = "%s.cf" % record.filename
+                # Create a new directory to store CFs
+                cf_path = os.path.abspath(self._cf_dir)
+                if not os.path.exists(cf_path):
+                    os.makedirs(cf_path)
+                # Generate cf filenames
+                bname, rname = os.path.split(os.path.basename(record.filename))
+                fname = os.path.join(cf_path, "%s.cf%s" % (bname, rname))
                 self.on_notify("Saving CF for input file %s in %s... " %
                                (record.filename, fname))
                 record.save_cf(fname, fmt=kwargs.get('cff', 'binary'),
@@ -182,27 +227,27 @@ class Analysis(object):
                 self.on_notify("Done\n")
 
     def _do_analysis(self, records, supervised=False, **kwargs):
-        """"""
         raise NotImplementedError
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
                           show_cf=False, show_specgram=False,
                           show_envelope=False,
                           show_all=False, **kwargs):
-        """"""
         raise NotImplementedError
 
     def on_notify(self, msg):
-        """"""
         pass
 
 
 class Detector(Analysis):
-    """
+    """A class to perform event detection on seismic data.
+
+    Takes a list of command line arguments and finds all those possible events
+    whose characteristic function value is over a given threshold value for
+    each input signal.
     """
 
     def _do_analysis(self, records, alg, supervised=False, **kwargs):
-        """"""
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         for record in records:
@@ -222,7 +267,6 @@ class Detector(Analysis):
                           show_cf=False, show_specgram=False,
                           show_envelope=False,
                           show_all=False, **kwargs):
-        """"""
         # Define Q&A for each mode
         detect_q = "Accept this event?"
         detect_a = ["&yes", "&no", "&accept all",
@@ -267,11 +311,13 @@ class Detector(Analysis):
 
 
 class Picker(Analysis):
-    """
+    """A class to perform event picking on seismic data.
+
+    Takes a list of command line input arguments and finds the global maximum
+    of the characteristic function for each seismic input signal.
     """
 
     def _do_analysis(self, records, alg, supervised=False, **kwargs):
-        """"""
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         for record in records:
@@ -295,7 +341,6 @@ class Picker(Analysis):
                           show_cf=False, show_specgram=False,
                           show_envelope=False,
                           show_all=False, **kwargs):
-        """"""
         # Define Q&A for each mode
         pick_q = "Accept this event?"
         pick_a = ["&yes", "&no", "&all", "&quit"]
@@ -335,7 +380,11 @@ class Picker(Analysis):
 
 
 def analysis(**kwargs):
-    """"""
+    """Performs event analysis/picking over a set of seismic signals.
+
+    Performs event detection if parameter 'threshold' is not None, otherwise
+    performs event picking.
+    """
     if 'threshold' in kwargs:
         task = Detector()
     else:
@@ -352,38 +401,56 @@ def main(argv=None):
     else:
         sys.argv.extend(argv)
 
-    program_name = os.path.basename(sys.argv[0])
+    program_name = __import__('__main__').__doc__.split("\n")[0]
     program_version = "v%s" % __version__
     program_version_message = '%%(prog)s %s' % program_version
-    program_shortdesc = __import__('__main__').__doc__.split("\n")[1]
-    program_license = '''%s
+    program_description = '''
+    %s %s
 
-  Created by Jose Emilio Romero Lopez.
-  Copyright 2013. All rights reserved.
+    A tool to perform event detection/picking over seismic signals.
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+    Renders synthetic seismic data in two ways: If a list of input files
+    containing seismic data is provided, the tool generates a new output
+    signal for each one of them by adding background noise. If no input
+    file is provided, it generates a list of synthetic seismic signals.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
+    Artificial earthquakes are generated at desired start point from
+    white noise band-filtered and modulated by using different envelope
+    functions for each band.
+    Similarly, background noise is modeled from white noise and finally
+    added to the previously generated sequence that contains the synthetic
+    earthquake.
 
-  You should have received a copy of the GNU Lesser General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-USAGE
-''' % program_shortdesc
+    Created by Jose Emilio Romero Lopez.
+    Copyright 2013. All rights reserved.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+    ''' % (program_name, program_version)
+    program_examples = '''
+    Examples of use:
+
+    \033[1m>> python generator.py -o example.out -f 100 -l 600 -t 200 -ep 5 -np 0\033[0m
+    '''
 
     try:
         # Setup argument parser
-        parser = parse.CustomArgumentParser(description=program_license,
+        parser = parse.CustomArgumentParser(description=program_description,
+                                            epilog=program_examples,
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 fromfile_prefix_chars='@')
-
-        #Create common arguments for all commands
         parser = argparse.ArgumentParser()
         parser.set_defaults(func=analysis)
         parser.add_argument('-V', '--version', action='version',
@@ -392,46 +459,49 @@ USAGE
                             choices=['float16', 'float32', 'float64'],
                             default='float64',
                             help='''
-        If the input files are in binary format this will be
-        the datatype used for reading it.
-                            ''')
-        parser.add_argument("--byteorder",
-                                   choices=['little-endian', 'big-endian',
-                                            'native'],
-                                   default='native',
-                                   help='''
-        If the input files are in binary format this will be the byte-order
-        of the selected datatype. Default choice is hardware native.
-                                   ''')
-
-        parser.add_argument("FILEIN", nargs='+',
-                                     action=parse.GlobInputFilenames,
-                                     help='''
-        Binary or text file containing a seismic-like signal.
+    Data-type of input data. Default value is float64, meaning double-precision
+    floating point format.
         ''')
-        parser.add_argument("--csv", type=argparse.FileType('w'),
-                                     default="output.csv",
-                                     help='''
-        Generates an report in csv format. If none is specified will generate
-        a csv file named output.csv containing the list of events found.
+        parser.add_argument("--byteorder",
+                            choices=['little-endian', 'big-endian', 'native'],
+                            default='native',
+                            help='''
+    If the input files are in binary format this will be the byte-order
+    of the selected datatype. Default choice is hardware native.
+        ''')
+        parser.add_argument("FILEIN", nargs='+',
+                            action=parse.GlobInputFilenames,
+                            metavar='file',
+                            help='''
+    Binary or text file containing a seismic-like signal.
+        ''')
+        parser.add_argument("-csv", type=argparse.FileType('w'),
+                            default="output.csv",
+                            metavar='<file>',
+                            help='''
+    Output CSV summary file. Default: 'output.csv'.
         ''')
         # Arguments to store the characteristic function
-        parser.add_argument("--cf", action="store_true", default=False,
+        parser.add_argument("-cf", action="store_true", default=False,
                             help='''
-                            If selected a file containing the corresponding characteristic function
-                            will be generated for each of the input files. The name of the new file
-                            will be the same of the input file followed by '.cf'.''')
-        parser.add_argument("--cff", choices=["binary", "text"],
+    Enables saving computed characteristic functions to file. Generated files
+    will be saved to 'cf_data' folder, which will be created if not exists yet.
+    E.g. given input files 'meq1.bin' and 'meq2.bin', saves their
+    characteristic functions to './cf_data/meq1.cf.bin' and
+    './cf_data/meq2.cf.bin'
+        ''')
+        parser.add_argument("-cff", choices=["binary", "text"],
                             default="binary",
                             help='''
-                            Output format for the characteristic function.
-                            Default value is 'binary'.''')
-        parser.add_argument("--cfd", choices=['float16', 'float32', 'float64'],
+    Characteristic function output file format.
+    Default value is 'binary'.
+        ''')
+        parser.add_argument("-cfd", choices=['float16', 'float32', 'float64'],
                             default='float64',
                             help='''
         If the characteristic function is saved in binary format, this will be the selected datatype.
         Default choice is hardware native.''')
-        parser.add_argument("--cfb", choices=['little-endian', 'big-endian', 'native'],
+        parser.add_argument("-cfb", choices=['little-endian', 'big-endian', 'native'],
                             default='native',
                             help='''
         If the characteristic function is saved in binary format, this will be the byte-order

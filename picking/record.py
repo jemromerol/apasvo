@@ -40,7 +40,7 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
     """Generates a Comma Separated Value (CSV) resume file from a list of
     Record objects.
 
-    The function stores into a file a resume table of the events found
+    The function stores into a file a summary table of the events found
     for a given list of records. The table has the following fields:
         file_name: Name of the file (absolute path) that stores the data
             signal where the event was found.
