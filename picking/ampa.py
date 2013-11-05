@@ -93,7 +93,7 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
     Args:
         x: Seismic data, numpy array type.
         fs: Sampling rate in Hz.
-        threshold: Local maxima found in the characteristic function above
+        threshold: Local maxima found in the characteristic function over
             this value will be returned by the function as possible events
             (detection mode).
             If threshold is None, the function will return only the global
@@ -237,7 +237,7 @@ class Ampa(object):
 
     Attributes:
         window: Size of the window in seconds. Default: 100 seconds.
-        window_overlap: Step size. Default: 50 seconds.
+        step: Step size. Default: 50 seconds.
         L: A list of filter lengths (in seconds) at the enhancement filter
             stage. Default: [30.0, 20.0, 10.0, 5.0, 2.5]
         L_coef: A parameter that measures the portion of negative response of
@@ -286,7 +286,7 @@ class Ampa(object):
         Args:
             x: Seismic data, numpy array type.
             fs: Sample rate in Hz.
-            threshold: Local maxima found in the characteristic function above
+            threshold: Local maxima found in the characteristic function over
                 this value will be returned by the function as possible events
                 (detection mode).
                 If threshold is None, the function will return only the global

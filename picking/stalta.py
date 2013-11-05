@@ -48,7 +48,7 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
     Args:
         x: Seismic data, numpy array type.
         fs: Sampling rate in Hz.
-        threshold: Local maxima found in the characteristic function above
+        threshold: Local maxima found in the characteristic function over
             this value will be returned by the function as possible events
             (detection mode).
             If threshold is None, the function will return only the global
@@ -122,7 +122,7 @@ class StaLta(object):
         Args:
             x: Seismic data, numpy array type.
             fs: Sample rate in Hz.
-            threshold: Local maxima found in the characteristic function above
+            threshold: Local maxima found in the characteristic function over
                 this value will be returned by the function as possible events
                 (detection mode).
                 If threshold is None, the function will return only the global

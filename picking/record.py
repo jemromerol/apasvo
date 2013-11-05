@@ -263,11 +263,11 @@ class Record(object):
         """
         taka = takanami.Takanami()
         for event in self.events:
-            t_start = event.time - takanami_margin
-            t_end = event.time + takanami_margin
+            t_start = (event.time / self.fs) - takanami_margin
+            t_end = (event.time / self.fs) + takanami_margin
             et, event.aic, event.n0_aic = taka.run(self.signal, self.fs,
                                                    t_start, t_end)
-            event.time = et / self.fs
+            event.time = et
             event.cf_value = self.cf[et]
         return self.events
 
@@ -395,7 +395,7 @@ class Record(object):
         # Draw event markers
         if show_events:
             for event in self.events:
-                arrival_time = event.time * self.fs
+                arrival_time = event.time / self.fs
                 for ax in fig.axes:
                     xmin, xmax = ax.get_xlim()
                     if arrival_time > xmin and arrival_time < xmax:
@@ -461,7 +461,7 @@ class Record(object):
         fig.axes[1].plot(t, event.aic)
         # Draw event
         for ax in fig.axes:
-            vline = ax.axvline(event.time * self.fs, label="Event")
+            vline = ax.axvline(event.time / self.fs, label="Event")
             vline.set(color='r', ls='--', lw=2)
         # Configure limits and draw legend
         for ax in fig.axes:

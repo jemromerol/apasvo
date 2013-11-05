@@ -261,7 +261,7 @@ def main(argv=None):
     Saves result to a file named 'example.out'
 
 
-    \033[1m>> python generator.py meq.bin meq2.bin -f 50 -np 2 -fir coeffs.txt\033[0m
+    \033[1m>> python generator.py meq.bin meq2.txt -f 50 -np 2 -fir coeffs.txt\033[0m
 
     Given two seismic signals, 'meq.bin' and 'meq2.txt', sample rate 50 Hz, adds
     background noise of 2.0 dB. Noise is modeled by a FIR filter whose

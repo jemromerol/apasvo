@@ -147,6 +147,10 @@ class Analysis(object):
     """
 
     _cf_dir = './cf_data'
+    _sort_keys = {'va': ('cf_value', False), 'vd': ('cf_value', True),
+                  'ta': ('time', False), 'td': ('time', True)}
+    _methods = {('stalta', False): 1, ('stalta', True): 2,
+                ('ampa', False): 3, ('ampa', True): 4}
 
     def run(self, FILEIN, csv=False, cf=False, **kwargs):
         """Event/picking detection on a given set of seismic signals.
@@ -194,12 +198,9 @@ class Analysis(object):
         pl.close('all')
 
         #Set the method used in events
-        methods = {('stalta', False): 1, ('stalta', True): 2,
-                   ('ampa', False): 3, ('ampa', True): 4}
         for record in records:
             for event in record.events:
-                event.method = rc.Event.methods[methods.get((method, takanami),
-                                                            0)]
+                event.method = rc.Event.methods[self._methods.get((method, takanami), 0)]
         # Show results
         draw_results(records, method=method)
 
@@ -226,7 +227,7 @@ class Analysis(object):
                                byteorder=kwargs.get('cfb', 'native'))
                 self.on_notify("Done\n")
 
-    def _do_analysis(self, records, supervised=False, **kwargs):
+    def _do_analysis(self, records, alg, supervised=False, **kwargs):
         raise NotImplementedError
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
@@ -247,13 +248,17 @@ class Detector(Analysis):
     each input signal.
     """
 
-    def _do_analysis(self, records, alg, supervised=False, **kwargs):
+    def _do_analysis(self, records, alg, supervised=False, sort=None, **kwargs):
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         for record in records:
             self.on_notify("Processing %s... " % record.filename)
             record.detect(alg, **kwargs)
             self.on_notify("Done\n")
+            # Sort results
+            if sort:
+                key, reverse = self._sort_keys.get(sort, ('cf_value', True))
+                record.sort_events(key, reverse)
             draw_events_table(record, method)
             if supervised:
                 last_response = self._supervise_events(record, **kwargs)
@@ -284,8 +289,8 @@ class Detector(Analysis):
             event = record.events[i]
             self.on_notify("Showing event no. %i of %i\n" %
                              (i + 1, len(record.events)))
-            record.plot_signal(t_start=event.time - show_len,
-                               t_end=event.time + show_len,
+            record.plot_signal(t_start=(event.time / record.fs) - show_len,
+                               t_end=(event.time / record.fs) + show_len,
                                num=1,
                                show_cf=show_cf,
                                show_specgram=show_specgram,
@@ -325,6 +330,9 @@ class Picker(Analysis):
             if supervised:
                 record.detect(alg, threshold=0.0, **kwargs)
                 self.on_notify("Done\n")
+                # Sort events
+                key, reverse = self._sort_keys.get('vd', ('cf_value', True))
+                record.sort_events(key, reverse)
                 draw_events_table(record, method)
                 last_response = self._supervise_events(record, **kwargs)
                 if last_response == 'quit':
@@ -409,17 +417,11 @@ def main(argv=None):
 
     A tool to perform event detection/picking over seismic signals.
 
-    Renders synthetic seismic data in two ways: If a list of input files
-    containing seismic data is provided, the tool generates a new output
-    signal for each one of them by adding background noise. If no input
-    file is provided, it generates a list of synthetic seismic signals.
-
-    Artificial earthquakes are generated at desired start point from
-    white noise band-filtered and modulated by using different envelope
-    functions for each band.
-    Similarly, background noise is modeled from white noise and finally
-    added to the previously generated sequence that contains the synthetic
-    earthquake.
+    Analysis can be performed in two ways: supervised or unsupervised mode.
+    In supervised mode the function graphs each of the candidate events
+    found and asks the user whether to accept them or not, whereas in
+    unsupervised mode the function just computes results without receiving
+    any feedback from users.
 
 
     Created by Jose Emilio Romero Lopez.
@@ -442,7 +444,21 @@ def main(argv=None):
     program_examples = '''
     Examples of use:
 
-    \033[1m>> python generator.py -o example.out -f 100 -l 600 -t 200 -ep 5 -np 0\033[0m
+    \033[1m>> python detector.py meq01.bin meq02.bin -f 100 --takanami\033[0m
+
+    Given two seismic signals, 'meq01.bin' and 'meq02.bin', sample rate 100 Hz,
+    performs event picking by using AMPA method (default settings) together with
+    Takanami method for arrival time refining.
+
+    Saves results summary to 'output.csv'.
+
+    \033[1m>> python detector.py meq01.txt --csv example.out -m stalta --lta 60 --takanami -s --show-all\033[0m
+
+
+    \033[1m>> python detector.py meq01.bin --cf -t 1.5 --ampa-filters 50.0 25.0 12.5 6.25  --ampa-noise-threshold 75 -s --show-all\033[0m
+
+
+    \033[1m>> python detector.py meq*.bin --csv example.out --cf --cff text @settings.txt\033[0m
     '''
 
     try:
@@ -451,10 +467,61 @@ def main(argv=None):
                                             epilog=program_examples,
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 fromfile_prefix_chars='@')
-        parser = argparse.ArgumentParser()
         parser.set_defaults(func=analysis)
         parser.add_argument('-V', '--version', action='version',
                             version=program_version_message)
+        parser.add_argument("FILEIN", nargs='+',
+                            action=parse.GlobInputFilenames,
+                            metavar='file',
+                            help='''
+    Binary or text file containing a seismic-like signal.
+        ''')
+        parser.add_argument("--csv", type=argparse.FileType('w'),
+                            default="output.csv",
+                            metavar='<file>',
+                            help='''
+    Output CSV summary file. Default: 'output.csv'.
+        ''')
+        parser.add_argument("-f", "--frequency", type=parse.positive_float,
+                            default=50.0,
+                            dest='fs',
+                            metavar='<arg>',
+                            help='''
+    Sample rate in Hz. Default: 50.0 Hz
+        ''')
+        parser.add_argument("-m", "--method",
+                            choices=['ampa', 'stalta'],
+                            default='ampa',
+                            help='''
+    Available event detection/picking algorithms. Default: 'ampa'.
+        ''')
+        parser.add_argument("-t", "--threshold",
+                            type=parse.positive_float,
+                            metavar='<arg>',
+                            help='''
+    Local maxima in the characteristic function over this value will
+    be considered as possible events (detection mode).
+    If no threshold parameter is provided, the application takes only the
+    global maximum of the characteristic function (picking mode).
+        ''')
+        parser.add_argument("--peak-window",
+                            type=parse.positive_float,
+                            default=1.0,
+                            dest='peak_checking',
+                            metavar='<arg>',
+                            help='''
+    How many seconds on each side of a point of the characteristic
+    function to use for the comparison to consider the point to be
+    a local maximum. If no threshold is provided, this parameter has
+    no effect. Default value is 1 s.
+        ''')
+        parser.add_argument("--sort", choices=['td', 'ta', 'vd', 'va'],
+                            default='vd',
+                            help='''
+    Specifies how to sort results. Choices are time descending/ascending
+    and characteristic function value descending/ascending.
+    Default value is 'vd', meaning value descending.
+        ''')
         parser.add_argument("--datatype",
                             choices=['float16', 'float32', 'float64'],
                             default='float64',
@@ -469,20 +536,9 @@ def main(argv=None):
     If the input files are in binary format this will be the byte-order
     of the selected datatype. Default choice is hardware native.
         ''')
-        parser.add_argument("FILEIN", nargs='+',
-                            action=parse.GlobInputFilenames,
-                            metavar='file',
-                            help='''
-    Binary or text file containing a seismic-like signal.
-        ''')
-        parser.add_argument("-csv", type=argparse.FileType('w'),
-                            default="output.csv",
-                            metavar='<file>',
-                            help='''
-    Output CSV summary file. Default: 'output.csv'.
-        ''')
-        # Arguments to store the characteristic function
-        parser.add_argument("-cf", action="store_true", default=False,
+    # Characteristic function arguments
+        cf_options = parser.add_argument_group("Characteristic Function settings")
+        cf_options.add_argument("--cf", action="store_true", default=False,
                             help='''
     Enables saving computed characteristic functions to file. Generated files
     will be saved to 'cf_data' folder, which will be created if not exists yet.
@@ -490,157 +546,178 @@ def main(argv=None):
     characteristic functions to './cf_data/meq1.cf.bin' and
     './cf_data/meq2.cf.bin'
         ''')
-        parser.add_argument("-cff", choices=["binary", "text"],
+        cf_options.add_argument("--cff", choices=["binary", "text"],
                             default="binary",
                             help='''
     Characteristic function output file format.
     Default value is 'binary'.
         ''')
-        parser.add_argument("-cfd", choices=['float16', 'float32', 'float64'],
+        cf_options.add_argument("--cfd", choices=['float16', 'float32', 'float64'],
                             default='float64',
                             help='''
-        If the characteristic function is saved in binary format, this will be the selected datatype.
-        Default choice is hardware native.''')
-        parser.add_argument("-cfb", choices=['little-endian', 'big-endian', 'native'],
+    Data-type of characteristic function saved data.
+    Default value is 'float64', meaning double-precision floating point data..
+        ''')
+        cf_options.add_argument("--cfe", choices=['little-endian', 'big-endian', 'native'],
                             default='native',
                             help='''
-        If the characteristic function is saved in binary format, this will be the byte-order
-        of the selected datatype. Default choice is hardware native.''')
-        parser.add_argument("-f", "--frequency", type=parse.positive_float,
-                                     default=50.0,
-                                     dest='fs',
-                                     help="Signal frequency.")
-        parser.add_argument("-m", "--method",
-                                   choices=['ampa', 'stalta'],
-                                   help='''
-                                   Available methods. Default method is AMPA.
-                                   ''', default='ampa')
-        parser.add_argument("--peak-checking",
-                                   type=parse.positive_float,
-                                   default=5.0,
-                                   help='''
-        How many seconds need to be examined before and after
-        a sample to consider it a local maximum.
-        Default value is 5 seconds.
+    Endianness of characteristic function saved data.
+    Default value is hardware native.
         ''')
         # STA-LTA arguments
-        sta_lta_options = parser.add_argument_group("STA-LTA options")
-        sta_lta_options.add_argument("--sta-window",
+        sta_lta_options = parser.add_argument_group("STA-LTA settings")
+        sta_lta_options.add_argument("--sta",
                                      type=parse.positive_float,
                                      dest='sta_length',
                                      default=5.0,
+                                     metavar='<arg>',
                                      help='''
-        Length of STA window (in seconds) when using the STA-LTA method.
-        Default value is 5 seconds.
+    Length of STA window (in seconds) when using STA-LTA method.
+    Default value is 5 seconds.
         ''')
-        sta_lta_options.add_argument("--lta-window",
+        sta_lta_options.add_argument("--lta",
                                      type=parse.positive_float,
                                      dest='lta_length',
-                                     default=600.0,
+                                     default=100.0,
+                                     metavar='<arg>',
                                      help='''
-        Length of LTA window (in seconds) when using the STA-LTA method.
-        Default value is 600 seconds.
+    Length of LTA window (in seconds) when using STA-LTA method.
+    Default value is 100 seconds.
         ''')
         # AMPA arguments
-        ampa_options = parser.add_argument_group("AMPA options")
+        ampa_options = parser.add_argument_group("AMPA settings")
         ampa_options.add_argument("--ampa-window",
                                   type=parse.positive_float,
                                   dest='window',
-                                  default=150.0,
+                                  default=100.0,
+                                  metavar='<arg>',
                                   help='''
-        Length of the window (in seconds) when using the AMPA method.
-        Usually this value should be close to the expected length
-        of the events we are looking for. Default value is 100 seconds.
+    Sliding window length (in seconds) when using AMPA method.
+    Typically this value should be close to the expected length
+    of the events sought.
+    Default: 100 seconds.
         ''')
-        ampa_options.add_argument("--ampa-window-overlap",
-                                  type=parse.fraction,
+        ampa_options.add_argument("--ampa-step",
+                                  type=parse.positive_float,
                                   dest='window_overlap',
-                                  default=0.5,
+                                  default=50.0,
+                                  metavar='<arg>',
                                   help='''
-        Overlapping value between windows when using the AMPA method.
-        Must be in range [0,1). Default value is 0.5.
+    Step length in seconds when using AMPA method.
+    Default: 50 seconds.
         ''')
-        ampa_options.add_argument("--ampa-L",
+        ampa_options.add_argument("--ampa-filters",
                                   type=parse.positive_float,
                                   dest='L',
                                   default=[30.0, 20.0, 10.0, 5.0, 2.5],
                                   nargs='+',
+                                  metavar='<arg>',
                                   help='''
-        Set of filter lengths (in seconds) used by AMPA
-        in the enhancement stage. Default values are 30.0, 20.0,
-        10.0, 5.0 and 2.5 seconds.
+    A list of filter lengths (in seconds) used by AMPA
+    at the enhancement filter stage.
+    The length of a filter is related to the duration of the detected
+    events. An enhancement filter for long duration events can negate
+    short duration events and vice versa. Combining several filters of
+    different length the algorithm achieves to deal with this issue.
+    Default values are 30.0, 20.0, 10.0, 5.0 and 2.5 seconds.
         ''')
-        ampa_options.add_argument("--ampa-L-coef",
+        ampa_options.add_argument("--ampa-response-penalty",
                                   type=float,
                                   dest='L_coef',
                                   default=3.0,
+                                  metavar='<arg>',
                                   help='''
-        Penalty factor which minimizes response to emerging or impulsive noise
-        on the set of filters applied in the enhancement stage.
-        Default value is 3.0.
+    Penalty factor that minimizes response to emerging or impulsive noise
+    of the set of filters applied at the enhancement stage.
+    Default: 3.0.
         ''')
         ampa_options.add_argument("--ampa-noise-threshold",
                                   type=parse.percentile,
                                   dest='noise_thr',
                                   default=90.0,
+                                  metavar='<arg>',
                                   help='''
-        Percentile used in the noise reduction stage. Default value is 90.0.
+    Percentile of the amplitude of the envelope that measures the noise
+    reduction level for each band at noise reduction stage.
+    Default: 90.
         ''')
         ampa_options.add_argument("--ampa-f-start",
                                   type=parse.positive_float,
                                   dest='f_start',
                                   default=2.0,
+                                  metavar='<arg>',
                                   help='''
-        Start frequency of the filter bank applied in the adaptive multi-band
-        processing stage. Default value is 2Hz.
+    Start frequency of the filter bank applied at the adaptive multi-band
+    processing stage.
+    Default: 2.0 Hz.
         ''')
         ampa_options.add_argument("--ampa-f-end",
                                   type=parse.positive_float,
                                   dest='f_end',
                                   default=12.0,
+                                  metavar='<arg>',
                                   help='''
-        End frequency of the filter bank applied in the adaptive multi-band
-        processing stage. Default value is 12Hz.
+    End frequency of the filter bank applied at the adaptive multi-band
+    processing stage.
+    Default: 12.0 Hz.
         ''')
         ampa_options.add_argument("--ampa-bandwidth",
                                   type=parse.positive_float,
                                   dest='bandwidth',
                                   default=3.0,
+                                  metavar='<arg>',
                                   help='''
-        Channel bandwidth of the filter bank applied in the adaptive multi-band
-        processing stage. Default value is 3Hz.
+    Channel bandwidth of the filter bank applied at the adaptive multi-band
+    processing stage.
+    Default: 3.0 Hz.
         ''')
         ampa_options.add_argument("--ampa-overlap",
                                   type=parse.positive_float,
                                   dest='overlap',
                                   default=1.0,
+                                  metavar='<arg>',
                                   help='''
-        Overlap between channels of the filter bank applied in the adaptive
-        multi-band processing stage. Default value is 1Hz.
+    Overlap between channels of the filter bank applied at the adaptive
+    multi-band processing stage.
+    Default: 1.0 Hz.
         ''')
         ampa_options.add_argument("--ampa-U",
                                   type=float,
                                   dest='U',
                                   default=12.0,
+                                  metavar='<arg>',
                                   help='''
-        Term used to avoid the logarithm of zero in the calculation of the
-        characteristic function. Default value is 12.0.
+    A parameter used at the end of the enhancement filter stage to avoid
+    logarithm of zero and to shift the characteristic function to zero.
+    Given y(n) the product of the outputs of the different filters used
+    at the end of the enhancement stage, the characteristic function is
+    then calculated as:
+
+        cf(n) = U + log10(y(n) + 10 ** (-U))
+
+    Default: 12.0.
         ''')
         # Takanami arguments
-        takanami_options = parser.add_argument_group("Takanami options")
+        takanami_options = parser.add_argument_group("Takanami settings")
         takanami_options.add_argument("--takanami",
                                  action='store_true',
                                  default=False,
                                  help='''
-        Use the Takanami AR method to refine results.
+    Specifies whether to use Takanami AR method to refine results or not.
         ''')
 
-        takanami_options.add_argument("--takanami-margin",
+        takanami_options.add_argument("--takanami-len",
                                  type=parse.positive_float,
+                                 dest='takanami_margin',
                                  default=5.0,
+                                 metavar='<arg>',
                                  help='''
-        When using the Takanami method how many seconds
-        will be examined before and after a picked event.
+    Given a possible event time point, this parameter specifies the length
+    of an interval centered at that point where to perform Takanami AR
+    refining method. I.e. let 't' a possible arrival time and 'w' the value of
+    the parameter, the application will perform Takanami AR method in
+    [t - w, t + w].
+    Default: 5.0 seconds.
         ''')
 
         # Create arguments for the supervised mode
@@ -648,48 +725,41 @@ def main(argv=None):
         supervised_options.add_argument("-s", "--supervised",
                                         action="store_true", default=False,
                                         help='''
-        Enables supervised mode.
-        ''')
-        supervised_options.add_argument("--show-all",
-                                        action='store_true', default=False,
-                                        help='''
-        Equivalent to --show-cf --show_envelope --show-specgram
+    Enables supervised mode. In supervised mode the application graphs
+    each of the candidate events found and asks the user whether to accept
+    them or not.
         ''')
         supervised_options.add_argument("--show-cf",
                                         action="store_true", default=False,
                                         help='''
-        Shows the characteristic function in supervised mode.
+    Plots characteristic function in supervised mode.
         ''')
         supervised_options.add_argument("--show-specgram",
                                         action="store_true", default=False,
                                         help='''
-        Shows the spectrogram in supervised mode.
+    Plots spectrogram in supervised mode.
         ''')
         supervised_options.add_argument("--show-envelope",
                                         action="store_true", default=False,
                                         help='''
-        Display signal envelope in supervised mode.
+    Plots signal envelope in supervised mode. The function will be drawn
+    together with signal amplitude.
+        ''')
+        supervised_options.add_argument("--show-all",
+                                        action='store_true', default=False,
+                                        help='''
+    Equivalent to: --show-cf --show_envelope --show-specgram.
         ''')
         supervised_options.add_argument("--show-len",
                                         type=parse.positive_float,
-                                        default=5.0,
+                                        default=30.0,
+                                        metavar='<arg>',
                                         help='''
-        How many seconds of the input signal will be displayed before and after
-        of a possible event.
-        Default value is 5.0 seconds.
-        ''')
-        # Create arguments for "detect" command
-        parser.add_argument("--sort", choices=['td', 'ta', 'vd', 'va'],
-                                   help='''
-        How the results are sorted. Choices are
-        time descending/ascending and characteristic
-        function value descending/ascending. Default
-        value is time ascending.
-                                   ''', default='ta')
-        parser.add_argument("-t", "--threshold", type=parse.positive_float,
-                                   help='''
-        Characteristic Function value from which a local maximum
-        can be considered a P-phase arrival event. Default value is 2.0.
+    Specifies how many seconds will be displayed at most before and after
+    of a possible event. I.e. let 't' a possible arrival time and 'w' the
+    value of '--show-len' parameter, the application will plot data in
+    the interval [t - w, t + w] for that event.
+    Default value is 30.0 seconds.
         ''')
 
         # Parse the args and call whatever function was selected
