@@ -32,6 +32,7 @@ import matplotlib.pyplot as pl
 import argparse
 import sys
 import os
+import datetime
 
 from _version import __version__
 from utils import clt
@@ -53,12 +54,13 @@ def draw_events_table(record, method):
     sys.stdout.write("%i possible events found in %s:\n" %
                      (len(record.events), record.filename))
     sys.stdout.flush()
-    et = [e.time / record.fs for e in record.events]
+    et = ["%.6g" % datetime.timedelta(seconds=e.time / record.fs)
+          for e in record.events]
     cf_val = [e.cf_value for e in record.events]
     if len(et) > 0:
         sys.stdout.write("\n%s\n\n" %
                          clt.Table(clt.Column("No.", range(1, len(et) + 1)),
-                                     clt.Column("Time(s)", et),
+                                     clt.Column("Time(s)", et, fmt='%s'),
                                      clt.Column("%s CF Value" % method.upper(),
                                                 cf_val)))
         sys.stdout.flush()
@@ -74,7 +76,7 @@ def draw_results(records, method):
     """
     # Extract data from records
     data = [{'file_name':record.filename,
-             'time':event.time / record.fs,
+             'time':str(datetime.timedelta(seconds=event.time / record.fs)),
              'cf_value': event.cf_value} for record in records
                                             for event in record.events]
     sys.stdout.write("Summary of events:\n")
@@ -83,7 +85,7 @@ def draw_results(records, method):
                                           [e['file_name'] for e in data],
                                           fmt='%s'),
                                  clt.Column("Time(s)",
-                                            [e['time'] for e in data]),
+                                            [e['time'] for e in data], fmt="%s"),
                                  clt.Column("%s CF Value" % method.upper(),
                                             [e['cf_value'] for e in data])))
     sys.stdout.flush()
@@ -152,7 +154,7 @@ class Analysis(object):
     _methods = {('stalta', False): 1, ('stalta', True): 2,
                 ('ampa', False): 3, ('ampa', True): 4}
 
-    def run(self, FILEIN, csv=False, cf=False, **kwargs):
+    def run(self, FILEIN, csv=None, cf=False, **kwargs):
         """Event/picking detection on a given set of seismic signals.
 
         Reads a list of command-line input arguments, performs event analysis
@@ -168,7 +170,7 @@ class Analysis(object):
             FILEIN: A list of binary or text file objects containing seismic
                 data.
             csv: Determines whether to save a summary of results to a CSV
-                file or not. Default value is False, meaning no CSV summary
+                file or not. Default value is None, meaning no CSV summary
                 will be saved.
             cf: Determines whether to save generated characteristic function
                 to a file (binary or text format) or not. Default value is
@@ -205,7 +207,7 @@ class Analysis(object):
         draw_results(records, method=method)
 
         # Generate reports
-        if csv is True:
+        if csv:
             self.on_notify("Generating CSV report in %s... " % csv.name)
             rc.generate_csv(records, csv)
             self.on_notify("Done\n")
@@ -218,7 +220,7 @@ class Analysis(object):
                 if not os.path.exists(cf_path):
                     os.makedirs(cf_path)
                 # Generate cf filenames
-                bname, rname = os.path.split(os.path.basename(record.filename))
+                bname, rname = os.path.splitext(os.path.basename(os.path.abspath(record.filename)))
                 fname = os.path.join(cf_path, "%s.cf%s" % (bname, rname))
                 self.on_notify("Saving CF for input file %s in %s... " %
                                (record.filename, fname))
@@ -454,11 +456,60 @@ def main(argv=None):
 
     \033[1m>> python detector.py meq01.txt --csv example.out -m stalta --lta 60 --takanami -s --show-all\033[0m
 
+    Let 'meq01.txt' a text file containing seismic data, performs event picking
+    with the following settings:
 
-    \033[1m>> python detector.py meq01.bin --cf -t 1.5 --ampa-filters 50.0 25.0 12.5 6.25  --ampa-noise-threshold 75 -s --show-all\033[0m
+        Sample rate: 50 Hz. (Default value).
+        Picking Algorithm: STA-LTA.
+            STA window length: 5.0 seconds. (Default value).
+            LTA window length: 60.0 seconds.
+        Apply Takanami AR method on results.
 
+    Works on supervised mode, showing characteristic function, envelope
+    function and espectrogram for each possible event.
+    Saves results summary to 'example.out'
+
+    \033[1m>> python detector.py meq01.bin --cf -t 1.5 --ampa-filters 50.0 25.0 12.5 6.25  --ampa-noise-threshold 75 -s --show-cf\033[0m
+
+    Let 'meq01.bin' a binary file containing seismic data, detects seismic
+    events whose characteristic function value is over 1.5.
+    Event detection uses the following settings:
+
+        Detection Algorithm: AMPA.
+            Filter lengths: 50.0 25.0 12.5 6.25 (in seconds).
+            Noise threshold percentile: 75
+
+    Works on supervised mode, showing characteristic function for each possible
+    event.
+    Saves results summary to 'output.csv'.
+    Saves characteristic function to './cf_data/meq01.cf.bin'.
 
     \033[1m>> python detector.py meq*.bin --csv example.out --cf --cff text @settings.txt\033[0m
+
+    Performs event picking on all files matching 'meq*.bin' and takes some
+    settings from a text file named 'settings.txt'.
+    Saves results summary to 'example.out'.
+    Saves characteristic functions to 'cf_data' folder, plain text format.
+
+    The following settings are used:
+
+        Picking Algorithm: AMPA.
+            Sliding window length: 200.0 seconds.
+            Sliding window step: 100.0 seconds. (50 % overlap).
+            Filter lengths: 50.0, 20.0, 10.0, 6.0, 3.0 (in seconds).
+            Noise threshold percentile: 75
+            Frequency range: 4-25 Hz.
+
+    So, the following is the content of 'settings.txt':
+
+    >> cat settings.txt
+    -m ampa
+    --ampa-window 200.0
+    --ampa-step 100.0
+    --ampa-filters 50.0 20.0 10.0 6.0 3.0
+    --ampa-noise-threshold 75
+    --ampa-f-start 4.0
+    --ampa-f-end 25.0
     '''
 
     try:

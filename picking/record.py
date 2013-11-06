@@ -70,7 +70,7 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
              'name': event.name,
              'method': event.method,
              'mode': event.mode,
-             'status': event.state,
+             'status': event.status,
              'comments': event.comments} for record in records
                                          for event in record.events]
     # Write data to csv

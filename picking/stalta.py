@@ -86,11 +86,12 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
     x_norm = np.abs(x - np.mean(x))
     cf = np.zeros(len(x))
     # FASTER VERSION USING STRIDES
-    sta_win = stride_tricks.as_strided(x_norm, shape=(len(x_norm) - lta + 1, sta),
-                                       strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
-    lta_win = stride_tricks.as_strided(x_norm, shape=(len(x_norm) - lta + 1, lta),
-                                       strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
-    cf[:len(x_norm) - lta + 1] = sta_win.mean(axis=1) / lta_win.mean(axis=1)
+    if len(cf) > 0:
+        sta_win = stride_tricks.as_strided(x_norm, shape=(len(x_norm) - lta + 1, sta),
+                                           strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
+        lta_win = stride_tricks.as_strided(x_norm, shape=(len(x_norm) - lta + 1, lta),
+                                           strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
+        cf[:len(x_norm) - lta + 1] = sta_win.mean(axis=1) / lta_win.mean(axis=1)
 #     for i in xrange(len(x_norm)):
 #         sta_to = int(min(len(x_norm), i + sta))
 #         lta_to = int(min(len(x_norm), i + lta))
