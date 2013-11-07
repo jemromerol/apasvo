@@ -39,7 +39,20 @@ from picking import envelope as env
 
 
 class SpanSelector(QtCore.QObject):
-    """
+    """Allows the user to manually select a piece of a seismic signal on a
+    SignalViewerWidget object.
+
+    Attributes:
+        xleft: Current selection lower limit (measured in h-axis units).
+        xright: Current selection upper limit (measured in h-axis units).
+        xmin: Minimum selection lower limit allowed (in h-axis units).
+        xmax: Maximum selection upper limit allowed (in h-axis units).
+        active: Indicates whether the selector object is active or not.
+        minstep: Minimun selection step allowed.
+
+    Signals:
+        toogled: 'active' state changes.
+        valueChanged: 'xleft', 'xright' values changes.
     """
 
     toogled = QtCore.Signal(bool)
@@ -127,7 +140,6 @@ class SpanSelector(QtCore.QObject):
         return self.xmin, self.xmax
 
     def set_active(self, value):
-        """"""
         if value != self.active:
             self.active = value
             self.toogled.emit(value)
@@ -136,7 +148,14 @@ class SpanSelector(QtCore.QObject):
 
 
 class EventMarker(QtCore.QObject):
-    """
+    """Plots a vertical line marker to indicate the arrival time of
+    a detected event on a SignalViewerWidget object.
+
+    Attributes:
+        event: Marked event.
+
+    Signals:
+        valueChanged: 'event' arrival time changed.
     """
 
     valueChanged = QtCore.Signal(float)

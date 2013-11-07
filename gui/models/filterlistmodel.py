@@ -28,7 +28,7 @@ from PySide import QtCore
 
 
 class FilterListModel(QtCore.QAbstractTableModel):
-    """
+    """A Table Model class to handle a list of length values.
     """
 
     sizeChanged = QtCore.Signal(int)

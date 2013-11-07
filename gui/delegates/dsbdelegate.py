@@ -28,7 +28,7 @@ from PySide import QtGui, QtCore
 
 
 class DoubleSpinBoxDelegate(QtGui.QStyledItemDelegate):
-    """"""
+    """A delegate class displaying a double spin box."""
 
     def __init__(self, parent=None, minimum=0.0, maximum=100.0, step=0.01):
         QtGui.QStyledItemDelegate.__init__(self, parent)

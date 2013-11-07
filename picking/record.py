@@ -194,7 +194,7 @@ class Record(object):
         """Computes a picking algorithm over self.signal.
 
         Args:
-            alg: A detection/picking algorithm object, e. g. an
+            alg: A detection/picking algorithm object, e. g. a
                 picking.ampa.Ampa or picking.stalta.StaLta instance.
             threshold: Local maxima found in the characteristic function above
                 this value will be returned by the function as possible events

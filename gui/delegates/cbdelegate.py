@@ -28,8 +28,7 @@ from PySide import QtGui, QtCore
 
 
 class ComboBoxDelegate(QtGui.QStyledItemDelegate):
-    """
-    """
+    """A delegate class displaying a combo box."""
 
     def __init__(self, parent=None, values=None):
         QtGui.QStyledItemDelegate.__init__(self, parent)

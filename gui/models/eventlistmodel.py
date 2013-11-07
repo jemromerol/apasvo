@@ -29,7 +29,7 @@ import datetime
 
 
 class EventListModel(QtCore.QAbstractTableModel):
-    """
+    """A Table Model class to handle a list of seismic events.
     """
 
     emptyList = QtCore.Signal(bool)
@@ -97,7 +97,6 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.endRemoveRows()
 
     def addEvent(self, event):
-        """"""
         self.beginInsertRows(QtCore.QModelIndex(), len(self._list),
                              len(self._list))
         self._list.append(event)
@@ -105,14 +104,12 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.endInsertRows()
 
     def _setEmpty(self):
-        """"""
         empty = (len(self._list) != 0)
         if self.empty != empty:
             self.empty = empty
             self.emptyList.emit(empty)
 
     def updateList(self):
-        """"""
         self.modelAboutToBeReset.emit()
         self._list = self._record.events
         self._setEmpty()

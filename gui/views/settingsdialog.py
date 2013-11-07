@@ -35,7 +35,7 @@ from _version import _organization
 
 
 class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
-    """
+    """A dialog window to edit application settings.
     """
 
     def __init__(self, parent=None):
@@ -100,7 +100,7 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
             self.actionRemoveFilter.setEnabled(False)
 
     def loadSettings(self):
-        """"""
+        """Loads settings from persistent storage."""
         self.settings = QtCore.QSettings(_organization, _application_name)
         self.settings.beginGroup("stalta_settings")
         self.staSpinBox.setValue(float(self.settings.value('sta_window_len', 5.0)))
@@ -125,7 +125,7 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
         self.settings.endGroup()
 
     def saveSettings(self):
-        """"""
+        """Saves settings to persistent storage."""
         self.settings = QtCore.QSettings(_organization, _application_name)
         self.settings.beginGroup("stalta_settings")
         self.settings.setValue('sta_window_len', self.staSpinBox.value())

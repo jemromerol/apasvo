@@ -29,8 +29,13 @@ from PySide import QtGui, QtCore
 from _version import _application_name
 from _version import _organization
 
+
 class PickingTask(QtCore.QObject):
-    """"""
+    """A class to handle an event picking/detection task.
+
+    PickingTask objects are meant to be passed to a QThread instance
+    that controls their execution.
+    """
 
     finished = QtCore.Signal()
 
@@ -41,7 +46,6 @@ class PickingTask(QtCore.QObject):
         self.threshold = threshold
 
     def run(self):
-        """"""
         settings = QtCore.QSettings(_organization, _application_name)
         takanami = int(settings.value('takanami_settings/takanami', False))
         takanami_margin = float(settings.value('takanami_margin', 5.0))
@@ -52,7 +56,19 @@ class PickingTask(QtCore.QObject):
 
 
 class PickingTaskDialog(QtGui.QDialog):
-    """
+    """A progress dialog window to provide feedback to the user while
+    an event detection/picking task is being performed.
+
+    Attributes:
+        record: Current opened seismic document, picking.Record object.
+        alg: A detection/picking algorithm object, e. g. a
+            picking.ampa.Ampa or picking.stalta.StaLta instance.
+        threshold: Local maxima found in the characteristic function above
+            this value will be returned by the function as possible events
+            (detection mode).
+            If threshold is None, the function will return only the global
+            maximum (picking mode).
+            Default value is None.
     """
 
     def __init__(self, record, alg, threshold=None):
