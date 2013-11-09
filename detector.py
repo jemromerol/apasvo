@@ -54,7 +54,7 @@ def draw_events_table(record, method):
     sys.stdout.write("%i possible events found in %s:\n" %
                      (len(record.events), record.filename))
     sys.stdout.flush()
-    et = ["%.6g" % datetime.timedelta(seconds=e.time / record.fs)
+    et = ["%s" % datetime.timedelta(seconds=e.time / record.fs)
           for e in record.events]
     cf_val = [e.cf_value for e in record.events]
     if len(et) > 0:

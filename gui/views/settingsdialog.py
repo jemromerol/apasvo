@@ -108,7 +108,7 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
         self.settings.endGroup()
         self.settings.beginGroup("ampa_settings")
         self.ampawindowSpinBox.setValue(float(self.settings.value('window_len', 100.0)))
-        self.ampawindowoverlapSpinBox.setValue(float(self.settings.value('overlap', 0.5)))
+        self.ampawindowstepSpinBox.setValue(float(self.settings.value('overlap', 50.0)))
         self.ampanoisethresholdSpinBox.setValue(int(self.settings.value('noise_threshold', 90)))
         for value in self._load_filters():
             self._filters.addFilter(float(value))
@@ -133,7 +133,7 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
         self.settings.endGroup()
         self.settings.beginGroup("ampa_settings")
         self.settings.setValue('window_len', self.ampawindowSpinBox.value())
-        self.settings.setValue('overlap', self.ampawindowoverlapSpinBox.value())
+        self.settings.setValue('step', self.ampawindowstepSpinBox.value())
         self.settings.setValue('noise_threshold', self.ampanoisethresholdSpinBox.value())
         self.settings.setValue('filters', self._filters.list())
         self.settings.beginGroup("filter_bank_settings")

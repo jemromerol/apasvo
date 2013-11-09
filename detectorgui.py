@@ -374,7 +374,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup('ampa_settings')
         wlen = float(settings.value('window_len', 100.0))
-        woverlap = float(settings.value('overlap', 0.5))
+        wstep = float(settings.value('step', 50.0))
         nthres = float(settings.value('noise_threshold', 90))
         filters = settings.value('ampa_settings/filters', [30.0, 20.0, 10.0,
                                                            5.0, 2.5])
@@ -390,7 +390,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             threshold = self.thresholdSpinBox.value()
         else:
             threshold = None
-        alg = ampa.Ampa(wlen, woverlap, filters, noise_thr=nthres,
+        alg = ampa.Ampa(wlen, wstep, filters, noise_thr=nthres,
                         bandwidth=bandwidth, overlap=overlap,
                         f_start=startf, f_end=endf)
         return_code = pickingtaskdialog.PickingTaskDialog(self.record, alg, threshold).exec_()

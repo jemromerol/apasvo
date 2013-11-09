@@ -174,7 +174,16 @@ class EventMarker(QtCore.QObject):
 
 
 class ThresholdMarker(QtCore.QObject):
-    """
+    """Plots an horizontal line marker on a SignalViewerWidget to
+    indicate a selected threshold value for the computed
+    characteristic function.
+
+    Attributes:
+        threshold: A threshold value. Default: 0.0.
+        active: Indicates whether the marker is active or not.
+
+    Signals:
+        thresholdChanged: 'threshold' value changed.
     """
 
     thresholdChanged = QtCore.Signal(float)
@@ -259,7 +268,14 @@ class ThresholdMarker(QtCore.QObject):
 
 
 class MiniMap(QtGui.QWidget):
-    """
+    """Shows the entire signal and allows the user to navigate through it.
+
+    Provides an scrollable selector over the entire signal.
+
+    Attributes:
+        xmin: Selector lower limit (measured in h-axis units).
+        xmax: Selector upper limit (measured in h-axis units).
+        step: Selector length (measured in h-axis units).
     """
 
     def __init__(self, parent, ax, record=None):
@@ -269,7 +285,7 @@ class MiniMap(QtGui.QWidget):
         self.xmin = 0.0
         self.xmax = 0.0
         self.step = 10.0
-        self.time = np.array([])
+        self.xrange = np.array([])
 
         self.minimapFig = plt.figure()
         self.minimapFig.set_figheight(0.75)
@@ -303,19 +319,18 @@ class MiniMap(QtGui.QWidget):
             self.set_record(record)
 
     def set_record(self, record, step):
-        """"""
         self.record = record
         self.step = step
-        self.time = np.arange(len(self.record.signal)) / self.record.fs
-        self.xmin = self.time[0]
-        self.xmax = self.time[-1]
+        self.xrange = np.arange(len(self.record.signal)) / self.record.fs
+        self.xmin = self.xrange[0]
+        self.xmax = self.xrange[-1]
 
         ax = self.minimapFig.axes[0]
         ax.lines = []
         formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
         ax.xaxis.set_major_formatter(formatter)
         ax.grid(True, which='both')
-        ax.plot(self.time, self.record.signal, color='black', rasterized=True)
+        ax.plot(self.xrange, self.record.signal, color='black', rasterized=True)
         ax.set_xlim(self.xmin, self.xmax)
         # Draw canvas
         self.minimapCanvas.draw()
@@ -390,7 +405,11 @@ class MiniMap(QtGui.QWidget):
 
 
 class SignalViewerWidget(QtGui.QWidget):
-    """
+    """Shows different visualizations of a seismic signal (magnitude, envelope,
+    spectrogram, characteristic function).
+    Allows the user to manipulate it (navigate through it, zoom in/out,
+    edit detected events, select threshold value, etc...)
+
     """
 
     def __init__(self, parent, record=None):
@@ -440,7 +459,6 @@ class SignalViewerWidget(QtGui.QWidget):
             self.set_record(record)
 
     def set_record(self, record, step=20.0):
-        """"""
         self.record = record
         self.time = np.arange(len(self.record.signal)) / self.record.fs
         self.xmax = self.time[-1]
@@ -518,7 +536,6 @@ class SignalViewerWidget(QtGui.QWidget):
         self.minimap.draw_animate()
 
     def set_signal_amplitude_visible(self, show_sa):
-        """"""
         if self._signal_data is not None and self._envelope_data is not None:
             self._signal_data.set_visible(show_sa)
             show_axis = (self._signal_data.get_visible() +
@@ -528,7 +545,6 @@ class SignalViewerWidget(QtGui.QWidget):
             self.draw_idle()
 
     def set_signal_envelope_visible(self, show_se):
-        """"""
         if self._signal_data is not None and self._envelope_data is not None:
             self._envelope_data.set_visible(show_se)
             show_axis = (self._signal_data.get_visible() +
@@ -538,29 +554,24 @@ class SignalViewerWidget(QtGui.QWidget):
             self.draw_idle()
 
     def set_cf_visible(self, show_cf):
-        """"""
         self.fig.axes[1].set_visible(show_cf)
         self.subplots_adjust()
         self.draw_idle()
 
     def set_espectrogram_visible(self, show_eg):
-        """"""
         self.fig.axes[2].set_visible(show_eg)
         self.subplots_adjust()
         self.draw_idle()
 
     def set_minimap_visible(self, show_mm):
-        """"""
         self.minimap.set_visible(show_mm)
         self.draw_idle()
 
     def set_threshold_visible(self, show_thr):
-        """"""
         self.thresholdMarker.set_visible(show_thr)
         self.canvas.draw_idle()
 
     def subplots_adjust(self):
-        """"""
         visible_subplots = [ax for ax in self.fig.get_axes() if ax.get_visible()]
         for i, ax in enumerate(visible_subplots):
             ax.change_geometry(len(visible_subplots), 1, i + 1)

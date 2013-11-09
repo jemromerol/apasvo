@@ -25,6 +25,7 @@
 '''
 
 from PySide import QtGui
+import re
 from gui.views.converted import ui_loaddialog
 from utils import futils
 from utils.formats import rawfile
@@ -87,7 +88,7 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
             self.ByteOrderLabel.setVisible(False)
 
     def load_preview(self):
-        """Shows a preview of loaded data usign the selected parameters."""
+        """Shows a preview of loaded data using the selected parameters."""
         # Load parameters
         values = self.get_values()
         # Set up a file handler according to the type of raw data (binary or text)
@@ -107,3 +108,16 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
                 'byteorder': self.byteorders[self.ByteOrderComboBox.currentIndex()],
                 'fs': float(self.SampleFrequencySpinBox.value())}
 
+    def _get_sample_rate(self, max_header_lines=64, comments='#'):
+        pattern = r'(?P<fs>\d+).*?(?P<unit>(ghz|mhz|hz))'
+        with open(self.filename, 'r') as f:
+            for i in xrange(max_header_lines):
+                line = f.readline()
+                _, _, comment = line.partition(comments)  # Select comments
+                if comment != '':
+                    m = re.match(pattern, comment.lower())
+                    if m:
+                        fs = m.groupdict()['fs']
+                        if fs:
+                            return float(fs)
+        return None

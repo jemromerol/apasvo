@@ -78,12 +78,13 @@ def read_in_chunks(file_object, chunk_size=1024):
             return
 
 
-def read_txt_in_chunks(file_object, n=1024):
+def read_txt_in_chunks(file_object, n=1024, comments='#'):
     """Lazy function (generator) to read a text file in chunks.
     Default chunk size: 1024 characters"""
     numeric_pattern = r'[+-]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[Ee][+-]?\d+)?'
     data = []
     for line in file_object.xreadlines():
+        line, _, _ = line.partition(comments)  # Eliminate comments
         data.extend(re.findall(numeric_pattern, line))
         if len(data) >= n:
             yield data[:n]
