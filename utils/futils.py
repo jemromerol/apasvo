@@ -122,10 +122,10 @@ def get_delimiter(fileobject, lines=16):
         A character corresponding to the delimiter detected.
         An empty string if nothing was found.
     """
+    comment = r'\s*#.*'
     integer = r'[+-]?\d+'
     decimal = r'\d+(e[+-]\d+)?'
     number = r'{integer}\.{decimal}'.format(integer=integer, decimal=decimal)
-    comment = r'\s*#.*'
     pattern = (r'{comment}|({number}((?P<sep>[\W]+){number})*({comment})?)'.
                format(number=number, comment=comment))
     delimiters = {}
@@ -147,6 +147,36 @@ def get_delimiter(fileobject, lines=16):
         return max(delimiters, key=lambda x: delimiters[x])
     else:
         return ''
+
+
+def get_sample_rate(filename, max_header_lines=64, comments='#'):
+    """Search for a sample rate value in the header of a text file containing
+    a seismic signal.
+
+    Args:
+        filename: Name of a text file containing a seismic signal.
+        max_header_lines: Maximum number of lines to be read from the beginning
+            of the file in order to get the sample rate value.
+        comments: Character used to indicate the start of a comment
+
+    Returns:
+        out: Sample rate, in Hz.
+            None if no sample rate value is found in header.
+    """
+    units = {'hz': 10.0 ** 0, 'khz': 10.0 ** 3,
+             'mhz': 10.0 ** 6, 'ghz': 10.0 ** 9}
+    pattern = r'sample\s+(rate|frequency).*?(?P<fs>\d+(\.\d*)?(e[+-]?\d+)?).*?(?P<unit>(ghz|mhz|khz|hz))'
+    with open(filename, 'r') as f:
+        for i in xrange(max_header_lines):
+            line = f.readline()
+            _, _, comment = line.partition(comments)  # Select comments
+            if comment != '':
+                m = re.search(pattern, comment.lower())
+                if m:
+                    fs = m.groupdict()['fs']
+                    if fs:
+                        return float(fs) * units[m.groupdict()['unit']]
+    return None
 
 
 def copytree(src, dst, symlinks=False, ignore=None):

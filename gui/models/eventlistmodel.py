@@ -55,7 +55,7 @@ class EventListModel(QtCore.QAbstractTableModel):
         attr_name = self._header[index.column()]
         data = self._list[index.row()].__getattribute__(attr_name)
         if attr_name == 'time':
-            return str(datetime.timedelta(seconds=data))
+            return str(datetime.timedelta(seconds=data / self._record.fs))
         if attr_name == 'cf_value':
             return "%.3f" % data
         return "%s" % data

@@ -25,15 +25,28 @@
 '''
 
 import numpy as np
-
 from utils import futils
+
+
+format_binary = 'binary'
+format_text = 'text'
+datatype_float16 = 'float16'
+datatype_float32 = 'float32'
+datatype_float64 = 'float64'
+byteorder_little_endian = 'little-endian'
+byteorder_big_endian = 'big-endian'
+byteorder_native = 'native'
 
 
 class RawFile(object):
     """An abstract class representing a binary or plain text file."""
 
-    datatypes = {'float16': 'f2', 'float32': 'f4', 'float64': 'f8'}
-    byteorders = {'little-endian': '<', 'big-endian': '>', 'native': '='}
+    _datatypes = {datatype_float16: 'f2',
+                  datatype_float32: 'f4',
+                  datatype_float64: 'f8'}
+    _byteorders = {byteorder_little_endian: '<',
+                   byteorder_big_endian: '>',
+                   byteorder_native: '='}
 
     def __init__(self):
         super(RawFile, self).__init__()
@@ -71,7 +84,7 @@ class BinFile(RawFile):
                 Default value is 'native'.
         """
         super(BinFile, self).__init__()
-        self.dtype = np.dtype(self.byteorders[byteorder] + self.datatypes[dtype])
+        self.dtype = np.dtype(self._byteorders[byteorder] + self._datatypes[dtype])
         self.filename = filename
 
     def read(self, **kwargs):
@@ -94,6 +107,8 @@ class BinFile(RawFile):
 
     def write(self, array, **kwargs):
         """Stores an array into the binary file."""
+        if array.dtype != np.dtype(self.dtype):
+            return array.astype(self.dtype).tofile(self.filename)
         return array.tofile(self.filename)
 
 
@@ -119,7 +134,7 @@ class TextFile(RawFile):
                 Default value is 'native'.
         """
         super(TextFile, self).__init__()
-        self.dtype = np.dtype(self.byteorders[byteorder] + self.datatypes[dtype])
+        self.dtype = np.dtype(self._byteorders[byteorder] + self._datatypes[dtype])
         self.filename = filename
 
     def read(self, **kwargs):
@@ -191,10 +206,10 @@ def get_file_handler(filename, fmt='', dtype='float64', byteorder='native', **kw
     """
     if isinstance(filename, file):
         filename = filename.name
-    formats = ['binary', 'text']
+    formats = [format_binary, format_text]
     if fmt not in formats:
-        fmt = 'text' if futils.istextfile(filename) else 'binary'
-    if fmt == 'text':
+        fmt = format_text if futils.istextfile(filename) else format_binary
+    if fmt == format_text:
         return TextFile(filename, dtype=dtype, byteorder=byteorder)
     else:
         return BinFile(filename, dtype=dtype, byteorder=byteorder)

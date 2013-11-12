@@ -34,16 +34,27 @@ from gui.delegates import cbdelegate
 from gui.models import eventlistmodel
 from gui.views import svwidget
 from gui.views import loaddialog
+from gui.views import savedialog
 from gui.views import settingsdialog
 from gui.views import pickingtaskdialog
 
 from picking import stalta
 from picking import ampa
 from picking import record as rc
+from utils.formats import rawfile
 
 from _version import __version__
 from _version import _application_name
 from _version import _organization
+
+
+format_csv = 'csv'
+format_other = 'other'
+
+binary_files_filter = 'Binary Files (*.bin)'
+text_files_filter = 'Text Files (*.txt)'
+all_files_filter = 'All Files (*.*)'
+csv_files_filter = 'CSV Files (*.csv)'
 
 
 class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
@@ -59,6 +70,16 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     windowList = []    # A list of opened application windows
     MaxRecentFiles = 10    # Recent files list max size
 
+    _file_filters = {binary_files_filter: rawfile.format_binary,
+                        text_files_filter: rawfile.format_text,
+                        all_files_filter: format_other}
+    _cf_file_filters = {binary_files_filter: rawfile.format_binary,
+                        text_files_filter: rawfile.format_text,
+                        all_files_filter: format_other}
+    _summary_file_filters = {csv_files_filter: format_csv,
+                             text_files_filter: rawfile.format_text,
+                             all_files_filter: format_other}
+
     def __init__(self, parent=None, filename=None):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
@@ -68,14 +89,24 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self._model = None
         self.isModified = False
         self.saved_filename = None
+        self.saved_cf_filename = None
+        self.saved_cf_format = None
+        self.saved_cf_dtype = None
+        self.saved_cf_byteorder = None
 
         stateDelegate = cbdelegate.ComboBoxDelegate(self.EventsTableView, rc.Event.statuses)
         self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
         self.EventsTableView.clicked.connect(self.goToEventPosition)
 
         self.actionOpen.triggered.connect(self.open)
-        self.actionSave.triggered.connect(self.save)
-        self.actionSave_As.triggered.connect(self.save_as)
+        self.actionSave.triggered.connect(self.save_events)
+        self.actionSave.triggered.connect(self.save_cf)
+        self.actionSave_As.triggered.connect(self.save_events_as)
+        self.actionSave_As.triggered.connect(self.save_cf_as)
+        self.actionSaveEvents.triggered.connect(self.save_events)
+        self.actionSaveEvents_As.triggered.connect(self.save_events_as)
+        self.actionSaveCF.triggered.connect(self.save_cf)
+        self.actionSaveCF_As.triggered.connect(self.save_cf_as)
         self.actionClose.triggered.connect(self.close)
         self.actionQuit.triggered.connect(QtGui.qApp.closeAllWindows)
         self.actionClearRecent.triggered.connect(self.clear_recent_list)
@@ -126,7 +157,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         """
         if filename is None:
             filename, _ = QtGui.QFileDialog.getOpenFileName(self, "Open Data File", ".",
-                                                            "Binary Files (*.bin *.raw);;Text Files (*.txt);;All Files (*.*)")
+                                                            ";;".join(self._file_filters))
         if filename != '':
             if self.record is None:
                 dialog = loaddialog.LoadDialog(self, filename)
@@ -174,24 +205,24 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         if action:
             self.open(action.data())
 
-    def save(self):
-        """Saves a results summary to file.
+    def save_events(self):
+        """Saves event list to file.
 
-        If summary has not been saved yet, opens a save file dialog.
+        If no events has been saved yet, opens a save file dialog.
         """
         if self.saved_filename is None:
-            return self.save_as()
+            return self.save_events_as()
         else:
-            return self.save_events(self.saved_filename)
+            return self.save_event_list(self.saved_filename)
 
-    def save_as(self):
-        """Opens a save file dialog to save a summary to file."""
-        filename, _ = QtGui.QFileDialog.getSaveFileName(self, "Open Data File", ".",
-                                                        "CSV Files (*.csv);;Text Files (*.txt);;All Files (*.*)")
+    def save_events_as(self):
+        """Opens a save file dialog to save event list to file."""
+        filename, _ = QtGui.QFileDialog.getSaveFileName(self, "Save Event List to File", ".",
+                                                        ";;".join(self._summary_file_filters))
         if filename != '':
-            self.save_events(filename)
+            self.save_event_list(filename)
 
-    def save_events(self, filename):
+    def save_event_list(self, filename):
         """Saves a results summary to file.
 
         Generates a results CSV summary.
@@ -202,6 +233,53 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         with open(filename, 'w') as f:
             rc.generate_csv([self.record], f)
             self.saved_filename = filename
+
+    def save_cf(self):
+        """Saves characteristic function to file.
+
+        If no characteristic function has been saved yet, opens a save file dialog.
+        """
+        if self.saved_cf_filename is None:
+            return self.save_cf_as()
+        else:
+            return self.record.save_cf(self.saved_cf_filename,
+                                       fmt=self.saved_cf_format,
+                                       dtype=self.saved_cf_dtype,
+                                       byteorder=self.saved_cf_byteorder)
+
+    def save_cf_as(self):
+        """Open a save file dialog to save computed characteristic function."""
+        filename, selected_filter = QtGui.QFileDialog.getSaveFileName(self, "Save Characteristic Function to File", ".",
+                                                        ";;".join(self._cf_file_filters.keys()))
+        if filename != '':
+            # Set defaults
+            if self._cf_file_filters[selected_filter] != format_other:
+                fmt = self._cf_file_filters[selected_filter]
+            elif self.saved_cf_format is not None:
+                fmt = self.saved_cf_format
+            else:
+                fmt = rawfile.format_binary
+            if self.saved_cf_dtype is not None:
+                dtype = self.saved_cf_dtype
+            else:
+                dtype = rawfile.datatype_float64
+            if self.saved_cf_byteorder is not None:
+                byteorder = self.saved_cf_byteorder
+            else:
+                byteorder = rawfile.byteorder_native
+            # Show dialog
+            dialog = savedialog.SaveDialog(self, fmt=fmt,
+                                           dtype=dtype,
+                                           byteorder=byteorder)
+            return_code = dialog.exec_()
+            # Save CF to file and store settings
+            if return_code == QtGui.QDialog.Accepted:
+                values = dialog.get_values()
+                self.record.save_cf(filename, **values)
+                self.saved_cf_filename = filename
+                self.saved_cf_format = values['fmt']
+                self.saved_cf_dtype = values['dtype']
+                self.saved_cf_byteorder = values['byteorder']
 
     def close(self):
         """Closes current document.
@@ -306,7 +384,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     QtGui.QMessageBox.Save | QtGui.QMessageBox.Discard |
                     QtGui.QMessageBox.Cancel)
             if ret == QtGui.QMessageBox.Save:
-                self.save()
+                self.save_events()
+                self.save_cf()
             elif ret == QtGui.QMessageBox.Cancel:
                 return False
         return True
@@ -323,7 +402,10 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.isModified = value
         self.actionSave.setEnabled(value)
         self.actionSave_As.setEnabled(value)
-        self.actionGenerate_HTML.setEnabled(value)
+        self.actionSaveEvents.setEnabled(value)
+        self.actionSaveEvents_As.setEnabled(value)
+        self.actionSaveCF.setEnabled(value)
+        self.actionSaveCF_As.setEnabled(value)
 
     def set_title(self):
         """Sets current window's title."""
@@ -403,7 +485,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         Args:
             index: Event row index at Events Table.
         """
-        self.signalViewer.set_position(self.record.events[index.row()].time)
+        self.signalViewer.set_position(self.record.events[index.row()].time / self.record.fs)
 
 
 if __name__ == '__main__':

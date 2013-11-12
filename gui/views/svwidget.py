@@ -74,8 +74,10 @@ class SpanSelector(QtCore.QObject):
             s.set_visible(False)
 
         bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
-        self.selectorLabel = matplotlib.text.Text(0, 0, "0.00", bbox=bbox)
-        self.selectorLabel.set_visible(False)
+#         self.selectorLeftLabel = matplotlib.text.Text(0, 0, "0.00", bbox=bbox)
+#         self.selectorLeftLabel.set_visible(False)
+#         self.selectorRightLabel = matplotlib.text.Text(0, 0, "0.00", bbox=bbox)
+#         self.selectorRightLabel.set_visible(False)
         self.pick_threshold = None
 
         self.press_selector = None
@@ -160,15 +162,16 @@ class EventMarker(QtCore.QObject):
 
     valueChanged = QtCore.Signal(float)
 
-    def __init__(self, fig, event):
+    def __init__(self, fig, record, event):
         super(EventMarker, self).__init__()
         self.fig = fig
         self.event = event
+        self.record = record
 
         self.markers = []
 
         for ax in fig.axes:
-            marker = ax.axvline(self.event.time)
+            marker = ax.axvline(self.event.time / self.record.fs)
             marker.set(color='r', ls='--', lw=2, alpha=0.8, picker=5)
             self.markers.append(marker)
 
@@ -481,7 +484,6 @@ class SignalViewerWidget(QtGui.QWidget):
                                                     rasterized=True)[0]
         # Plot CF
         self.set_cf_visible(self.record.cf.size != 0)
-        self.fig.axes[1].cla()
         self.fig.axes[1].xaxis.set_major_formatter(formatter)
         self.fig.axes[1].grid(True, which='both')
         self.fig.axes[1].lines = []
@@ -489,7 +491,6 @@ class SignalViewerWidget(QtGui.QWidget):
                               color='black', rasterized=True)
         self.thresholdMarker = ThresholdMarker(self.fig.axes[1])
         # Plot espectrogram
-        self.fig.axes[2].cla()
         self.fig.axes[2].xaxis.set_major_formatter(formatter)
         self.fig.axes[2].specgram(self.record.signal, Fs=self.record.fs,
                                   cmap='jet',
@@ -498,7 +499,7 @@ class SignalViewerWidget(QtGui.QWidget):
         # Plot events
         self.eventMarkers = []
         for event in self.record.events:
-            self.eventMarkers.append(EventMarker(self.fig, event))
+            self.eventMarkers.append(EventMarker(self.fig, self.record, event))
         # Set the span selector
         self.selector.set_active(False)
         self.selector.set_selection_limits(self.xmin, self.xmax)

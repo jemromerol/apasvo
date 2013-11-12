@@ -102,7 +102,7 @@ class Ui_LoadDialog(object):
         self.SampleFrequencySpinBox.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.SampleFrequencySpinBox.setAccelerated(True)
         self.SampleFrequencySpinBox.setMinimum(1)
-        self.SampleFrequencySpinBox.setMaximum(1000)
+        self.SampleFrequencySpinBox.setMaximum(10000)
         self.SampleFrequencySpinBox.setProperty("value", 50)
         self.SampleFrequencySpinBox.setObjectName("SampleFrequencySpinBox")
         self.gridLayout.addWidget(self.SampleFrequencySpinBox, 3, 1, 1, 1)
