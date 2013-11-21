@@ -533,12 +533,12 @@ def main(argv=None):
                             help='''
     Output CSV summary file. Default: 'output.csv'.
         ''')
-        parser.add_argument("-f", "--frequency", type=parse.positive_float,
+        parser.add_argument("-f", "--frequency", type=parse.positive_int,
                             default=50.0,
                             dest='fs',
                             metavar='<arg>',
                             help='''
-    Sample rate in Hz. Default: 50.0 Hz
+    Sample rate in Hz. Default: 50 Hz
         ''')
         parser.add_argument("-m", "--method",
                             choices=['ampa', 'stalta'],

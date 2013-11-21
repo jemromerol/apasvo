@@ -343,12 +343,12 @@ def main(argv=None):
     No. of signals to generate. Default: 1.
     If input signal is provided, this parameter has no effect.
         ''')
-        parser.add_argument("-f", "--frequency", type=parse.positive_float,
-                            default=50.0,
+        parser.add_argument("-f", "--frequency", type=parse.positive_int,
+                            default=50,
                             dest='fs',
                             metavar='<arg>',
                             help='''
-    Sample rate in Hz. Default: 50.0 Hz.
+    Sample rate in Hz. Default: 50 Hz.
         ''')
         parser.add_argument("-l", "--length",
                             type=parse.positive_int,

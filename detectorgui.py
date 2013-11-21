@@ -37,6 +37,7 @@ from gui.views import loaddialog
 from gui.views import savedialog
 from gui.views import settingsdialog
 from gui.views import pickingtaskdialog
+from gui.views import playertoolbar
 
 from picking import stalta
 from picking import ampa
@@ -113,16 +114,20 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSettings.triggered.connect(self.edit_settings)
         self.actionSTA_LTA.triggered.connect(self.doSTALTA)
         self.actionAMPA.triggered.connect(self.doAMPA)
-
+        # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
         self.splitter.addWidget(self.signalViewer)
-        self.toolBarNavigation = svwidget.NavigationToolbar(self.signalViewer.canvas,
-                                                   self)
+        self.toolBarNavigation = svwidget.NavigationToolbar(self.signalViewer.canvas, self)
         self.toolBarNavigation.setEnabled(False)
-        self.toolBarMain.setObjectName("toolBarNavigation")
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarNavigation)
         self.addToolBarBreak()
+        # add analysis toolbar
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarAnalysis)
+        self.addToolBarBreak()
+        # add media toolbar
+        self.toolBarMedia = playertoolbar.PlayerToolBar(self)
+        self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarMedia)
+        self.addToolBarBreak()
 
         self.actionEvent_List.toggled.connect(self.EventsTableView.setVisible)
         self.actionSignal_Amplitude.toggled.connect(self.signalViewer.set_signal_amplitude_visible)
@@ -189,7 +194,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     self.actionCreate_New_Event.setEnabled(True)
                     self.actionSTA_LTA.setEnabled(True)
                     self.actionAMPA.setEnabled(True)
-                    self.actionPlay.setEnabled(True)
                     self.toolBarNavigation.setEnabled(True)
                     self.toolBarAnalysis.setEnabled(True)
                     self.set_title()
@@ -396,6 +400,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             event.accept()
         else:
             event.ignore()
+        self.toolBarMedia.disconnect_path()
 
     def set_modified(self, value):
         """Sets 'isModified' attribute's value"""
@@ -490,6 +495,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
+    app.setApplicationName(_application_name)
     main = MainWindow()
     main.show()
     sys.exit(app.exec_())

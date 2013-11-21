@@ -153,6 +153,10 @@ def generate_seismic_earthquake(tmax, t0, fs, P_signal_db, low_period,
     Returns:
         out: A numpy array containing the generated signal.
     """
+    if fs <= 0:
+        raise ValueError("fs must be a positive value")
+    if fs != int(fs):
+        raise ValueError("fs must be an integer value")
     L = tmax * fs
     # Value from which the exponential function truncates its fall
     betta = high_amp / 100.
@@ -217,6 +221,10 @@ def generate_seismic_noise(tmax, fs, P_noise_db, bfirls=None):
     Returns:
         out: A numpy array containing the generated signal.
     """
+    if fs <= 0:
+        raise ValueError("fs must be a positive value")
+    if fs != int(fs):
+        raise ValueError("fs must be an integer value")
     if bfirls is None:
         bfirls = np.array([1])
     L = tmax * fs

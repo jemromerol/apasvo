@@ -175,7 +175,7 @@ def get_sample_rate(filename, max_header_lines=64, comments='#'):
                 if m:
                     fs = m.groupdict()['fs']
                     if fs:
-                        return float(fs) * units[m.groupdict()['unit']]
+                        return int(float(fs) * units[m.groupdict()['unit']])
     return None
 
 

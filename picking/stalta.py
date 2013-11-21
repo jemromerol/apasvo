@@ -74,6 +74,8 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
     # Check arguments
     if fs <= 0:
         raise ValueError("fs must be a positive value")
+    if fs != int(fs):
+        raise ValueError("fs must be an integer value")
     if sta_length <= 0:
         raise ValueError("sta_length must be a positive value")
     if lta_length <= 0:

@@ -34,6 +34,7 @@
 
 from PySide import QtCore, QtGui
 
+
 class Ui_LoadDialog(object):
     def setupUi(self, LoadDialog):
         LoadDialog.setObjectName("LoadDialog")
