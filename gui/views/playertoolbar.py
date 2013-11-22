@@ -39,10 +39,31 @@ bit_depths = ('int8', 'int16')
 
 
 class PlayerToolBar(QtGui.QToolBar):
+    """Allows the user to play a seismic signal.
+
+    Attributes:
+        data: Seismic data, numpy array type.
+        data_fs: Sample rate of 'data', in Hz.
+        fs: Sample rate used to play 'data', in Hz. Available values are
+            2000, 4000, 6000, 8000, 10000 and 16000.
+            Default: 2000 samples/sec.
+        bd: Bit depth of 'data' samples once loaded. Available values
+            are 'int8' and 'int16', i.e. 8 and 16 bits depth.
+        repeat: Determines whether to replay or not.
+            Default: False.
+        connected: Indicates whether the media player is connected to an
+            audio output or not.
+        data_loaded: Indicates whether a seismic signal has been loaded
+            onto the player or not.
+
+    Signal:
+        tick: Emits current time position in the stream currently being
+            played at a given interval.
+    """
 
     tick = QtCore.Signal(int)
 
-    def __init__(self, parent=None, data=None, data_fs=None, fs=8000,
+    def __init__(self, parent=None, data=None, data_fs=None, fs=2000,
                  bd='int16', repeat=False, tick_interval=200):
         if fs not in sample_rates:
             raise ValueError('Unsupported sampling rate')
@@ -59,6 +80,7 @@ class PlayerToolBar(QtGui.QToolBar):
         self._mediaObject.currentSourceChanged.connect(self.current_source_changed)
         self._mediaObject.tick.connect(self.on_tick)
         self._mediaObject.stateChanged.connect(self.state_changed)
+        self.connected = False
         self.connect_path()
         self._buffer = QtCore.QBuffer()
         self.buffer_loaded = False
@@ -106,7 +128,7 @@ class PlayerToolBar(QtGui.QToolBar):
         self.addSeparator()
         self.labelStart = QtGui.QLabel(" Start:", self)
         self.tsbStart = QtGui.QTimeEdit(self)
-        self.tsbStart.setMinimumTime(QtCore.QTime())
+        self.tsbStart.setMinimumTime(QtCore.QTime().addSecs(0))
         self.labelEnd = QtGui.QLabel(" End:", self)
         self.tsbEnd = QtGui.QTimeEdit(self)
         self.labelPosition = QtGui.QLabel(" Position:", self)
@@ -134,7 +156,7 @@ class PlayerToolBar(QtGui.QToolBar):
 
     def finished(self):
         if self.repeat:
-            self.mediaObject.play()
+            self.on_play()
 
     def toogle_repeat(self, value):
         self.repeat = value
@@ -146,36 +168,51 @@ class PlayerToolBar(QtGui.QToolBar):
             self.setEnabled(False)
 
     def on_play(self):
-        if not self.buffer_loaded:
-            self._load_buffer()
+        if self._mediaObject.state() == Phonon.StoppedState:
+            if not self.buffer_loaded:
+                self._load_buffer()
+            self._mediaObject.setCurrentSource(self._buffer)
         self._mediaObject.play()
 
     def load_data(self, data, data_fs):
+        """Loads a seismic signal onto the player.
+
+        Args:
+            data: Seismic data, numpy array type.
+            data_fs: Sample rate of loaded data.
+        """
         self.data = (((data - data.mean()) / (max(data) - min(data))) *
-                     np.iinfo(self.bd)).astype(self.bd)
+                     np.iinfo(self.bd).max).astype(self.bd)
         self.data_fs = data_fs
         self._start = 0
         self._end = len(self.data)
         self.data_loaded = True
         # update ui
-        self.tsbStart.setTime(QtCore.QTime())
-        offset = QtCore.QTime().addMSecs(self._end * self.data_fs * 1000)
-        self.tsbEnd.setTime(offset)
-        self.tsbStart.setMinimumTime(QtCore.QTime())
-        self.tsbEnd.setMaximumTime(offset)
+        self._update_qtimeedit_range()
         self.buffer_loaded = False
-        #self._load_buffer()
+        self._load_buffer()
 
     def _load_buffer(self):
         if not self.data_loaded:
             raise UnboundLocalError("Data not initialized.")
         stream = cStringIO.StringIO()
         wavfile.write(stream, self.fs, self.data[self._start:self._end])
+#        self._buffer.close()
+        if self._buffer.isOpen():
+            self._buffer.close()
         self._buffer.setData(stream.read())
-        self._mediaObject.setCurrentSource(self._buffer)
+        self._buffer.open(QtCore.QBuffer.ReadOnly)
+        self._mediaObject.clear()
+        self._mediaObject.setCurrentSource(Phonon.MediaSource(self._buffer))
         self.buffer_loaded = True
 
     def set_limits(self, t_from, t_to):
+        """Sets a time interval into loaded data to be played.
+
+        Args:
+            t_from: Start time point of the interval to be played, in seconds.
+            t_to: End time point of the interval to be played, in seconds.
+        """
         if not self.data_loaded:
             raise UnboundLocalError("Data not initialized.")
         t_from = int(t_from * self.data_fs)
@@ -189,10 +226,19 @@ class PlayerToolBar(QtGui.QToolBar):
         self._start = t_from
         self._end = t_to
         self.buffer_loaded = False
+        # update ui
+        self._update_qtimeedit_range()
         #self._load_buffer()
 
+    def _update_qtimeedit_range(self):
+        t_start = QtCore.QTime().addMSecs((self._start / self.data_fs) * 1000)
+        t_end = QtCore.QTime().addMSecs((self._end / self.data_fs) * 1000)
+        self.tsbStart.setTime(t_start)
+        self.tsbEnd.setMaximumTime(t_end)
+        self.tsbEnd.setTime(t_end)
+
     def on_tick(self, value):
-        if self.data_loaded:
+        if self.data_loaded and self.buffer_loaded:
             offset = ((self._start / self.data_fs) + (value / 1000.0) *
                       (self.fs / self.data_fs))
             self.tick.emit(offset)
@@ -234,15 +280,20 @@ class PlayerToolBar(QtGui.QToolBar):
             self.tsbEnd.setEnabled(False)
 
     def connect_path(self):
-        self._path = Phonon.createPath(self._mediaObject, self._audioOutput)
-        self.connected = True
+        """Connect the player to an audio output."""
+        if not self.connected:
+            self._path = Phonon.createPath(self._mediaObject, self._audioOutput)
+            self.connected = True
 
     def disconnect_path(self):
-        self._path.disconnectPath()
-        self._mediaObject.clear()
-        self.set_enabled(False)
-        self.connected = False
-        self.data_loaded = False
+        """Disconnect the player from audio output and clear loaded data."""
+        if self.connected:
+            self._path.disconnectPath()
+            self._mediaObject.clear()
+            self.set_enabled(False)
+            self.connected = False
+            self.data_loaded = False
+            self.buffer_loaded = False
 
 
 

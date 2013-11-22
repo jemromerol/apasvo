@@ -184,6 +184,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     self.signalViewer.set_record(self.record)
                     self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
                     self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
+                    self.toolBarMedia.load_data(self.record.signal, self.record.fs)
+                    self.toolBarMedia.connect_path()
                     QtGui.QApplication.restoreOverrideCursor()
                     # Update recent list
                     self.push_recent_list(filename)
@@ -196,6 +198,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     self.actionAMPA.setEnabled(True)
                     self.toolBarNavigation.setEnabled(True)
                     self.toolBarAnalysis.setEnabled(True)
+                    self.toolBarMedia.set_enabled(True)
                     self.set_title()
             else:
                 other = MainWindow(filename=filename)
@@ -299,6 +302,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.saved_filename = None
             self.signalViewer.thresholdMarker.thresholdChanged.disconnect(self.thresholdSpinBox.setValue)
             self.thresholdSpinBox.valueChanged.disconnect(self.signalViewer.thresholdMarker.set_threshold)
+            self.toolBarMedia.disconnect_path()
             # Update GUI
             self.centralwidget.setVisible(False)
             self.actionClose.setEnabled(False)
@@ -306,7 +310,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.actionCreate_New_Event.setEnabled(False)
             self.actionSTA_LTA.setEnabled(False)
             self.actionAMPA.setEnabled(False)
-            self.actionPlay.setEnabled(False)
             self.toolBarNavigation.setEnabled(False)
             self.toolBarAnalysis.setEnabled(False)
             self.set_title()
