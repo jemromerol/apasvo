@@ -55,7 +55,7 @@ class SpanSelector(QtCore.QObject):
         valueChanged: 'xleft', 'xright' values changes.
     """
 
-    toogled = QtCore.Signal(bool)
+    toggled = QtCore.Signal(bool)
     valueChanged = QtCore.Signal(float, float)
 
     def __init__(self, fig, xmin=0.0, xmax=0.0, minstep=0.01):
@@ -73,7 +73,7 @@ class SpanSelector(QtCore.QObject):
         for s in self.selectors:
             s.set_visible(False)
 
-        bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
+#         bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
 #         self.selectorLeftLabel = matplotlib.text.Text(0, 0, "0.00", bbox=bbox)
 #         self.selectorLeftLabel.set_visible(False)
 #         self.selectorRightLabel = matplotlib.text.Text(0, 0, "0.00", bbox=bbox)
@@ -108,29 +108,31 @@ class SpanSelector(QtCore.QObject):
             if xright - xleft >= self.minstep:
                 if not self.active:
                     self.set_active(True)
-                self.set_selector_limits(xleft, xright)
+                self.set_selector_limits(xleft, xright, adjust_to_viewport=True)
 
     def get_xdata(self, event):
         inv = self.fig.axes[0].transData.inverted()
         xdata, _ = inv.transform((event.x, event.y))
         return xdata
 
-    def set_selector_limits(self, xleft, xright):
-        xmin, xmax = self.fig.axes[0].get_xlim()
-        if xleft < xmin:
-            xleft = xmin
-        if xright > xmax:
-            xright = xmax
-        if xleft < self.xmin:
-            xleft = self.xmin
-        if xright > self.xmax:
-            xright = self.xmax
-        self.xleft, self.xright = xleft, xright
-        for s in self.selectors:
-            s.xy[:2, 0] = self.xleft
-            s.xy[2:4, 0] = self.xright
-        self.valueChanged.emit(self.xleft, self.xright)
-        self.fig.canvas.draw_idle()
+    def set_selector_limits(self, xleft, xright, adjust_to_viewport=False):
+        if (xleft, xright) != (self.xleft, self.xright):
+            if adjust_to_viewport:
+                xmin, xmax = self.fig.axes[0].get_xlim()
+                if xleft < xmin:
+                    xleft = xmin
+                if xright > xmax:
+                    xright = xmax
+                if xleft < self.xmin:
+                    xleft = self.xmin
+                if xright > self.xmax:
+                    xright = self.xmax
+            self.xleft, self.xright = xleft, xright
+            for s in self.selectors:
+                s.xy[:2, 0] = self.xleft
+                s.xy[2:4, 0] = self.xright
+            self.valueChanged.emit(self.xleft, self.xright)
+            self.fig.canvas.draw_idle()
 
     def get_selector_limits(self):
         return self.xleft, self.xright
@@ -144,9 +146,10 @@ class SpanSelector(QtCore.QObject):
     def set_active(self, value):
         if value != self.active:
             self.active = value
-            self.toogled.emit(value)
+            self.toggled.emit(value)
             for s in self.selectors:
                 s.set_visible(value)
+            self.fig.canvas.draw_idle()
 
 
 class EventMarker(QtCore.QObject):
@@ -454,7 +457,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.minimap)
 
-        self.selector.toogled.connect(self.minimap.set_selection_visible)
+        self.selector.toggled.connect(self.minimap.set_selection_visible)
         self.selector.valueChanged.connect(self.minimap.set_selection_limits)
 
         self.record = None

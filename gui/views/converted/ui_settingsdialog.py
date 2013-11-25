@@ -33,6 +33,8 @@
 '''
 
 from PySide import QtCore, QtGui
+from gui.views import playertoolbar
+
 
 class Ui_SettingsDialog(object):
     def setupUi(self, SettingsDialog):
@@ -57,12 +59,13 @@ class Ui_SettingsDialog(object):
         self.treeWidget.setAnimated(False)
         self.treeWidget.setHeaderHidden(True)
         self.treeWidget.setObjectName("treeWidget")
-        item_0 = QtGui.QTreeWidgetItem(self.treeWidget)
-        item_0 = QtGui.QTreeWidgetItem(self.treeWidget)
-        item_1 = QtGui.QTreeWidgetItem(item_0)
-        item_1 = QtGui.QTreeWidgetItem(item_0)
-        item_1 = QtGui.QTreeWidgetItem(item_0)
-        item_0 = QtGui.QTreeWidgetItem(self.treeWidget)
+        item_stalta = QtGui.QTreeWidgetItem(self.treeWidget)
+        item_ampa = QtGui.QTreeWidgetItem(self.treeWidget)
+        item_ampa_general = QtGui.QTreeWidgetItem(item_ampa)
+        item_ampa_fb = QtGui.QTreeWidgetItem(item_ampa)
+        item_ampa_filters = QtGui.QTreeWidgetItem(item_ampa)
+        item_takanami = QtGui.QTreeWidgetItem(self.treeWidget)
+        item_player = QtGui.QTreeWidgetItem(self.treeWidget)
         self.horizontalLayout.addWidget(self.treeWidget)
 
         # Set STA-LTA Group Box
@@ -266,6 +269,34 @@ class Ui_SettingsDialog(object):
         self.takanamiformLayout.setWidget(4, QtGui.QFormLayout.FieldRole, self.takanamiMarginSpinBox)
         self.horizontalLayout.addWidget(self.takanamiGroupBox)
 
+        # Set Player Group Box
+        self.playerGroupBox = QtGui.QGroupBox(self.widget)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHeightForWidth(self.playerGroupBox.sizePolicy().hasHeightForWidth())
+        self.playerGroupBox.setSizePolicy(sizePolicy)
+        self.playerGroupBox.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.playerGroupBox.setVisible(False)
+        self.formLayout = QtGui.QFormLayout(self.playerGroupBox)
+        self.formLayout.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
+        self.formLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
+        self.formLayout.setRowWrapPolicy(QtGui.QFormLayout.DontWrapRows)
+        self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.formLayout.setFormAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
+        self.formLayout.setContentsMargins(24, 24, 24, 24)
+        self.formLayout.setHorizontalSpacing(9)
+        self.formLayout.setVerticalSpacing(24)
+        self.samplerateLabel = QtGui.QLabel(self.playerGroupBox)
+        self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.samplerateLabel)
+        self.samplerateComboBox = QtGui.QComboBox(self.playerGroupBox)
+        self.samplerateComboBox.addItems([str(item) for item in playertoolbar.sample_rates])
+        self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.samplerateComboBox)
+        self.bitdepthLabel = QtGui.QLabel(self.playerGroupBox)
+        self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole, self.bitdepthLabel)
+        self.bitdepthComboBox = QtGui.QComboBox(self.playerGroupBox)
+        self.bitdepthComboBox.addItems([str(item) for item in playertoolbar.bit_depths])
+        self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole, self.bitdepthComboBox)
+        self.horizontalLayout.addWidget(self.playerGroupBox)
+
         # Button Box
         self.verticalLayout.addWidget(self.widget)
         self.buttonBox = QtGui.QDialogButtonBox(SettingsDialog)
@@ -286,6 +317,7 @@ class Ui_SettingsDialog(object):
         self._settingsMenus[self.treeWidget.topLevelItem(1).child(1).text(0)] = self.ampaFiltersGroupBox
         self._settingsMenus[self.treeWidget.topLevelItem(1).child(2).text(0)] = self.filterbankGroupBox
         self._settingsMenus[self.treeWidget.topLevelItem(2).text(0)] = self.takanamiGroupBox
+        self._settingsMenus[self.treeWidget.topLevelItem(3).text(0)] = self.playerGroupBox
         self.treeWidget.setCurrentItem(self.treeWidget.topLevelItem(0))
         self.currentMenu = self.staltaGroupBox
 
@@ -300,6 +332,7 @@ class Ui_SettingsDialog(object):
         self.treeWidget.topLevelItem(1).child(1).setText(0, QtGui.QApplication.translate("SettingsDialog", "Filters", None, QtGui.QApplication.UnicodeUTF8))
         self.treeWidget.topLevelItem(1).child(2).setText(0, QtGui.QApplication.translate("SettingsDialog", "Filter Bank Settings", None, QtGui.QApplication.UnicodeUTF8))
         self.treeWidget.topLevelItem(2).setText(0, QtGui.QApplication.translate("SettingsDialog", "Takanami", None, QtGui.QApplication.UnicodeUTF8))
+        self.treeWidget.topLevelItem(3).setText(0, QtGui.QApplication.translate("SettingsDialog", "Player", None, QtGui.QApplication.UnicodeUTF8))
         self.treeWidget.setSortingEnabled(__sortingEnabled)
         self.staltaGroupBox.setTitle(QtGui.QApplication.translate("SettingsDialog", "STA-LTA Settings", None, QtGui.QApplication.UnicodeUTF8))
         self.staLabel.setText(QtGui.QApplication.translate("SettingsDialog", "STA window (in seconds):", None, QtGui.QApplication.UnicodeUTF8))
@@ -318,4 +351,7 @@ class Ui_SettingsDialog(object):
         self.overlapLabel.setText(QtGui.QApplication.translate("SettingsDialog", "Channel Overlap (Hz):", None, QtGui.QApplication.UnicodeUTF8))
         self.ampaFiltersGroupBox.setTitle(QtGui.QApplication.translate("SettingsDialog", "AMPA Filters", None, QtGui.QApplication.UnicodeUTF8))
         self.filtersTable.setSortingEnabled(True)
+        self.playerGroupBox.setTitle(QtGui.QApplication.translate("SettingsDialog", "Player Settings", None, QtGui.QApplication.UnicodeUTF8))
+        self.samplerateLabel.setText(QtGui.QApplication.translate("SettingsDialog", "Sample rate (samples/sec.):", None, QtGui.QApplication.UnicodeUTF8))
+        self.bitdepthLabel.setText(QtGui.QApplication.translate("SettingsDialog", "Bit Depth:", None, QtGui.QApplication.UnicodeUTF8))
 

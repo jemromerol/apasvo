@@ -62,13 +62,15 @@ class PlayerToolBar(QtGui.QToolBar):
     """
 
     tick = QtCore.Signal(int)
+    intervalChanged = QtCore.Signal(float, float)
+    intervalSelected = QtCore.Signal(bool)
 
     def __init__(self, parent=None, data=None, data_fs=None, fs=2000,
                  bd='int16', repeat=False, tick_interval=200):
         if fs not in sample_rates:
-            raise ValueError('Unsupported sampling rate')
+            raise ValueError('Unsupported sampling rate: %s' % fs)
         if bd not in bit_depths:
-            raise ValueError('Unsupported bit depth')
+            raise ValueError('Unsupported bit depth: %s' % bd)
         if tick_interval < 1:
             raise ValueError('tick_interval must be greater than zero.')
         super(PlayerToolBar, self).__init__(parent)
@@ -86,6 +88,7 @@ class PlayerToolBar(QtGui.QToolBar):
         self.buffer_loaded = False
         self._start = 0
         self._end = np.inf
+        self._interval_selected = False
         self.repeat = repeat
         self.fs = fs
         self.bd = bd
@@ -144,7 +147,7 @@ class PlayerToolBar(QtGui.QToolBar):
         self.actionPlay.triggered.connect(self.on_play)
         self.actionStop.triggered.connect(self._mediaObject.stop)
         self.actionPause.triggered.connect(self._mediaObject.pause)
-        self.actionRepeat.toggled.connect(self.toogle_repeat)
+        self.actionRepeat.toggled.connect(self.toggle_repeat)
         self.tsbStart.timeChanged.connect(self.on_start_time_changed)
         self.tsbEnd.timeChanged.connect(self.on_end_time_changed)
 
@@ -155,11 +158,13 @@ class PlayerToolBar(QtGui.QToolBar):
         pass
 
     def finished(self):
+        self._mediaObject.stop()
         if self.repeat:
             self.on_play()
 
-    def toogle_repeat(self, value):
-        self.repeat = value
+    def toggle_repeat(self, value):
+        if value != self.repeat:
+            self.repeat = value
 
     def set_enabled(self, value):
         if self.data_loaded and self.connected:
@@ -187,7 +192,12 @@ class PlayerToolBar(QtGui.QToolBar):
         self._start = 0
         self._end = len(self.data)
         self.data_loaded = True
+        self.toggle_interval_selected(False)
         # update ui
+        self.tsbStart.setMinimumTime(QtCore.QTime().addMSecs(0))
+        self.tsbEnd.setMaximumTime(QtCore.QTime().addMSecs(int(1000 *
+                                                               len(self.data) /
+                                                               self.data_fs)))
         self._update_qtimeedit_range()
         self.buffer_loaded = False
         self._load_buffer()
@@ -197,7 +207,6 @@ class PlayerToolBar(QtGui.QToolBar):
             raise UnboundLocalError("Data not initialized.")
         stream = cStringIO.StringIO()
         wavfile.write(stream, self.fs, self.data[self._start:self._end])
-#        self._buffer.close()
         if self._buffer.isOpen():
             self._buffer.close()
         self._buffer.setData(stream.read())
@@ -215,26 +224,28 @@ class PlayerToolBar(QtGui.QToolBar):
         """
         if not self.data_loaded:
             raise UnboundLocalError("Data not initialized.")
-        t_from = int(t_from * self.data_fs)
-        t_to = int(t_to * self.data_fs)
-        if t_from < 0:
-            raise ValueError("t_from must be greater or equal than zero.")
-        if t_to >= len(self.data):
-            raise ValueError("t_to must be smaller than data length.")
-        if t_from >= t_to:
-            raise ValueError("t_to must be greater than t_from")
-        self._start = t_from
-        self._end = t_to
-        self.buffer_loaded = False
-        # update ui
-        self._update_qtimeedit_range()
-        #self._load_buffer()
+        t_from = int(max(0, t_from) * self.data_fs)
+        t_to = int(min(len(self.data), t_to) * self.data_fs)
+        if t_from > t_to:
+            raise ValueError("t_to must be greater or equal than t_from")
+        if (t_from, t_to) != (self._start, self._end):
+            if t_from == t_to:
+                self.toggle_interval_selected(False)
+                self._start = 0
+                self._end = len(self.data)
+            else:
+                self.toggle_interval_selected(True)
+                self._start = t_from
+                self._end = t_to
+            self.buffer_loaded = False
+            self.intervalChanged.emit(self._start / self.data_fs, self._end / self.data_fs)
+            # update ui
+            self._update_qtimeedit_range()
 
     def _update_qtimeedit_range(self):
-        t_start = QtCore.QTime().addMSecs((self._start / self.data_fs) * 1000)
-        t_end = QtCore.QTime().addMSecs((self._end / self.data_fs) * 1000)
+        t_start = QtCore.QTime().addSecs(int(self._start / self.data_fs))
+        t_end = QtCore.QTime().addSecs(int(self._end / self.data_fs))
         self.tsbStart.setTime(t_start)
-        self.tsbEnd.setMaximumTime(t_end)
         self.tsbEnd.setTime(t_end)
 
     def on_tick(self, value):
@@ -246,16 +257,24 @@ class PlayerToolBar(QtGui.QToolBar):
             self.tsbPosition.setTime(QtCore.QTime().fromString(t))
 
     def on_start_time_changed(self, value):
-        t_from = QtCore.QTime().msecsTo(value) / 1000.0
-        self._start = int(max(0, t_from * self.data_fs))
-        self.tsbEnd.setMinimumTime(value)
-        self.buffer_loaded = False
+        t_from = int(max(0, (QtCore.QTime().msecsTo(value) / 1000.0) *
+                         self.data_fs))
+        if t_from != self._start:
+            self._start = t_from
+            self.tsbEnd.setMinimumTime(value)
+            self.buffer_loaded = False
+            self.toggle_interval_selected(True)
+            self.intervalChanged.emit(self._start / self.data_fs, self._end / self.data_fs)
 
     def on_end_time_changed(self, value):
-        t_to = QtCore.QTime().msecsTo(value) / 1000.0
-        self._end = int(min(len(self.data), t_to * self.data_fs))
-        self.tsbStart.setMaximumTime(value)
-        self.buffer_loaded = False
+        t_to = int(min(len(self.data), (QtCore.QTime().msecsTo(value) /
+                                        1000.0) * self.data_fs))
+        if t_to != self._end:
+            self._end = t_to
+            self.tsbStart.setMaximumTime(value)
+            self.buffer_loaded = False
+            self.toggle_interval_selected(True)
+            self.intervalChanged.emit(self._start / self.data_fs, self._end / self.data_fs)
 
     def state_changed(self, state):
         if state == Phonon.BufferingState:
@@ -295,7 +314,28 @@ class PlayerToolBar(QtGui.QToolBar):
             self.data_loaded = False
             self.buffer_loaded = False
 
+    def toggle_interval_selected(self, value):
+        """Activates/deactivates selection of a time interval."""
+        if value != self._interval_selected:
+            self._interval_selected = value
+            self.buffer_loaded = False
+            self.intervalSelected.emit(self._interval_selected)
+            if not self._interval_selected:
+                self._start = 0
+                self._end = len(self.data)
+            self._update_qtimeedit_range()
 
+    def set_audio_format(self, fs=2000, bd='int16'):
+        if fs not in sample_rates:
+            raise ValueError('Unsupported sampling rate')
+        if bd not in bit_depths:
+            raise ValueError('Unsupported bit depth')
+        if not self.data_loaded:
+            raise UnboundLocalError("Data not initialized.")
+        if self.fs != fs or self.bd != bd:
+            self.fs = fs
+            self.bd = bd
+            self.load_data(self.data, self.data_fs)
 
 
 

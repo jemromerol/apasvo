@@ -29,6 +29,7 @@ from PySide import QtGui, QtCore
 from converted import ui_settingsdialog
 from gui.models import filterlistmodel
 from gui.delegates import dsbdelegate
+from gui.views import playertoolbar
 
 from _version import _application_name
 from _version import _organization
@@ -37,6 +38,8 @@ from _version import _organization
 class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
     """A dialog window to edit application settings.
     """
+
+    saved = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(SettingsDialog, self).__init__(parent)
@@ -123,6 +126,12 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
         self.takanamiCheckBox.setChecked(int(self.settings.value('takanami', True)))
         self.takanamiMarginSpinBox.setValue(float(self.settings.value('takanami_margin', 5.0)))
         self.settings.endGroup()
+        self.settings.beginGroup("player_settings")
+        sample_rate_index = playertoolbar.sample_rates.index(int(self.settings.value('sample_rate', playertoolbar.sample_rates[0])))
+        self.samplerateComboBox.setCurrentIndex(sample_rate_index)
+        bit_depth_index = playertoolbar.bit_depths.index(self.settings.value('bit_depth', playertoolbar.bit_depths[0]))
+        self.bitdepthComboBox.setCurrentIndex(bit_depth_index)
+        self.settings.endGroup()
 
     def saveSettings(self):
         """Saves settings to persistent storage."""
@@ -147,6 +156,11 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
         self.settings.setValue('takanami', self.takanamiCheckBox.checkState())
         self.settings.setValue('takanami_margin', self.takanamiMarginSpinBox.value())
         self.settings.endGroup()
+        self.settings.beginGroup("player_settings")
+        self.settings.setValue('sample_rate', self.samplerateComboBox.currentText())
+        self.settings.setValue('bit_depth', self.bitdepthComboBox.currentText())
+        self.settings.endGroup()
+        self.saved.emit()
 
     def onclick(self, button):
         if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.Apply:

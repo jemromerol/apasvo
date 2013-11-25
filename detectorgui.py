@@ -125,8 +125,17 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarAnalysis)
         self.addToolBarBreak()
         # add media toolbar
-        self.toolBarMedia = playertoolbar.PlayerToolBar(self)
+        settings = QtCore.QSettings(_organization, _application_name)
+        settings.beginGroup('player_settings')
+        fs = int(settings.value('sample_rate', playertoolbar.sample_rates[0]))
+        bd = settings.value('bit_depth', playertoolbar.bit_depths[1])
+        settings.endGroup()
+        self.toolBarMedia = playertoolbar.PlayerToolBar(self, fs=fs, bd=bd)
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarMedia)
+        self.toolBarMedia.intervalChanged.connect(self.signalViewer.set_selector_limits)
+        self.toolBarMedia.intervalSelected.connect(self.signalViewer.selector.set_active)
+        self.signalViewer.selector.toggled.connect(self.toolBarMedia.toggle_interval_selected)
+        self.signalViewer.selector.valueChanged.connect(self.toolBarMedia.set_limits)
         self.addToolBarBreak()
 
         self.actionEvent_List.toggled.connect(self.EventsTableView.setVisible)
@@ -135,8 +144,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionEspectrogram.toggled.connect(self.signalViewer.set_espectrogram_visible)
         self.actionCharacteristic_Function.toggled.connect(self.signalViewer.set_cf_visible)
         self.actionSignal_MiniMap.toggled.connect(self.signalViewer.set_minimap_visible)
-        self.signalViewer.selector.toogled.connect(self.actionTakanami.setEnabled)
-        self.thresholdCheckBox.toggled.connect(self.toogle_threshold)
+        self.signalViewer.selector.toggled.connect(self.actionTakanami.setEnabled)
+        self.thresholdCheckBox.toggled.connect(self.toggle_threshold)
         self.actionMain_Toolbar.toggled.connect(self.toolBarMain.setVisible)
         self.actionMedia_Toolbar.toggled.connect(self.toolBarMedia.setVisible)
         self.actionAnalysis_Toolbar.toggled.connect(self.toolBarAnalysis.setVisible)
@@ -317,7 +326,16 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def edit_settings(self):
         """Opens settings dialog."""
         dialog = settingsdialog.SettingsDialog(self)
+        dialog.saved.connect(self.update_settings)
         dialog.exec_()
+
+    def update_settings(self):
+        settings = QtCore.QSettings(_organization, _application_name)
+        # update player settings
+        settings.beginGroup('player_settings')
+        fs = int(settings.value('sample_rate', playertoolbar.sample_rates[0]))
+        bd = settings.value('bit_depth', playertoolbar.bit_depths[1])
+        self.toolBarMedia.set_audio_format(fs, bd)
 
     def push_recent_list(self, filename):
         """Adds a document to recent opened list.
@@ -423,7 +441,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def strippedName(self, fullFileName):
         return QtCore.QFileInfo(fullFileName).fileName()
 
-    def toogle_threshold(self, value):
+    def toggle_threshold(self, value):
         """Set threshold checkbox's value"""
         self.thresholdLabel.setEnabled(value)
         self.thresholdSpinBox.setEnabled(value)
