@@ -33,6 +33,7 @@ from gui.views.converted import ui_mainwindow
 from gui.delegates import cbdelegate
 from gui.models import eventlistmodel
 from gui.views import svwidget
+from gui.views import navigationtoolbar
 from gui.views import loaddialog
 from gui.views import savedialog
 from gui.views import settingsdialog
@@ -117,7 +118,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
         self.splitter.addWidget(self.signalViewer)
-        self.toolBarNavigation = svwidget.NavigationToolbar(self.signalViewer.canvas, self)
+        self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.signalViewer.canvas, self)
         self.toolBarNavigation.setEnabled(False)
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarNavigation)
         self.addToolBarBreak()

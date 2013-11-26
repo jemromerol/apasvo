@@ -90,23 +90,23 @@ class PickingTaskDialog(QtGui.QDialog):
         self._thread.start()
 
     def init_ui(self):
-        self.setWindowTitle('Signal processing')
-        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+        self.setWindowTitle('Event detection')
         self.label = QtGui.QLabel("Applying %s..." % self.alg._name, self)
         self.pbarWidget = QtGui.QWidget(self)
         self.pbar = QtGui.QProgressBar(self.pbarWidget)
         self.pbar.setMinimum(0)
         self.pbar.setMaximum(0)
-        #self.button_cancel = QtGui.QPushButton('&Cancel', self.pbarWidget)
+        self.button_cancel = QtGui.QPushButton('&Cancel', self.pbarWidget)
         self.hlayout = QtGui.QHBoxLayout(self.pbarWidget)
         self.hlayout.addWidget(self.pbar)
-        #self.hlayout.addWidget(self.button_cancel)
+        self.hlayout.addWidget(self.button_cancel)
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.pbarWidget)
-        #self.button_cancel.clicked.connect(self.reject)
+        self.button_cancel.clicked.connect(self.reject)
 
     def reject(self):
+        self.label.setText("Canceling task...")
         self._thread.terminate()
         self._thread.wait()
         self.record.events = self._events
