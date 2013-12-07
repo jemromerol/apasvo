@@ -115,6 +115,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSettings.triggered.connect(self.edit_settings)
         self.actionSTA_LTA.triggered.connect(self.doSTALTA)
         self.actionAMPA.triggered.connect(self.doAMPA)
+        self.actionClear_Event_List.triggered.connect(self.clear_events)
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
         self.splitter.addWidget(self.signalViewer)
@@ -204,6 +205,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     self.actionClose.setEnabled(True)
                     self.actionSelect_All.setEnabled(True)
                     self.actionCreate_New_Event.setEnabled(True)
+                    self.actionClear_Event_List.setEnabled(True)
                     self.actionSTA_LTA.setEnabled(True)
                     self.actionAMPA.setEnabled(True)
                     self.toolBarNavigation.setEnabled(True)
@@ -318,6 +320,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.actionClose.setEnabled(False)
             self.actionSelect_All.setEnabled(False)
             self.actionCreate_New_Event.setEnabled(False)
+            self.actionClear_Event_List.setEnabled(False)
             self.actionSTA_LTA.setEnabled(False)
             self.actionAMPA.setEnabled(False)
             self.toolBarNavigation.setEnabled(False)
@@ -448,38 +451,47 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.thresholdSpinBox.setEnabled(value)
         self.signalViewer.thresholdMarker.set_visible(value)
 
-    def onPickingFinished(self):
+    def onPickingFinished(self, n_events):
         """Updates current window after performing an event
-        detection/picking analysis."""
+        detection/picking analysis.
+
+        Args:
+            n_events: Number of events found.
+        """
         self.signalViewer.set_record(self.record)
         self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
         self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
         self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
         self.signalViewer.thresholdMarker.set_visible(self.thresholdCheckBox.checkState())
-        nevents = len(self.record.events)
         self._model.updateList()
         msgBox = QtGui.QMessageBox()
-        msgBox.setText("%s possible event(s) has been found" % nevents)
+        msgBox.setText("%s possible event(s) has been found" % n_events)
         msgBox.exec_()
 
     def doSTALTA(self):
         """Performs event detection/picking by using STA-LTA method."""
+        # Read settings
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup('stalta_settings')
         sta_length = float(settings.value('sta_window_len', 5.0))
         lta_length = float(settings.value('lta_window_len', 100.0))
         settings.endGroup()
+        # Get threshold value
         if self.thresholdCheckBox.checkState():
             threshold = self.thresholdSpinBox.value()
         else:
             threshold = None
+        # Create an STA-LTA algorithm instance with selected settings
         alg = stalta.StaLta(sta_length, lta_length)
+        n_events = len(self.record.events)  # Number of events before picking
         return_code = pickingtaskdialog.PickingTaskDialog(self.record, alg, threshold).exec_()
         if return_code == QtGui.QDialog.Accepted:
-            self.onPickingFinished()
+            n_events_found = len(self.record.events) - n_events  # N. of events found
+            self.onPickingFinished(n_events_found)
 
     def doAMPA(self):
         """Performs event detection/picking by using AMPA method."""
+        # Read settings
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup('ampa_settings')
         wlen = float(settings.value('window_len', 100.0))
@@ -495,16 +507,20 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         overlap = float(settings.value('overlap', 1.0))
         settings.endGroup()
         settings.endGroup()
+        # Get threshold value
         if self.thresholdCheckBox.checkState():
             threshold = self.thresholdSpinBox.value()
         else:
             threshold = None
+        # Create an AMPA algorithm instance with selected settings
         alg = ampa.Ampa(wlen, wstep, filters, noise_thr=nthres,
                         bandwidth=bandwidth, overlap=overlap,
                         f_start=startf, f_end=endf)
+        n_events = len(self.record.events)  # Number of events before picking
         return_code = pickingtaskdialog.PickingTaskDialog(self.record, alg, threshold).exec_()
         if return_code == QtGui.QDialog.Accepted:
-            self.onPickingFinished()
+            n_events_found = len(self.record.events) - n_events  # N. of events found
+            self.onPickingFinished(n_events_found)
 
     def goToEventPosition(self, index):
         """Centers signal viewer widget to an event location.
@@ -513,6 +529,15 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             index: Event row index at Events Table.
         """
         self.signalViewer.set_position(self.record.events[index.row()].time / self.record.fs)
+
+    def clear_events(self):
+        self.record.events = []
+        self.signalViewer.set_record(self.record)
+        self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
+        self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
+        self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
+        self.signalViewer.thresholdMarker.set_visible(self.thresholdCheckBox.checkState())
+        self._model.updateList()
 
 
 if __name__ == '__main__':

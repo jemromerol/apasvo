@@ -112,7 +112,6 @@ class StaLta(object):
         lta_length: length of LTA window, in seconds.
             Default 100.0 seconds.
     """
-    _name = 'STA-LTA'
 
     def __init__(self, sta_length=5.0, lta_length=100.0, **kwargs):
         super(StaLta, self).__init__()

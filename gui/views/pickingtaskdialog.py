@@ -35,6 +35,7 @@ class PickingTask(QtCore.QObject):
 
     PickingTask objects are meant to be passed to a QThread instance
     that controls their execution.
+
     """
 
     finished = QtCore.Signal()
@@ -91,7 +92,7 @@ class PickingTaskDialog(QtGui.QDialog):
 
     def init_ui(self):
         self.setWindowTitle('Event detection')
-        self.label = QtGui.QLabel("Applying %s..." % self.alg._name, self)
+        self.label = QtGui.QLabel("Applying %s..." % self.alg.__class__.__name__.upper(), self)
         self.pbarWidget = QtGui.QWidget(self)
         self.pbar = QtGui.QProgressBar(self.pbarWidget)
         self.pbar.setMinimum(0)

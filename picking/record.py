@@ -35,6 +35,23 @@ from picking import takanami
 from picking import envelope as env
 from utils.formats import rawfile
 
+method_other = 'other'
+method_takanami = 'Takanami'
+method_stalta = 'STALTA'
+method_stalta_takanami = 'STALTA+Takanami'
+method_ampa = 'AMPA'
+method_ampa_takanami = 'AMPA+Takanami'
+
+mode_manual = 'manual'
+mode_automatic = 'automatic'
+mode_undefined = 'undefined'
+
+status_reported = 'reported'
+status_revised = 'revised'
+status_confirmed = 'confirmed'
+status_rejected = 'rejected'
+status_undefined = 'undefined'
+
 
 def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
     """Generates a Comma Separated Value (CSV) resume file from a list of
@@ -99,7 +116,7 @@ class Event(object):
         comments: Additional comments.
             Default: ''.
         method: A string indicating the algorithm used to find the event.
-            Possible values are: 'STA-LTA', 'STA-LTA+Takanami', 'AMPA',
+            Possible values are: 'STALTA', 'STALTA+Takanami', 'AMPA',
             'AMPA+Takanami' and 'other'.
             Default: 'other'.
         mode: Event picking mode. Possible values are: 'manual', 'automatic'
@@ -113,12 +130,14 @@ class Event(object):
         aic: List of AIC values from n0_aic.
     """
 
-    methods = ['other', 'STA-LTA', 'STA-LTA+Takanami', 'AMPA', 'AMPA+Takanami']
-    modes = ['manual', 'automatic', 'undefined']
-    statuses = ['reported', 'revised', 'confirmed', 'rejected', 'undefined']
+    methods = (method_other, method_takanami, method_stalta,
+               method_stalta_takanami, method_ampa, method_ampa_takanami)
+    modes = (mode_manual, mode_automatic, mode_undefined)
+    statuses = (status_reported, status_revised, status_confirmed,
+                status_rejected, status_undefined)
 
     def __init__(self, record, time, cf_value, name='', comments='',
-                 method='other', mode='automatic', status='reported',
+                 method=method_other, mode=mode_automatic, status=status_reported,
                  aic=None, n0_aic=None, **kwargs):
         super(Event, self).__init__()
         self.record = record
@@ -128,10 +147,10 @@ class Event(object):
         self.comments = comments
         self.method = method
         if mode not in self.modes:
-            mode = 'undefined'
+            mode = mode_undefined
         self.mode = mode
         if status not in self.statuses:
-            status = 'undefined'
+            status = status_undefined
         self.status = status
         self.aic = aic
         self.n0_aic = n0_aic
@@ -156,7 +175,8 @@ class Record(object):
     """
 
     def __init__(self, fileobj, fs, label='', description='', fmt='',
-                 dtype='float64', byteorder='native', **kwargs):
+                 dtype=rawfile.datatype_float64,
+                 byteorder=rawfile.byteorder_native, **kwargs):
         """Initializes a Record instance.
 
         Args:
@@ -191,7 +211,7 @@ class Record(object):
         self.description = description
 
     def detect(self, alg, threshold=None, peak_window=1.0,
-               takanami=False, takanami_margin=5.0, **kwargs):
+               takanami=False, takanami_margin=5.0, action='append', **kwargs):
         """Computes a picking algorithm over self.signal.
 
         Args:
@@ -215,6 +235,10 @@ class Record(object):
                 use for the application of Takanami method.
                 If 'takanami' is False, this parameter has no effect.
                 Default: 5.0 seconds.
+            action: Two valid choices: 'append' and 'clear'. 'append' adds the
+                events found to the end of the list of events, while 'clear'
+                removes the existing events of the list.
+                Default: 'append'.
 
         Returns:
             events: A resulting list of Event objects.
@@ -222,13 +246,24 @@ class Record(object):
         et, self.cf = alg.run(self.signal, self.fs, threshold=threshold,
                                 peak_window=peak_window)
         # Build event list
-        self.events = []
+        events = []
         for t in et:
-            self.events.append(Event(self, t, self.cf[t], method=alg._name,
-                                     mode='automatic', state='reported'))
+            # set method name
+            method_name = alg.__class__.__name__.upper()
+            if method_name not in Event.methods:
+                method_name = method_other
+            events.append(Event(self, t, self.cf[t], method=method_name,
+                                     mode=mode_automatic, status=status_reported))
         # Refine arrival times
         if takanami:
-            self._refine_events(takanami_margin)
+            events = self.refine_events(events, takanami_margin)
+        # Update event list
+        if action == 'append':
+            self.events.extend(events)
+        elif action == 'clear':
+            self.events = events
+        else:
+            raise ValueError("%s is not a valid value for 'action'" % action)
         return self.events
 
     def sort_events(self, key='time', reverse=False):
@@ -250,7 +285,7 @@ class Record(object):
                              reverse=reverse)
         return self.events
 
-    def _refine_events(self, takanami_margin=5.0):
+    def refine_events(self, events, takanami_margin=5.0):
         """Computes Takanami AR method over self.events.
 
         Args:
@@ -263,17 +298,25 @@ class Record(object):
             events: A resulting list of Event objects.
         """
         taka = takanami.Takanami()
-        for event in self.events:
+        for event in events:
             t_start = (event.time / self.fs) - takanami_margin
             t_end = (event.time / self.fs) + takanami_margin
             et, event.aic, event.n0_aic = taka.run(self.signal, self.fs,
                                                    t_start, t_end)
             event.time = et
             event.cf_value = self.cf[et]
-        return self.events
+            # set event method
+            if event.method == method_ampa:
+                event.method = method_ampa_takanami
+            elif event.method == method_stalta:
+                event.method = method_stalta_takanami
+            else:
+                event.method = method_takanami
+        return events
 
-    def save_cf(self, fname, fmt='binary', dtype='float64',
-                byteorder='native'):
+    def save_cf(self, fname, fmt=rawfile.format_binary,
+                dtype=rawfile.datatype_float64,
+                byteorder=rawfile.byteorder_native):
         """Saves characteristic function in a file.
 
         Args:

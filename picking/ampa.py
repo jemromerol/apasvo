@@ -262,7 +262,6 @@ class Ampa(object):
             logarithm of zero and to shift the characteristic function to zero.
             Default value is 12.
     """
-    _name = 'AMPA'
 
     def __init__(self, window=100., step=50.,
                  L=None, L_coef=3., noise_thr=90.,

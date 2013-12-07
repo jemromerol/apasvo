@@ -151,8 +151,6 @@ class Analysis(object):
     _cf_dir = './cf_data'
     _sort_keys = {'va': ('cf_value', False), 'vd': ('cf_value', True),
                   'ta': ('time', False), 'td': ('time', True)}
-    _methods = {('stalta', False): 1, ('stalta', True): 2,
-                ('ampa', False): 3, ('ampa', True): 4}
 
     def run(self, FILEIN, csv=None, cf=False, **kwargs):
         """Event/picking detection on a given set of seismic signals.
