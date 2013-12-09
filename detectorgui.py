@@ -39,6 +39,7 @@ from gui.views import savedialog
 from gui.views import settingsdialog
 from gui.views import pickingtaskdialog
 from gui.views import playertoolbar
+from gui.views import eventposdialog
 
 from picking import stalta
 from picking import ampa
@@ -99,6 +100,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         stateDelegate = cbdelegate.ComboBoxDelegate(self.EventsTableView, rc.Event.statuses)
         self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
         self.EventsTableView.clicked.connect(self.goToEventPosition)
+        self.EventsTableView.clicked.connect(self.on_event_selection)
 
         self.actionOpen.triggered.connect(self.open)
         self.actionSave.triggered.connect(self.save_events)
@@ -115,6 +117,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSettings.triggered.connect(self.edit_settings)
         self.actionSTA_LTA.triggered.connect(self.doSTALTA)
         self.actionAMPA.triggered.connect(self.doAMPA)
+        self.actionEdit_Event.triggered.connect(self.edit_event)
         self.actionClear_Event_List.triggered.connect(self.clear_events)
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
@@ -531,13 +534,20 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.signalViewer.set_position(self.record.events[index.row()].time / self.record.fs)
 
     def clear_events(self):
+        for event in self.record.events:
+            self.signalViewer.delete_event(event)
         self.record.events = []
-        self.signalViewer.set_record(self.record)
-        self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
-        self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
-        self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
-        self.signalViewer.thresholdMarker.set_visible(self.thresholdCheckBox.checkState())
         self._model.updateList()
+
+    def on_event_selection(self, index):
+        n_selected = len(self.EventsTableView.selectionModel().selectedRows())
+        self.actionDelete_Selected.setEnabled(n_selected > 0)
+        self.actionEdit_Event.setEnabled(n_selected == 1)
+
+    def edit_event(self):
+        event = self.record.events[self.EventsTableView.selectionModel().
+                                   selectedRows()[0].row()]
+        eventposdialog.EventPosDialog(self.record, event, self).exec_()
 
 
 if __name__ == '__main__':

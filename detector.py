@@ -197,10 +197,6 @@ class Analysis(object):
         pl.ioff()
         pl.close('all')
 
-        #Set the method used in events
-        for record in records:
-            for event in record.events:
-                event.method = rc.Event.methods[self._methods.get((method, takanami), 0)]
         # Show results
         draw_results(records, method=method)
 

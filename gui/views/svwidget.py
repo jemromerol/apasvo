@@ -35,6 +35,7 @@ import numpy as np
 import datetime
 
 from picking import envelope as env
+from picking import record
 
 
 class SpanSelector(QtCore.QObject):
@@ -162,20 +163,94 @@ class EventMarker(QtCore.QObject):
         valueChanged: 'event' arrival time changed.
     """
 
-    valueChanged = QtCore.Signal(float)
+    valueChanged = QtCore.Signal(int)
 
     def __init__(self, fig, record, event):
         super(EventMarker, self).__init__()
         self.fig = fig
         self.event = event
         self.record = record
+        self.position = self.event.time / self.record.fs
 
         self.markers = []
-
-        for ax in fig.axes:
+        # draw markers
+        for ax in self.fig.axes:
             marker = ax.axvline(self.event.time / self.record.fs)
             marker.set(color='r', ls='--', lw=2, alpha=0.8, picker=5)
             self.markers.append(marker)
+        # draw label
+        bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
+        self.position_label = self.fig.text(0, 0,
+                                            "Time: 00:00:00.000 seconds\nCF value: 0.000",
+                                            bbox=bbox)
+        self.position_label.set_visible(False)
+
+        self.canvas = self.fig.canvas
+        self.canvas.mpl_connect('pick_event', self.onpick)
+        self.canvas.mpl_connect('button_release_event', self.onrelease)
+        self.canvas.mpl_connect('motion_notify_event', self.onmove)
+        self.pick_event = None
+
+    def onpick(self, event):
+        if event.artist in self.markers:
+            if not self.canvas.widgetlock.locked():
+                self.canvas.widgetlock(self)
+                self.pick_event = event
+                xfig, yfig = self._event_to_fig_coords(event.mouseevent)
+                self.position_label.set_position((xfig, yfig))
+                self.position_label.set_visible(True)
+                self.canvas.draw_idle()
+
+    def onrelease(self, event):
+        if self.canvas.widgetlock.isowner(self):
+            self.position_label.set_visible(False)
+            self.pick_event = None
+            self.canvas.draw_idle()
+            self.canvas.widgetlock.release(self)
+            if int(self.position * self.record.fs) != self.event.time:
+                self.valueChanged.emit(int(self.position * self.record.fs))
+
+    def onmove(self, event):
+        if self.pick_event is not None:
+            xdata = self.get_xdata(event)
+            self.set_position(round(xdata, 3))
+            xfig, yfig = self._event_to_fig_coords(event)
+            self.position_label.set_position((xfig, yfig))
+            self.canvas.draw_idle()
+
+    def get_xdata(self, event):
+        inv = self.fig.axes[0].transData.inverted()
+        xdata, _ = inv.transform((event.x, event.y))
+        return xdata
+
+    def _event_to_fig_coords(self, event):
+        inv = self.fig.transFigure.inverted()
+        return inv.transform((event.x, event.y))
+
+    def set_position(self, value):
+        if value != self.position:
+            if 0 <= self.position * self.record.fs <= len(self.record.signal):
+                self.position = value
+                for marker in self.markers:
+                    marker.set_xdata(self.position)
+                t = str(datetime.timedelta(seconds=self.position))
+                if 0 <= self.position * self.record.fs < len(self.record.cf):
+                    cf_value = self.record.cf[int(self.position * self.record.fs)]
+                else:
+                    cf_value = 0.000
+                self.position_label.set_text("Time: %s seconds\nCF value: %.4g" %
+                                             (t[:-3], cf_value))
+
+    def redraw(self):
+        self.position = self.event.time / self.record.fs
+        for marker in self.markers:
+            marker.set_xdata(self.position)
+        self.canvas.draw_idle()
+
+    def remove(self):
+        for ax, marker in zip(self.fig.axes, self.markers):
+            ax.lines.remove(marker)
+        self.canvas.draw_idle()
 
 
 class ThresholdMarker(QtCore.QObject):
@@ -494,14 +569,15 @@ class SignalViewerWidget(QtGui.QWidget):
         self.thresholdMarker = ThresholdMarker(self.fig.axes[1])
         # Plot espectrogram
         self.fig.axes[2].xaxis.set_major_formatter(formatter)
+        self.fig.axes[2].lines = []
         self.fig.axes[2].specgram(self.record.signal, Fs=self.record.fs,
                                   cmap='jet',
                                   xextent=(self.xmin, self.xmax),
                                   rasterized=True)
         # Plot events
-        self.eventMarkers = []
+        self.eventMarkers = {}
         for event in self.record.events:
-            self.eventMarkers.append(EventMarker(self.fig, self.record, event))
+            self.eventMarkers[event] = EventMarker(self.fig, self.record, event)
         # Set the span selector
         self.selector.set_active(False)
         self.selector.set_selection_limits(self.xmin, self.xmax)
@@ -510,6 +586,17 @@ class SignalViewerWidget(QtGui.QWidget):
         # Adjust the space between subplots
         self.fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05,
                                  top=0.95, hspace=0.1)
+
+    def create_event(self, event):
+        if event not in self.eventMarkers:
+            self.eventMarkers[event] = EventMarker(self.fig, self.record, event)
+
+    def update_event(self, event):
+        self.eventMarkers[event].redraw()
+
+    def delete_event(self, event):
+        self.eventMarkers[event].remove()
+        self.eventMarkers.pop(event)
 
     def set_xlim(self, l, r):
         xmin = max(0, l)
