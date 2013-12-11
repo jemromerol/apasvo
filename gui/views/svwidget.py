@@ -24,10 +24,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtGui, QtCore
-import matplotlib
-matplotlib.use('Qt4Agg')
-matplotlib.rcParams['backend.qt4'] = 'PySide'
+from PySide import QtGui
+from PySide import QtCore
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FuncFormatter
 import matplotlib.pyplot as plt
@@ -35,7 +33,7 @@ import numpy as np
 import datetime
 
 from picking import envelope as env
-from picking import record
+from picking import record as rc
 
 
 class SpanSelector(QtCore.QObject):
@@ -163,19 +161,17 @@ class EventMarker(QtCore.QObject):
         valueChanged: 'event' arrival time changed.
     """
 
-    valueChanged = QtCore.Signal(int)
-
-    def __init__(self, fig, record, event):
+    def __init__(self, fig, document, event):
         super(EventMarker, self).__init__()
         self.fig = fig
         self.event = event
-        self.record = record
-        self.position = self.event.time / self.record.fs
+        self.document = document
+        self.position = self.event.time / self.document.record.fs
 
         self.markers = []
         # draw markers
         for ax in self.fig.axes:
-            marker = ax.axvline(self.event.time / self.record.fs)
+            marker = ax.axvline(self.event.time / self.document.record.fs)
             marker.set(color='r', ls='--', lw=2, alpha=0.8, picker=5)
             self.markers.append(marker)
         # draw label
@@ -190,6 +186,8 @@ class EventMarker(QtCore.QObject):
         self.canvas.mpl_connect('button_release_event', self.onrelease)
         self.canvas.mpl_connect('motion_notify_event', self.onmove)
         self.pick_event = None
+        # draw canvas
+        self.canvas.draw_idle()
 
     def onpick(self, event):
         if event.artist in self.markers:
@@ -207,8 +205,12 @@ class EventMarker(QtCore.QObject):
             self.pick_event = None
             self.canvas.draw_idle()
             self.canvas.widgetlock.release(self)
-            if int(self.position * self.record.fs) != self.event.time:
-                self.valueChanged.emit(int(self.position * self.record.fs))
+            time_in_samples = int(self.position * self.document.record.fs)
+            if time_in_samples != self.event.time:
+                self.document.editEvent(self.event, time=time_in_samples,
+                                        cf_value=self.document.record.cf[time_in_samples],
+                                        mode=rc.mode_manual,
+                                        method=rc.method_other)
 
     def onmove(self, event):
         if self.pick_event is not None:
@@ -229,20 +231,20 @@ class EventMarker(QtCore.QObject):
 
     def set_position(self, value):
         if value != self.position:
-            if 0 <= self.position * self.record.fs <= len(self.record.signal):
+            if 0 <= self.position * self.document.record.fs <= len(self.document.record.signal):
                 self.position = value
                 for marker in self.markers:
                     marker.set_xdata(self.position)
                 t = str(datetime.timedelta(seconds=self.position))
-                if 0 <= self.position * self.record.fs < len(self.record.cf):
-                    cf_value = self.record.cf[int(self.position * self.record.fs)]
+                if 0 <= self.position * self.document.record.fs < len(self.document.record.cf):
+                    cf_value = self.document.record.cf[int(self.position * self.document.record.fs)]
                 else:
                     cf_value = 0.000
                 self.position_label.set_text("Time: %s seconds\nCF value: %.4g" %
                                              (t[:-3], cf_value))
 
     def redraw(self):
-        self.position = self.event.time / self.record.fs
+        self.position = self.event.time / self.document.record.fs
         for marker in self.markers:
             marker.set_xdata(self.position)
         self.canvas.draw_idle()
@@ -277,6 +279,7 @@ class ThresholdMarker(QtCore.QObject):
         # Set threshold line
         self.figThreshold = self.ax.axhline(self.threshold)
         self.figThreshold.set(color='b', ls='--', lw=2, alpha=0.8, picker=5)
+        self.figThreshold.set_visible(False)
 
         # Set threshold label
         bbox = dict(boxstyle="round", fc="Lightblue", ec="b", alpha=0.8)
@@ -345,6 +348,9 @@ class ThresholdMarker(QtCore.QObject):
         self.figThreshold.set_visible(value)
         self.active = value
         self.canvas.draw_idle()
+
+    def get_visible(self):
+        return self.active
 
 
 class MiniMap(QtGui.QWidget):
@@ -474,6 +480,9 @@ class MiniMap(QtGui.QWidget):
     def set_visible(self, value):
         self.minimapCanvas.setVisible(value)
 
+    def get_visible(self):
+        return self.minimapCanvas.isVisible()
+
     def set_selection_limits(self, xleft, xright):
         self.minimapSelection.xy[:2, 0] = xleft
         self.minimapSelection.xy[2:4, 0] = xright
@@ -492,7 +501,7 @@ class SignalViewerWidget(QtGui.QWidget):
 
     """
 
-    def __init__(self, parent, record=None):
+    def __init__(self, parent, document=None):
         super(SignalViewerWidget, self).__init__(parent)
 
         self.xmin = 0.0
@@ -502,6 +511,7 @@ class SignalViewerWidget(QtGui.QWidget):
 
         self._signal_data = None
         self._envelope_data = None
+        self._cf_data = None
 
         self.fig, _ = plt.subplots(3, 1, sharex=True)
 
@@ -512,10 +522,10 @@ class SignalViewerWidget(QtGui.QWidget):
         self.graphArea.setWidget(self.canvas)
         self.toolbar = QtGui.QToolBar(self)
 
-        self.eventMarkers = []
+        self.eventMarkers = {}
         self.thresholdMarker = None
         self.selector = SpanSelector(self.fig)
-        self.minimap = MiniMap(self, self.fig.axes[0], record)
+        self.minimap = MiniMap(self, self.fig.axes[0], None)
 
         self.spinbox = QtGui.QTimeEdit(QtCore.QTime.currentTime(),
                                        parent=self.toolbar)
@@ -534,22 +544,24 @@ class SignalViewerWidget(QtGui.QWidget):
         self.selector.toggled.connect(self.minimap.set_selection_visible)
         self.selector.valueChanged.connect(self.minimap.set_selection_limits)
 
-        self.record = None
-        if record is not None:
-            self.set_record(record)
+        self.document = document
+        if self.document is not None:
+            self.set_record(document.record)
 
-    def set_record(self, record, step=20.0):
-        self.record = record
+    def set_record(self, document, step=20.0):
+        self.document = document
+        self.record = self.document.record
         self.time = np.arange(len(self.record.signal)) / self.record.fs
         self.xmax = self.time[-1]
         # Draw minimap
-        self.minimap.set_record(record, step)
+        self.minimap.set_record(self.record, step)
         # Plot signal
         #self.fig.axes[0].cla()
         formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
         self.fig.axes[0].xaxis.set_major_formatter(formatter)
         self.fig.axes[0].grid(True, which='both')
-        self.fig.axes[0].lines = []
+        for line in self.fig.axes[0].lines:
+            line.remove()
         self._signal_data = self.fig.axes[0].plot(self.time,
                                                   self.record.signal,
                                                   color='black',
@@ -563,21 +575,20 @@ class SignalViewerWidget(QtGui.QWidget):
         self.set_cf_visible(self.record.cf.size != 0)
         self.fig.axes[1].xaxis.set_major_formatter(formatter)
         self.fig.axes[1].grid(True, which='both')
-        self.fig.axes[1].lines = []
-        self.fig.axes[1].plot(self.time[:len(self.record.cf)], self.record.cf,
-                              color='black', rasterized=True)
+        for line in self.fig.axes[1].lines:
+            line.remove()
+        self._cf_data = self.fig.axes[1].plot(self.time[:len(self.record.cf)],
+                                              self.record.cf,
+                                              color='black', rasterized=True)[0]
         self.thresholdMarker = ThresholdMarker(self.fig.axes[1])
         # Plot espectrogram
         self.fig.axes[2].xaxis.set_major_formatter(formatter)
-        self.fig.axes[2].lines = []
+        for line in self.fig.axes[2].lines:
+            line.remove()
         self.fig.axes[2].specgram(self.record.signal, Fs=self.record.fs,
                                   cmap='jet',
                                   xextent=(self.xmin, self.xmax),
                                   rasterized=True)
-        # Plot events
-        self.eventMarkers = {}
-        for event in self.record.events:
-            self.eventMarkers[event] = EventMarker(self.fig, self.record, event)
         # Set the span selector
         self.selector.set_active(False)
         self.selector.set_selection_limits(self.xmin, self.xmax)
@@ -586,17 +597,26 @@ class SignalViewerWidget(QtGui.QWidget):
         # Adjust the space between subplots
         self.fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05,
                                  top=0.95, hspace=0.1)
+        self.subplots_adjust()
+
+    def update_cf(self):
+        self._cf_data.set_xdata(self.time[:len(self.record.cf)])
+        self._cf_data.set_ydata(self.record.cf)
+        margin = (self.record.cf.max() - self.record.cf.min()) * 0.1
+        self.fig.axes[1].set_ylim((self.record.cf.min() - margin,
+                                   self.record.cf.max() + margin))
+        self.set_cf_visible(self.record.cf.size != 0)
 
     def create_event(self, event):
         if event not in self.eventMarkers:
-            self.eventMarkers[event] = EventMarker(self.fig, self.record, event)
-
-    def update_event(self, event):
-        self.eventMarkers[event].redraw()
+            self.eventMarkers[event] = EventMarker(self.fig, self.document, event)
 
     def delete_event(self, event):
         self.eventMarkers[event].remove()
         self.eventMarkers.pop(event)
+
+    def update_event(self, event):
+        self.eventMarkers[event].redraw()
 
     def set_xlim(self, l, r):
         xmin = max(0, l)
@@ -627,39 +647,49 @@ class SignalViewerWidget(QtGui.QWidget):
 
     def set_signal_amplitude_visible(self, show_sa):
         if self._signal_data is not None and self._envelope_data is not None:
-            self._signal_data.set_visible(show_sa)
-            show_axis = (self._signal_data.get_visible() +
-                         self._envelope_data.get_visible())
-            self.fig.axes[0].set_visible(show_axis)
-            self.subplots_adjust()
-            self.draw_idle()
+            if self._signal_data.get_visible() != show_sa:
+                self._signal_data.set_visible(show_sa)
+                show_axis = (self._signal_data.get_visible() +
+                             self._envelope_data.get_visible())
+                self.fig.axes[0].set_visible(show_axis)
+                self.subplots_adjust()
+                self.draw_idle()
 
     def set_signal_envelope_visible(self, show_se):
         if self._signal_data is not None and self._envelope_data is not None:
-            self._envelope_data.set_visible(show_se)
-            show_axis = (self._signal_data.get_visible() +
-                         self._envelope_data.get_visible())
-            self.fig.axes[0].set_visible(show_axis)
+            if self._envelope_data.get_visible() != show_se:
+                self._envelope_data.set_visible(show_se)
+                show_axis = (self._signal_data.get_visible() +
+                             self._envelope_data.get_visible())
+                self.fig.axes[0].set_visible(show_axis)
+                self.subplots_adjust()
+                self.draw_idle()
+
+    def set_cf_visible(self, show_cf):
+        if self.fig.axes[1].get_visible() != show_cf:
+            if len(self.record.cf) <= 0:
+                self.fig.axes[1].set_visible(False)
+            else:
+                self.fig.axes[1].set_visible(show_cf)
+                self.subplots_adjust()
+                self.draw_idle()
+
+    def set_espectrogram_visible(self, show_eg):
+        if self.fig.axes[2].get_visible() != show_eg:
+            self.fig.axes[2].set_visible(show_eg)
             self.subplots_adjust()
             self.draw_idle()
 
-    def set_cf_visible(self, show_cf):
-        self.fig.axes[1].set_visible(show_cf)
-        self.subplots_adjust()
-        self.draw_idle()
-
-    def set_espectrogram_visible(self, show_eg):
-        self.fig.axes[2].set_visible(show_eg)
-        self.subplots_adjust()
-        self.draw_idle()
-
     def set_minimap_visible(self, show_mm):
-        self.minimap.set_visible(show_mm)
-        self.draw_idle()
+        if self.minimap.get_visible() != show_mm:
+            self.minimap.set_visible(show_mm)
+            self.minimap.draw_animate()
 
     def set_threshold_visible(self, show_thr):
-        self.thresholdMarker.set_visible(show_thr)
-        self.canvas.draw_idle()
+        if self.thresholdMarker:
+            if self.thresholdMarker.get_visible() != show_thr:
+                self.thresholdMarker.set_visible(show_thr)
+                self.draw_idle()
 
     def subplots_adjust(self):
         visible_subplots = [ax for ax in self.fig.get_axes() if ax.get_visible()]

@@ -40,9 +40,9 @@ class PickingTask(QtCore.QObject):
 
     finished = QtCore.Signal()
 
-    def __init__(self, record, alg, threshold=None):
+    def __init__(self, document, alg, threshold=None):
         super(PickingTask, self).__init__()
-        self.record = record
+        self.document = document
         self.alg = alg
         self.threshold = threshold
 
@@ -50,7 +50,7 @@ class PickingTask(QtCore.QObject):
         settings = QtCore.QSettings(_organization, _application_name)
         takanami = int(settings.value('takanami_settings/takanami', False))
         takanami_margin = float(settings.value('takanami_margin', 5.0))
-        self.record.detect(self.alg, threshold=self.threshold,
+        self.document.detectEvents(self.alg, threshold=self.threshold,
                            takanami=takanami,
                            takanami_margin=takanami_margin)
         self.finished.emit()
@@ -72,16 +72,16 @@ class PickingTaskDialog(QtGui.QDialog):
             Default value is None.
     """
 
-    def __init__(self, record, alg, threshold=None):
+    def __init__(self, document, alg, threshold=None):
         QtGui.QDialog.__init__(self)
-        self.record = record
-        self._events = self.record.events
+        self.document = document
+        #self._events = self.record.events
         self.alg = alg
         self.threshold = threshold
         self.init_ui()
 
         self._thread = QtCore.QThread(self)
-        self._task = PickingTask(self.record, self.alg, self.threshold)
+        self._task = PickingTask(self.document, self.alg, self.threshold)
         self._task.moveToThread(self._thread)
         self._thread.started.connect(self._task.run)
         self._task.finished.connect(self._thread.quit)
@@ -110,5 +110,5 @@ class PickingTaskDialog(QtGui.QDialog):
         self.label.setText("Canceling task...")
         self._thread.terminate()
         self._thread.wait()
-        self.record.events = self._events
+        #self.record.events = self._events
         return QtGui.QDialog.reject(self)

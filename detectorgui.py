@@ -29,6 +29,10 @@
 import sys
 from PySide import QtGui, QtCore
 
+import matplotlib
+matplotlib.use('Qt4Agg')
+matplotlib.rcParams['backend.qt4'] = 'PySide'
+
 from gui.views.converted import ui_mainwindow
 from gui.delegates import cbdelegate
 from gui.models import eventlistmodel
@@ -39,7 +43,6 @@ from gui.views import savedialog
 from gui.views import settingsdialog
 from gui.views import pickingtaskdialog
 from gui.views import playertoolbar
-from gui.views import eventposdialog
 
 from picking import stalta
 from picking import ampa
@@ -88,8 +91,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.setupUi(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        self.record = None
-        self._model = None
+        self.document = None
         self.isModified = False
         self.saved_filename = None
         self.saved_cf_filename = None
@@ -117,7 +119,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSettings.triggered.connect(self.edit_settings)
         self.actionSTA_LTA.triggered.connect(self.doSTALTA)
         self.actionAMPA.triggered.connect(self.doAMPA)
-        self.actionEdit_Event.triggered.connect(self.edit_event)
         self.actionClear_Event_List.triggered.connect(self.clear_events)
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
@@ -144,13 +145,16 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.addToolBarBreak()
 
         self.actionEvent_List.toggled.connect(self.EventsTableView.setVisible)
+
         self.actionSignal_Amplitude.toggled.connect(self.signalViewer.set_signal_amplitude_visible)
         self.actionSignal_Envelope.toggled.connect(self.signalViewer.set_signal_envelope_visible)
         self.actionEspectrogram.toggled.connect(self.signalViewer.set_espectrogram_visible)
         self.actionCharacteristic_Function.toggled.connect(self.signalViewer.set_cf_visible)
         self.actionSignal_MiniMap.toggled.connect(self.signalViewer.set_minimap_visible)
         self.signalViewer.selector.toggled.connect(self.actionTakanami.setEnabled)
+
         self.thresholdCheckBox.toggled.connect(self.toggle_threshold)
+
         self.actionMain_Toolbar.toggled.connect(self.toolBarMain.setVisible)
         self.actionMedia_Toolbar.toggled.connect(self.toolBarMedia.setVisible)
         self.actionAnalysis_Toolbar.toggled.connect(self.toolBarAnalysis.setVisible)
@@ -178,27 +182,39 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             filename, _ = QtGui.QFileDialog.getOpenFileName(self, "Open Data File", ".",
                                                             ";;".join(self._file_filters))
         if filename != '':
-            if self.record is None:
+            if self.document is None:
                 dialog = loaddialog.LoadDialog(self, filename)
                 return_code = dialog.exec_()
                 if return_code == QtGui.QDialog.Accepted:
                     values = dialog.get_values()
                     # Load and visualize the opened record
                     QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                    self.record = rc.Record(filename, **values)
-                    self._model = eventlistmodel.EventListModel(self.record, ['name', 'time',
+                    record = rc.Record(filename, **values)
+                    self.document = eventlistmodel.EventListModel(record, ['name', 'time',
                                                                'cf_value',
                                                                'mode',
                                                                'method',
                                                                'status',
                                                                'comments'])
-                    self._model.emptyList.connect(self.set_modified)
+                    self.document.emptyList.connect(self.set_modified)
                     ########
-                    self.EventsTableView.setModel(self._model)
-                    self.signalViewer.set_record(self.record)
+                    self.EventsTableView.setModel(self.document)
+                    # connect document model to signalViewer
+                    self.document.eventCreated.connect(self.signalViewer.create_event)
+                    self.document.eventDeleted.connect(self.signalViewer.delete_event)
+                    self.document.eventModified.connect(self.signalViewer.update_event)
+                    self.document.detectionPerformed.connect(self.signalViewer.update_cf)
+                    # load document data into signal viewer
+                    self.signalViewer.set_record(self.document)
                     self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
+                    self.signalViewer.set_signal_amplitude_visible(self.actionSignal_Amplitude.isChecked())
+                    self.signalViewer.set_signal_envelope_visible(self.actionSignal_Envelope.isChecked())
+                    self.signalViewer.set_cf_visible(self.actionCharacteristic_Function.isChecked())
+                    self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
+                    self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
+                    self.signalViewer.set_threshold_visible(self.thresholdCheckBox.isChecked())
                     self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
-                    self.toolBarMedia.load_data(self.record.signal, self.record.fs)
+                    self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
                     self.toolBarMedia.connect_path()
                     QtGui.QApplication.restoreOverrideCursor()
                     # Update recent list
@@ -253,7 +269,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             filename: Output file name.
         """
         with open(filename, 'w') as f:
-            rc.generate_csv([self.record], f)
+            rc.generate_csv([self.document.record], f)
             self.saved_filename = filename
 
     def save_cf(self):
@@ -264,7 +280,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         if self.saved_cf_filename is None:
             return self.save_cf_as()
         else:
-            return self.record.save_cf(self.saved_cf_filename,
+            return self.document.record.save_cf(self.saved_cf_filename,
                                        fmt=self.saved_cf_format,
                                        dtype=self.saved_cf_dtype,
                                        byteorder=self.saved_cf_byteorder)
@@ -297,7 +313,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             # Save CF to file and store settings
             if return_code == QtGui.QDialog.Accepted:
                 values = dialog.get_values()
-                self.record.save_cf(filename, **values)
+                self.document.record.save_cf(filename, **values)
                 self.saved_cf_filename = filename
                 self.saved_cf_format = values['fmt']
                 self.saved_cf_dtype = values['dtype']
@@ -310,9 +326,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         the user whether to save data or not.
         """
         if self.maybeSave():
-            self.record = None
-            self._model.emptyList.disconnect(self.set_modified)
-            self._model = None
+            self.document.emptyList.disconnect(self.set_modified)
+            self.document = None
             self.set_modified(False)
             self.saved_filename = None
             self.signalViewer.thresholdMarker.thresholdChanged.disconnect(self.thresholdSpinBox.setValue)
@@ -442,7 +457,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
     def set_title(self):
         """Sets current window's title."""
-        prefix = '' if self.record is None else "%s - " % self.record.filename
+        prefix = '' if self.document is None else "%s - " % self.document.record.filename
         self.setWindowTitle('%sP-phase Picker v.%s' % (prefix, __version__))
 
     def strippedName(self, fullFileName):
@@ -461,12 +476,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         Args:
             n_events: Number of events found.
         """
-        self.signalViewer.set_record(self.record)
-        self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
-        self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
-        self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
-        self.signalViewer.thresholdMarker.set_visible(self.thresholdCheckBox.checkState())
-        self._model.updateList()
         msgBox = QtGui.QMessageBox()
         msgBox.setText("%s possible event(s) has been found" % n_events)
         msgBox.exec_()
@@ -486,10 +495,10 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             threshold = None
         # Create an STA-LTA algorithm instance with selected settings
         alg = stalta.StaLta(sta_length, lta_length)
-        n_events = len(self.record.events)  # Number of events before picking
-        return_code = pickingtaskdialog.PickingTaskDialog(self.record, alg, threshold).exec_()
+        n_events = self.document.rowCount()  # Number of events before picking
+        return_code = pickingtaskdialog.PickingTaskDialog(self.document, alg, threshold).exec_()
         if return_code == QtGui.QDialog.Accepted:
-            n_events_found = len(self.record.events) - n_events  # N. of events found
+            n_events_found = self.document.rowCount() - n_events  # N. of events found
             self.onPickingFinished(n_events_found)
 
     def doAMPA(self):
@@ -519,10 +528,10 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         alg = ampa.Ampa(wlen, wstep, filters, noise_thr=nthres,
                         bandwidth=bandwidth, overlap=overlap,
                         f_start=startf, f_end=endf)
-        n_events = len(self.record.events)  # Number of events before picking
-        return_code = pickingtaskdialog.PickingTaskDialog(self.record, alg, threshold).exec_()
+        n_events = self.document.rowCount()  # Number of events before picking
+        return_code = pickingtaskdialog.PickingTaskDialog(self.document, alg, threshold).exec_()
         if return_code == QtGui.QDialog.Accepted:
-            n_events_found = len(self.record.events) - n_events  # N. of events found
+            n_events_found = self.document.rowCount() - n_events  # N. of events found
             self.onPickingFinished(n_events_found)
 
     def goToEventPosition(self, index):
@@ -531,23 +540,14 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         Args:
             index: Event row index at Events Table.
         """
-        self.signalViewer.set_position(self.record.events[index.row()].time / self.record.fs)
+        self.signalViewer.set_position(self.document.record.events[index.row()].time / self.document.record.fs)
 
     def clear_events(self):
-        for event in self.record.events:
-            self.signalViewer.delete_event(event)
-        self.record.events = []
-        self._model.updateList()
+        self.document.clearEvents()
 
     def on_event_selection(self, index):
         n_selected = len(self.EventsTableView.selectionModel().selectedRows())
         self.actionDelete_Selected.setEnabled(n_selected > 0)
-        self.actionEdit_Event.setEnabled(n_selected == 1)
-
-    def edit_event(self):
-        event = self.record.events[self.EventsTableView.selectionModel().
-                                   selectedRows()[0].row()]
-        eventposdialog.EventPosDialog(self.record, event, self).exec_()
 
 
 if __name__ == '__main__':
