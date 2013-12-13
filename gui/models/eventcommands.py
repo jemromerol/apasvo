@@ -36,32 +36,44 @@ class AppendEvent(QtGui.QUndoCommand):
         self.event = event
 
     def undo(self):
+        self.model.beginRemoveRows(QtCore.QModelIndex(), len(self.model.record.events),
+                                   len(self.model.record.events))
         self.model.record.events.pop()
         self.model.eventDeleted.emit(self.event)
+        self.model.endRemoveRows()
 
     def redo(self):
+        self.model.beginInsertRows(QtCore.QModelIndex(), len(self.model.record.events),
+                                   len(self.model.record.events))
         self.model.record.events.append(self.event)
         self.model.eventCreated.emit(self.event)
+        self.model.endInsertRows()
 
     def id(self):
         return 1
 
 
-class DeleteEvent(QtGui.QUndoCommand):
+class DeleteEvents(QtGui.QUndoCommand):
 
-    def __init__(self, model, event):
-        super(DeleteEvent, self).__init__('Delete event')
+    def __init__(self, model, row_list):
+        super(DeleteEvents, self).__init__('Delete events')
         self.model = model
-        self.event = event
-        self.position = self.model.record.events.index(self.event)
+        self.row_list = row_list
+        self.events = [self.model.record.events[i] for i in self.row_list]
 
     def undo(self):
-        self.model.record.events.insert(self.position, self.event)
-        self.model.eventCreated.emit(self.event)
+        for row, event in zip(self.row_list, self.events):
+            self.model.beginInsertRows(QtCore.QModelIndex(), row, row)
+            self.model.record.events.insert(row, event)
+            self.model.eventCreated.emit(event)
+            self.model.endInsertRows()
 
     def redo(self):
-        self.model.record.events.pop(self.position)
-        self.model.eventDeleted.emit(self.event)
+        for row, event in zip(self.row_list, self.events):
+            self.model.beginRemoveRows(QtCore.QModelIndex(), row, row)
+            self.model.record.events.pop(row)
+            self.model.eventDeleted.emit(event)
+            self.model.endRemoveRows()
 
     def id(self):
         return 2
@@ -79,14 +91,18 @@ class EditEvent(QtGui.QUndoCommand):
             self.old_params[key] = self.event.__getattribute__(key)
 
     def undo(self):
+        self.model.layoutAboutToBeChanged.emit()
         for key, value in self.old_params.items():
             self.event.__setattr__(key, value)
         self.model.eventModified.emit(self.event)
+        self.model.layoutChanged.emit()
 
     def redo(self):
+        self.model.layoutAboutToBeChanged.emit()
         for key, value in self.params.items():
             self.event.__setattr__(key, value)
         self.model.eventModified.emit(self.event)
+        self.model.layoutChanged.emit()
 
     def id(self):
         return 3
@@ -97,17 +113,23 @@ class ClearEventList(QtGui.QUndoCommand):
     def __init__(self, model):
         super(ClearEventList, self).__init__('Clear event list')
         self.model = model
-        self.events = self.model.record.events
+        self.events = list(self.model.record.events)
 
     def undo(self):
-        self.model.record.events = self.events
+        self.model.beginInsertRows(QtCore.QModelIndex(), 0,
+                                   len(self.events) - 1)
+        self.model.record.events = list(self.events)
         for event in self.model.record.events:
             self.model.eventCreated.emit(event)
+        self.model.endInsertRows()
 
     def redo(self):
+        self.model.beginRemoveRows(QtCore.QModelIndex(), 0,
+                                   len(self.events) - 1)
         self.model.record.events = []
         for event in self.model.record.events:
             self.model.eventDeleted.emit(event)
+        self.model.endRemoveRows()
 
     def id(self):
         return 4
@@ -120,14 +142,18 @@ class SortEventList(QtGui.QUndoCommand):
         self.model = model
         self.key = key
         self.order = order
-        self.old_events = self.model.record.events
+        self.old_events = list(self.model.record.events)
 
     def undo(self):
-        self.model.record.events = self.old_events
+        self.model.layoutAboutToBeChanged.emit()
+        self.model.record.events = list(self.old_events)
+        self.model.layoutChanged.emit()
 
     def redo(self):
+        self.model.layoutAboutToBeChanged.emit()
         self.model.record.sort_events(key=self.key,
                                 reverse=(self.order == QtCore.Qt.DescendingOrder))
+        self.model.layoutChanged.emit()
 
     def id(self):
         return 5
@@ -139,24 +165,26 @@ class DetectEvents(QtGui.QUndoCommand):
         super(DetectEvents, self).__init__('Apply %s' % alg.__class__.__name__.
                                            upper())
         self.model = model
-        self.alg = alg
-        self.old_events = self.model.record.events
-        self.params = kwargs
+        self.n_events_before = len(self.model.record.events)
+        self.events = list(self.model.record.detect(alg, **kwargs))
+        self.n_events_after = len(self.events)
+        self.model.detectionPerformed.emit()
 
     def undo(self):
-        for event in self.model.record.events:
-            self.model.eventDeleted.emit(event)
-        self.model.record.events = self.old_events
-        for event in self.old_events:
-            self.model.eventCreated.emit(event)
+        self.model.beginRemoveRows(QtCore.QModelIndex(), self.n_events_before,
+                                   self.n_events_after - 1)
+        self.model.record.events = self.model.record.events[:self.n_events_before]
+        for i in range(self.n_events_before, self.n_events_after):
+            self.model.eventDeleted.emit(self.events[i])
+        self.model.endRemoveRows()
 
     def redo(self):
-        for event in self.old_events:
-            self.model.eventDeleted.emit(event)
-        self.model.record.detect(self.alg, **self.params)
-        self.model.detectionPerformed.emit()
-        for event in self.model.record.events:
-            self.model.eventCreated.emit(event)
+        self.model.beginInsertRows(QtCore.QModelIndex(), self.n_events_before,
+                                   self.n_events_after - 1)
+        self.model.record.events = list(self.events)
+        for i in range(self.n_events_before, self.n_events_after):
+            self.model.eventCreated.emit(self.events[i])
+        self.model.endInsertRows()
 
     def id(self):
         return 6

@@ -26,6 +26,9 @@
 
 from PySide import QtCore
 from PySide import QtGui
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.ticker import FuncFormatter
+import matplotlib.pyplot as plt
 
 
 class TakanamiDialog(QtGui.QDialog):
@@ -35,4 +38,10 @@ class TakanamiDialog(QtGui.QDialog):
         self.setupUI()
 
     def setupUI(self):
-        pass
+        self.setWindowTitle("Takanami's Autoregressive Method")
+        self.fig, _ = plt.subplots(2, 1, sharex=True)
+        self.canvas = FigureCanvas(self.fig)
+        self.canvas.setMinimumSize(self.canvas.size())
+        self.position_label = QtGui.QLabel("Time: 00:00:00.000  CF value: 0.000")
+        self.group_box = QtGui.QGroupBox(self)
+        self.group_box.setTitle("Maximum margins")

@@ -25,9 +25,8 @@
 '''
 
 from PySide import QtCore
-from PySide import QtGui
 from gui.models import eventcommands as commands
-from picking import record
+from picking import record as rc
 import datetime
 
 
@@ -36,17 +35,17 @@ class EventListModel(QtCore.QAbstractTableModel):
     """
 
     emptyList = QtCore.Signal(bool)
-    eventCreated = QtCore.Signal(record.Event)
-    eventDeleted = QtCore.Signal(record.Event)
-    eventModified = QtCore.Signal(record.Event)
+    eventCreated = QtCore.Signal(rc.Event)
+    eventDeleted = QtCore.Signal(rc.Event)
+    eventModified = QtCore.Signal(rc.Event)
     detectionPerformed = QtCore.Signal()
 
-    def __init__(self, record, header):
+    def __init__(self, record, header, command_stack):
         QtCore.QAbstractTableModel.__init__(self)
         self.record = record
         self._header = header
         self.empty = (len(self.record.events) != 0)
-        self.command_stack = QtGui.QUndoStack(self)
+        self.command_stack = command_stack
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self.record.events)
@@ -73,32 +72,21 @@ class EventListModel(QtCore.QAbstractTableModel):
         return None
 
     def sort(self, column, order=QtCore.Qt.AscendingOrder):
-        self.layoutAboutToBeChanged.emit()
         self.command_stack.push(commands.SortEventList(self,
                                                        self._header[column],
                                                        order))
-        self.layoutChanged.emit()
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role == QtCore.Qt.EditRole:
             params = {self._header[index.column()]: value}
             self.command_stack.push(commands.EditEvent(self, self.record.events[index.row()],
                                                        **params))
-            self.dataChanged.emit(index, index)
+            #self.dataChanged.emit(index, index)
             return True
         return False
 
     def editEvent(self, event, **kwargs):
-        row = self.record.events.index(event)
         self.command_stack.push(commands.EditEvent(self, event, **kwargs))
-        # notify update of edited arguments
-        for arg_name in kwargs.keys():
-            for col, col_name in enumerate(self._header):
-                if arg_name == col_name:
-                    index = self.createIndex(row, col)
-                    self.dataChanged.emit(index, index)
-                break
-        self.layoutChanged.emit()
 
     def flags(self, index):
         attr_name = self._header[index.column()]
@@ -107,33 +95,19 @@ class EventListModel(QtCore.QAbstractTableModel):
         return (QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable |
                 QtCore.Qt.ItemIsEnabled)
 
-    def removeRows(self, row, count, parent=QtCore.QModelIndex()):
-        if row < 0 or row > len(self.record.events):
-            return
-        self.beginRemoveRows(parent, row, row + count - 1)
-        while count != 0:
-            self.command_stack.push(commands.DeleteEvent(self,
-                                                         self.record.events[row]))
-            count -= 1
+    def removeRows(self, row_list, parent=QtCore.QModelIndex()):
+        self.command_stack.push(commands.DeleteEvents(self, row_list))
         self._setEmpty()
-        self.endRemoveRows()
 
     def addEvent(self, event):
-        self.beginInsertRows(QtCore.QModelIndex(), len(self.record.events),
-                             len(self.record.events))
         self.command_stack.push(commands.AppendEvent(self, event))
         self._setEmpty()
-        self.endInsertRows()
 
     def detectEvents(self, alg, **kwargs):
-        self.modelAboutToBeReset.emit()
         self.command_stack.push(commands.DetectEvents(self, alg, **kwargs))
-        self.modelReset.emit()
 
     def clearEvents(self):
-        self.modelAboutToBeReset.emit()
         self.command_stack.push(commands.ClearEventList(self))
-        self.modelReset.emit()
 
     def _setEmpty(self):
         empty = (len(self.record.events) != 0)

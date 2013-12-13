@@ -120,6 +120,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSTA_LTA.triggered.connect(self.doSTALTA)
         self.actionAMPA.triggered.connect(self.doAMPA)
         self.actionClear_Event_List.triggered.connect(self.clear_events)
+        self.actionDelete_Selected.triggered.connect(self.delete_selected_events)
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
         self.splitter.addWidget(self.signalViewer)
@@ -191,12 +192,15 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                     record = rc.Record(filename, **values)
                     self.document = eventlistmodel.EventListModel(record, ['name', 'time',
-                                                               'cf_value',
-                                                               'mode',
-                                                               'method',
-                                                               'status',
-                                                               'comments'])
+                                                                  'cf_value',
+                                                                  'mode',
+                                                                  'method',
+                                                                  'status',
+                                                                  'comments'],
+                                                                  self.command_stack)
                     self.document.emptyList.connect(self.set_modified)
+                    self.actionUndo = self.document.command_stack.createUndoAction(self)
+                    self.actionRedo = self.document.command_stack.createRedoAction(self)
                     ########
                     self.EventsTableView.setModel(self.document)
                     # connect document model to signalViewer
@@ -222,7 +226,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     # Update GUI
                     self.centralwidget.setVisible(True)
                     self.actionClose.setEnabled(True)
-                    self.actionSelect_All.setEnabled(True)
                     self.actionCreate_New_Event.setEnabled(True)
                     self.actionClear_Event_List.setEnabled(True)
                     self.actionSTA_LTA.setEnabled(True)
@@ -328,6 +331,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         if self.maybeSave():
             self.document.emptyList.disconnect(self.set_modified)
             self.document = None
+            self.command_stack.clear()
             self.set_modified(False)
             self.saved_filename = None
             self.signalViewer.thresholdMarker.thresholdChanged.disconnect(self.thresholdSpinBox.setValue)
@@ -336,7 +340,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             # Update GUI
             self.centralwidget.setVisible(False)
             self.actionClose.setEnabled(False)
-            self.actionSelect_All.setEnabled(False)
             self.actionCreate_New_Event.setEnabled(False)
             self.actionClear_Event_List.setEnabled(False)
             self.actionSTA_LTA.setEnabled(False)
@@ -543,7 +546,13 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.signalViewer.set_position(self.document.record.events[index.row()].time / self.document.record.fs)
 
     def clear_events(self):
-        self.document.clearEvents()
+        if self.document is not None:
+            self.document.clearEvents()
+
+    def delete_selected_events(self):
+        if self.document is not None:
+            selected_rows = self.EventsTableView.selectionModel().selectedRows()
+            self.document.removeRows([row.row() for row in selected_rows])
 
     def on_event_selection(self, index):
         n_selected = len(self.EventsTableView.selectionModel().selectedRows())

@@ -166,12 +166,12 @@ class EventMarker(QtCore.QObject):
         self.fig = fig
         self.event = event
         self.document = document
-        self.position = self.event.time / self.document.record.fs
+        self.position = self.event.time
 
         self.markers = []
         # draw markers
         for ax in self.fig.axes:
-            marker = ax.axvline(self.event.time / self.document.record.fs)
+            marker = ax.axvline(self.event.time / self.event.record.fs)
             marker.set(color='r', ls='--', lw=2, alpha=0.8, picker=5)
             self.markers.append(marker)
         # draw label
@@ -189,34 +189,33 @@ class EventMarker(QtCore.QObject):
         # draw canvas
         self.canvas.draw_idle()
 
-    def onpick(self, event):
-        if event.artist in self.markers:
+    def onpick(self, pick_event):
+        if pick_event.artist in self.markers:
             if not self.canvas.widgetlock.locked():
                 self.canvas.widgetlock(self)
-                self.pick_event = event
-                xfig, yfig = self._event_to_fig_coords(event.mouseevent)
+                self.pick_event = pick_event
+                xfig, yfig = self._event_to_fig_coords(pick_event.mouseevent)
                 self.position_label.set_position((xfig, yfig))
                 self.position_label.set_visible(True)
                 self.canvas.draw_idle()
 
-    def onrelease(self, event):
+    def onrelease(self, mouse_event):
         if self.canvas.widgetlock.isowner(self):
             self.position_label.set_visible(False)
             self.pick_event = None
             self.canvas.draw_idle()
             self.canvas.widgetlock.release(self)
-            time_in_samples = int(self.position * self.document.record.fs)
-            if time_in_samples != self.event.time:
-                self.document.editEvent(self.event, time=time_in_samples,
-                                        cf_value=self.document.record.cf[time_in_samples],
+            if self.position != self.event.time:
+                self.document.editEvent(self.event, time=self.position,
+                                        cf_value=self.event.record.cf[self.position],
                                         mode=rc.mode_manual,
                                         method=rc.method_other)
 
-    def onmove(self, event):
+    def onmove(self, mouse_event):
         if self.pick_event is not None:
-            xdata = self.get_xdata(event)
-            self.set_position(round(xdata, 3))
-            xfig, yfig = self._event_to_fig_coords(event)
+            xdata = self.get_xdata(mouse_event)
+            self.set_position(xdata)
+            xfig, yfig = self._event_to_fig_coords(mouse_event)
             self.position_label.set_position((xfig, yfig))
             self.canvas.draw_idle()
 
@@ -230,23 +229,25 @@ class EventMarker(QtCore.QObject):
         return inv.transform((event.x, event.y))
 
     def set_position(self, value):
-        if value != self.position:
-            if 0 <= self.position * self.document.record.fs <= len(self.document.record.signal):
-                self.position = value
+        time_in_samples = int(value * self.event.record.fs)
+        if time_in_samples != self.position:
+            if 0 <= self.position <= len(self.event.record.signal):
+                self.position = time_in_samples
+                time_in_seconds = time_in_samples / float(self.event.record.fs)
                 for marker in self.markers:
-                    marker.set_xdata(self.position)
-                t = str(datetime.timedelta(seconds=self.position))
-                if 0 <= self.position * self.document.record.fs < len(self.document.record.cf):
-                    cf_value = self.document.record.cf[int(self.position * self.document.record.fs)]
+                    marker.set_xdata(time_in_seconds)
+                t = str(datetime.timedelta(seconds=time_in_seconds))
+                if 0 <= self.position < len(self.event.record.cf):
+                    cf_value = self.event.record.cf[self.position]
                 else:
                     cf_value = 0.000
                 self.position_label.set_text("Time: %s seconds\nCF value: %.4g" %
                                              (t[:-3], cf_value))
 
     def redraw(self):
-        self.position = self.event.time / self.document.record.fs
+        self.position = self.event.time
         for marker in self.markers:
-            marker.set_xdata(self.position)
+            marker.set_xdata(self.position / float(self.event.record.fs))
         self.canvas.draw_idle()
 
     def remove(self):
@@ -530,7 +531,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.spinbox = QtGui.QTimeEdit(QtCore.QTime.currentTime(),
                                        parent=self.toolbar)
         self.toolbar.addWidget(self.spinbox)
-        self.toolbar.setVisible(False)
+        self.toolbar.setVisible(True)
 
         for ax in self.fig.axes:
             ax.callbacks.connect('xlim_changed', self.on_xlim_change)
