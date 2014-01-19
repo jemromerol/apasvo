@@ -99,6 +99,14 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.command_stack.push(commands.DeleteEvents(self, row_list))
         self._setEmpty()
 
+    def createEvent(self, time, name='', comments='', method=rc.method_other,
+                    mode=rc.mode_manual, status=rc.status_reported):
+        sample = int(time * self.record.fs)
+        event = rc.Event(self.record, sample, name=name, comments=comments,
+                         method=method, mode=mode, status=status)
+        self.addEvent(event)
+        return event
+
     def addEvent(self, event):
         self.command_stack.push(commands.AppendEvent(self, event))
         self._setEmpty()
@@ -107,7 +115,8 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.command_stack.push(commands.DetectEvents(self, alg, **kwargs))
 
     def clearEvents(self):
-        self.command_stack.push(commands.ClearEventList(self))
+        if len(self.record.events) > 0:
+            self.command_stack.push(commands.ClearEventList(self))
 
     def _setEmpty(self):
         empty = (len(self.record.events) != 0)

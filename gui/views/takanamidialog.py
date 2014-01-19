@@ -27,11 +27,12 @@
 from PySide import QtCore
 from PySide import QtGui
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.ticker import FuncFormatter
+from gui.views import navigationtoolbar
 import matplotlib.pyplot as plt
+from picking import record as rc
+from picking import takanami
 from _version import _application_name
 from _version import _organization
-
 
 MINIMUM_MARGIN_IN_SECS = 0.5
 
@@ -40,142 +41,193 @@ class TakanamiTask(QtCore.QObject):
     """A class to handle a Takanami exec. task."""
 
     finished = QtCore.Signal()
+    position_estimated = QtCore.Signal(int)
 
-    def __init__(self, event):
-        super(TakamaniTask, self).__init__()
-        self.event = event
+    def __init__(self, record, start, end, fig=None):
+        super(TakanamiTask, self).__init__()
+        self.record = record
+        self.start = start
+        self.end = end
+        self.fig = fig
+        self.algorithm = takanami.Takanami()
 
     def run(self):
-        self.event.record.refine_events(self.event)
+        start_time_in_secs = max(0.0, self.start) / self.record.fs
+        end_time_in_secs = (min(len(self.record.signal), self.end) /
+                            self.record.fs)
+        et, aic, n0_aic = self.algorithm.run(self.record.signal,
+                                             self.record.fs,
+                                             start_time_in_secs,
+                                             end_time_in_secs)
+        self.position_estimated.emit(et)
+        if self.fig is not None:
+            self.draw_figure(et, aic, n0_aic)
         self.finished.emit()
+
+    def draw_figure(self, time, aic, n0_aic):
+        m_event = rc.Event(self.record, time, aic=aic, n0_aic=n0_aic)
+        m_event.plot_aic(show_envelope=True, num=self.fig.number)
+        self.fig.canvas.draw_idle()
 
 
 class TakanamiDialog(QtGui.QDialog):
 
-    def __init__(self, document, event, parent=None):
+    def __init__(self, document, t_start, t_end, seismic_event=None, parent=None):
         super(TakanamiDialog, self).__init__(parent)
-        self._init_ui()
 
         self.document = document
-        self.event = event
+        self.record = self.document.record
 
-        self._start = 0.0
-        self._end = 0.0
+        self._start = int(t_start * self.record.fs)
+        self._end = int(t_end * self.record.fs)
+        if not 0 <= self._start < len(self.record.signal):
+            raise ValueError("Invalid t_start value")
+        if not 0 <= self._end < len(self.record.signal):
+            raise ValueError("Invalid t_end value")
+        if self._start >= self._end:
+            raise ValueError("t_end must be greater than t_start")
+
+        self.seismic_event = seismic_event
+        if self.seismic_event is None:
+            self.event_time = self._start + int((self._end - self._start) / 2)
+        else:
+            self.event_time = self.seismic_event.time
+
+        self._init_ui()
         self.load_settings()
-
-        self.simmetric_limits = True
 
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.button_box.clicked.connect(self.on_click)
-        self.start_point_spinbox.timeChanged.connect(self.on_left_margin_changed)
-        self.end_point_spinbox.timeChanged.connect(self.on_right_margin_changed)
-        self.limits_checkbox.toogled.connect(self.toggle_simmetric_limits)
- 
+        self.start_point_spinbox.timeChanged.connect(self.on_start_point_changed)
+        self.end_point_spinbox.timeChanged.connect(self.on_end_point_changed)
+
+        self.apply_takanami()
+
     def _init_ui(self):
         self.setWindowTitle("Takanami's Autoregressive Method")
         self.fig, _ = plt.subplots(2, 1, sharex=True)
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setMinimumSize(self.canvas.size())
-        self.position_label = QtGui.QLabel("Time: 00:00:00.000  CF value: 0.000")
+        self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
+        self.position_label = QtGui.QLabel("Time: 00:00:00.000")
         self.group_box = QtGui.QGroupBox(self)
         self.group_box.setTitle("Limits")
-        self.limits_checkbox = QtGui.QCheckBox("Simmetric limits",
-                                                self.group_box)
-        self.limits_checkbox.setChecked(True)
         self.start_point_label = QtGui.QLabel("Start point:")
         self.start_point_spinbox = QtGui.QTimeEdit(self.group_box)
-        self.start_point_spinbox.setMinimumTime(QtCore.QTime.addSecs(0))
+        self.start_point_spinbox.setDisplayFormat("hh:mm:ss.zzz")
         self.end_point_label = QtGui.QLabel("End point:")
-        self.end_point_spinbox = QtGui.QTimeEdiTimeEdit(self.group_box)
-        self.end_point_spinbox.setMinimumTime(QtCore.QTime.addSecs(0))
-        self.group_box_layout = QtGui.QFormLayout(self.group_box)
-        self.group_box_layout.setWidget(0, Qtgui.QFormLayout.SpanRole,
-                                        self.limits_checkbox)
-        self.group_box_layout.setWidget(1, QtGui.QFormLayout.LabelRole,
-                                        self.start_point_label)
-        self.group_box_layout.setWidget(1, QtGui.QFormLayout.FieldRole,
-                                        self.start_point_spinbox)
-        self.group_box_layout.setWidget(2, QtGui.QFormLayout.LabelRole,
-                                        self.end_point_label)
-        self.group_box_layout.setWidget(2, QtGui.QFormLayout.FieldRole,
-                                        self.end_point_spinbox)
+        self.end_point_spinbox = QtGui.QTimeEdit(self.group_box)
+        self.end_point_spinbox.setDisplayFormat("hh:mm:ss.zzz")
+        self.group_box_layout = QtGui.QHBoxLayout(self.group_box)
+        self.group_box_layout.addWidget(self.start_point_label)
+        self.group_box_layout.addWidget(self.start_point_spinbox)
+        self.group_box_layout.addWidget(self.end_point_label)
+        self.group_box_layout.addWidget(self.end_point_spinbox)
         self.button_box = QtGui.QDialogButtonBox(self)
         self.button_box.setOrientation(QtCore.Qt.Horizontal)
-        self.button_box.setStandardButtons(QtGui.QDialogButtonBox.RestoreDefaults,
-                                           QtGui.QDialogButtonBox.Cancel,
+        self.button_box.setStandardButtons(QtGui.QDialogButtonBox.RestoreDefaults |
+                                           QtGui.QDialogButtonBox.Apply |
+                                           QtGui.QDialogButtonBox.Cancel |
                                            QtGui.QDialogButtonBox.Ok)
         self.layout = QtGui.QVBoxLayout(self)
+        self.layout.addWidget(self.toolBarNavigation)
         self.layout.addWidget(self.canvas)
         self.layout.addWidget(self.position_label)
         self.layout.addWidget(self.group_box)
         self.layout.addWidget(self.button_box)
 
-       
+        # set spinboxes's initial values and limits
+        time_in_msecs = int((len(self.record.signal) * 1000.0) /
+                         self.record.fs)
+        self.start_point_spinbox.setTime(QtCore.QTime().addMSecs(0))
+        self.end_point_spinbox.setTime(QtCore.QTime().addMSecs(time_in_msecs))
+        self.start_point_spinbox.setMinimumTime(QtCore.QTime().addSecs(0))
+        self.end_point_spinbox.setMinimumTime(QtCore.QTime().addSecs(0))
+        self.start_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(time_in_msecs))
+        self.end_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(time_in_msecs))
+
     def on_click(self, button):
-        if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.RestoreDefaults:
+        if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.RestoreDefaults:
             self.load_settings()
-        if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.Ok:
-            self.save_settings()
+        if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Ok:
+            self.save_event()
+        if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Apply:
+            self.apply_takanami()
 
     def on_start_point_changed(self, value):
-        t_start = int(max(0, (QtCore.QTime().msecsTo(value) / 1000.0) *
-                          self.event.record.fs))
+        time_in_msecs = QtCore.QTime().msecsTo(value)
+        t_start = int(max(0, (time_in_msecs / 1000.0) *
+                          self.record.fs))
         if self._start != t_start:
-            self_start = t_start
-     
+            self._start = t_start
+            self.end_point_spinbox.setMinimumTime(QtCore.QTime().
+                                                  addMSecs(time_in_msecs))
 
     def on_end_point_changed(self, value):
-        t_end = int(min(len(event.record.signal,
-                        (QtCore.QTime().msecsTo(value) / 1000.0) *
-                         self.event.record.fs))
+        time_in_msecs = QtCore.QTime().msecsTo(value)
+        t_end = int(min(len(self.record.signal),
+                        ((time_in_msecs / 1000.0) *
+                         self.record.fs)))
         if self._end != t_end:
             self._end = t_end
- 
-    def toggle_simmetric_limits(self, value):
-        if self.simmetric_limits != value:
-            self.simmetric_limits = value
-            if self.simmetric_limits:
-                minimum_margin = min(self.event.time - self._start,
-                                     self.event.time - self._end)
-                self.set_margin(minimum_margin)
-     
+            self.start_point_spinbox.setMaximumTime(QtCore.QTime().
+                                                    addMSecs(time_in_msecs))
+
+    def on_position_estimated(self, value):
+        self.event_time = value
+        time_in_msecs = QtCore.QTime().addMSecs((self.event_time * 1000.0) /
+                                                self.record.fs)
+        self.position_label.setText("Time: %s" % time_in_msecs.toString("hh:mm:ss.zzz"))
+
     def load_settings(self):
-         """Loads settings from persistent storage."""
+        """Loads settings from persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("takanami_settings")
-        default_margin = int(self.settings.value('takanami_margin', 5.0) * self.event.record.fs)
+        default_margin = int(float(settings.value('takanami_margin', 5.0)) *
+                             self.record.fs)
         settings.endGroup()
         self.set_margin(default_margin)
- 
+
+    def save_event(self):
+        if self.seismic_event is not None:
+            if self.seismic_event.time != self.event_time:
+                self.document.editEvent(self.seismic_event,
+                                        time=self.event_time,
+                                        method=rc.method_takanami,
+                                        mode=rc.mode_automatic,
+                                        status=rc.status_reported)
+        else:
+            self.document.createEvent(self.event_time,
+                                      method=rc.method_takanami,
+                                      mode=rc.mode_automatic,
+                                      status=rc.status_reported)
+
     def set_margin(self, margin):
         if margin <= 0:
             raise ValueError("margin must be a positive value")
 
-        margin = max(MINIMUM_MARGIN_IN_SECS * self.event.record.fs, margin)
-        self._start = max(0, self.event.time - margin)
-        self._end = min(len(event.record.signal),
-                        self.event.time + margin)
+        margin = max(MINIMUM_MARGIN_IN_SECS * self.record.fs, margin)
+        self._start = max(0, self.event_time - margin)
+        self._end = min(len(self.record.signal),
+                        self.event_time + margin)
         self.start_point_spinbox.setTime(QtCore.QTime().
                                          addMSecs((self._start * 1000.0) /
-                                                  self.event.record.fs))
+                                                  self.record.fs))
         self.end_point_spinbox.setTime(QtCore.QTime().
                                        addMSecs((self._end * 1000.0) /
-                                                self.event.record.fs))
+                                                self.record.fs))
 
     def apply_takanami(self):
         self._thread = QtCore.QThread(self)
-        self._task = TakanamiTask(self.event)
+        self._task = TakanamiTask(self.record, self._start, self._end, self.fig)
         self._task.moveToThread(self._thread)
         self._thread.started.connect(self._task.run)
         self._task.finished.connect(self._thread.quit)
-        self._task.finished.connect(self.accept)
         self._task.finished.connect(self._task.deleteLater)
+        self._task.position_estimated.connect(self.on_position_estimated)
         self._thread.finished.connect(self._thread.deleteLater)
         self._thread.start()
-
-
-     
 
 
 

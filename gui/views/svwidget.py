@@ -207,7 +207,6 @@ class EventMarker(QtCore.QObject):
             self.canvas.widgetlock.release(self)
             if self.position != self.event.time:
                 self.document.editEvent(self.event, time=self.position,
-                                        cf_value=self.event.record.cf[self.position],
                                         mode=rc.mode_manual,
                                         method=rc.method_other)
 
@@ -240,7 +239,7 @@ class EventMarker(QtCore.QObject):
                 if 0 <= self.position < len(self.event.record.cf):
                     cf_value = self.event.record.cf[self.position]
                 else:
-                    cf_value = 0.000
+                    cf_value = np.nan
                 self.position_label.set_text("Time: %s seconds\nCF value: %.4g" %
                                              (t[:-3], cf_value))
 
@@ -521,17 +520,14 @@ class SignalViewerWidget(QtGui.QWidget):
         self.graphArea = QtGui.QScrollArea(self)
         self.graphArea.setWidgetResizable(True)
         self.graphArea.setWidget(self.canvas)
-        self.toolbar = QtGui.QToolBar(self)
+#        self.toolbar = QtGui.QToolBar(self)
 
         self.eventMarkers = {}
         self.thresholdMarker = None
         self.selector = SpanSelector(self.fig)
         self.minimap = MiniMap(self, self.fig.axes[0], None)
 
-        self.spinbox = QtGui.QTimeEdit(QtCore.QTime.currentTime(),
-                                       parent=self.toolbar)
-        self.toolbar.addWidget(self.spinbox)
-        self.toolbar.setVisible(True)
+#        self.toolbar.setVisible(True)
 
         for ax in self.fig.axes:
             ax.callbacks.connect('xlim_changed', self.on_xlim_change)
@@ -539,7 +535,7 @@ class SignalViewerWidget(QtGui.QWidget):
         # Set the layout
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.graphArea)
-        self.layout.addWidget(self.toolbar)
+#        self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.minimap)
 
         self.selector.toggled.connect(self.minimap.set_selection_visible)
@@ -698,7 +694,7 @@ class SignalViewerWidget(QtGui.QWidget):
             ax.change_geometry(len(visible_subplots), 1, i + 1)
 
     def get_selector_limits(self):
-        self.selector.get_selector_limits()
+        return self.selector.get_selector_limits()
 
     def set_selector_limits(self, xleft, xright):
         self.selector.set_selector_limits(xleft, xright)

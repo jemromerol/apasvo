@@ -136,13 +136,15 @@ class Event(object):
     statuses = (status_reported, status_revised, status_confirmed,
                 status_rejected, status_undefined)
 
-    def __init__(self, record, time, cf_value, name='', comments='',
+    def __init__(self, record, time, name='', comments='',
                  method=method_other, mode=mode_automatic, status=status_reported,
                  aic=None, n0_aic=None, **kwargs):
         super(Event, self).__init__()
         self.record = record
+        if time < 0 or time >= len(self.record.signal):
+            raise ValueError("Event position must be a value between 0 and %d"
+                             % len(self.record.signal))
         self.time = time
-        self.cf_value = cf_value
         self.name = name
         self.comments = comments
         self.method = method
@@ -154,6 +156,77 @@ class Event(object):
         self.status = status
         self.aic = aic
         self.n0_aic = n0_aic
+
+    @property
+    def cf_value(self):
+        if 0 <= self.time < len(self.record.cf):
+            return self.record.cf[self.time]
+        else:
+            return np.nan
+
+    def plot_aic(self, show_envelope=True, num=None, **kwargs):
+        """Plots AIC values for a given event object.
+
+        Draws a figure with two axes: the first one plots magnitude and
+        envelope of 'self.signal' and the second one plots AIC values computed
+        after applying Takanami AR method to 'event'. Plotted data goes from
+        'event.n0_aic' to 'event.n0_aic + len(event.aic)'.
+
+        Args:
+            show_envelope: Boolean value to specify whether to plot the
+                envelope of 'signal' or not. This function will be drawn
+                preferably on the first axis together with amplitude of
+                'signal'.
+                Default: True.
+            num: Identifier of the returned MatplotLib figure, integer type.
+                Default None, which means an identifier value will be
+                automatically generated.
+
+        Returns:
+            fig: A MatplotLib Figure instance.
+        """
+        if self.aic is None or self.n0_aic is None:
+            raise ValueError("Event doesn't have AIC data to plot")
+
+        # Set limits
+        i_from = int(max(0, self.n0_aic))
+        i_to = int(min(len(self.record.signal), self.n0_aic + len(self.aic)))
+        # Create time sequence
+        t = np.arange(i_from, i_to) / self.record.fs
+        # Create figure
+        fig, _ = pl.subplots(2, 1, sharex='all', num=num)
+        fig.canvas.set_window_title(self.record.label)
+        fig.set_tight_layout(True)
+        # Configure axes
+        for ax in fig.axes:
+            ax.cla()
+            ax.grid(True, which='both')
+            formatter = ticker.FuncFormatter(lambda x, pos: '%.0f' % x)
+            ax.xaxis.set_major_formatter(formatter)
+            ax.set_xlabel('Time (seconds)')
+            pl.setp(ax.get_xticklabels(), visible=True)
+        # Draw signal
+        fig.axes[0].set_title('Signal Amplitude')
+        fig.axes[0].set_ylabel('Amplitude')
+        fig.axes[0].plot(t, self.record.signal[i_from:i_to], color='b',
+                         label='Signal')
+        # Draw envelope
+        if show_envelope:
+            fig.axes[0].plot(t, env.envelope(self.record.signal[i_from:i_to]),
+                         color='g', label='Envelope')
+            fig.axes[0].legend(loc=0, fontsize='small')
+        # Draw AIC
+        fig.axes[1].set_title('AIC')
+        fig.axes[1].plot(t, self.aic)
+        # Draw event
+        for ax in fig.axes:
+            vline = ax.axvline(self.time / self.record.fs, label="Event")
+            vline.set(color='r', ls='--', lw=2)
+        # Configure limits and draw legend
+        for ax in fig.axes:
+            ax.set_xlim(t[0], t[-1])
+            ax.legend(loc=0, fontsize='small')
+        return fig
 
 
 class Record(object):
@@ -252,7 +325,7 @@ class Record(object):
             method_name = alg.__class__.__name__.upper()
             if method_name not in Event.methods:
                 method_name = method_other
-            events.append(Event(self, t, self.cf[t], method=method_name,
+            events.append(Event(self, t, method=method_name,
                                      mode=mode_automatic, status=status_reported))
         # Refine arrival times
         if takanami:
@@ -285,7 +358,7 @@ class Record(object):
                              reverse=reverse)
         return self.events
 
-    def refine_events(self, events, takanami_margin=5.0):
+    def refine_events(self, events, t_start=None, t_end=None, takanami_margin=5.0):
         """Computes Takanami AR method over self.events.
 
         Args:
@@ -304,7 +377,6 @@ class Record(object):
             et, event.aic, event.n0_aic = taka.run(self.signal, self.fs,
                                                    t_start, t_end)
             event.time = et
-            event.cf_value = self.cf[et]
             # set event method
             if event.method == method_ampa:
                 event.method = method_ampa_takanami
@@ -449,68 +521,6 @@ class Record(object):
         # Configure limits and draw legend
         for ax in fig.axes:
             ax.set_xlim(t[0], t[-1])
-        return fig
-
-    def plot_aic(self, event, show_envelope=True, num=None, **kwargs):
-        """Plots AIC values for a given event object.
-
-        Draws a figure with two axes: the first one plots magnitude and
-        envelope of 'self.signal' and the second one plots AIC values computed
-        after applying Takanami AR method to 'event'. Plotted data goes from
-        'event.n0_aic' to 'event.n0_aic + len(event.aic)'.
-
-        Args:
-            event: An Event object.
-            show_envelope: Boolean value to specify whether to plot the
-                envelope of 'signal' or not. This function will be drawn
-                preferably on the first axis together with amplitude of
-                'signal'.
-                Default: True.
-            num: Identifier of the returned MatplotLib figure, integer type.
-                Default None, which means an identifier value will be
-                automatically generated.
-
-        Returns:
-            fig: A MatplotLib Figure instance.
-        """
-        # Set limits
-        i_from = int(max(0, event.n0_aic))
-        i_to = int(min(len(self.signal), event.n0_aic + len(event.aic)))
-        # Create time sequence
-        t = np.arange(i_from, i_to) / self.fs
-        # Create figure
-        fig, _ = pl.subplots(2, 1, sharex='all', num=num)
-        fig.canvas.set_window_title(self.label)
-        fig.set_tight_layout(True)
-        # Configure axes
-        for ax in fig.axes:
-            ax.cla()
-            ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: '%.0f' % x)
-            ax.xaxis.set_major_formatter(formatter)
-            ax.set_xlabel('Time (seconds)')
-            pl.setp(ax.get_xticklabels(), visible=True)
-        # Draw signal
-        fig.axes[0].set_title('Signal Amplitude')
-        fig.axes[0].set_ylabel('Amplitude')
-        fig.axes[0].plot(t, self.signal[i_from:i_to], color='b',
-                         label='Signal')
-        # Draw envelope
-        if show_envelope:
-            fig.axes[0].plot(t, env.envelope(self.signal[i_from:i_to]),
-                         color='g', label='Envelope')
-            fig.axes[0].legend(loc=0, fontsize='small')
-        # Draw AIC
-        fig.axes[1].set_title('AIC')
-        fig.axes[1].plot(t, event.aic)
-        # Draw event
-        for ax in fig.axes:
-            vline = ax.axvline(event.time / self.fs, label="Event")
-            vline.set(color='r', ls='--', lw=2)
-        # Configure limits and draw legend
-        for ax in fig.axes:
-            ax.set_xlim(t[0], t[-1])
-            ax.legend(loc=0, fontsize='small')
         return fig
 
 

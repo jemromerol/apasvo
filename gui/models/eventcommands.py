@@ -36,8 +36,8 @@ class AppendEvent(QtGui.QUndoCommand):
         self.event = event
 
     def undo(self):
-        self.model.beginRemoveRows(QtCore.QModelIndex(), len(self.model.record.events),
-                                   len(self.model.record.events))
+        self.model.beginRemoveRows(QtCore.QModelIndex(), len(self.model.record.events) - 1,
+                                   len(self.model.record.events) - 1)
         self.model.record.events.pop()
         self.model.eventDeleted.emit(self.event)
         self.model.endRemoveRows()

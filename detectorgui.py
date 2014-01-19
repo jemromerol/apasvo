@@ -42,6 +42,7 @@ from gui.views import loaddialog
 from gui.views import savedialog
 from gui.views import settingsdialog
 from gui.views import pickingtaskdialog
+from gui.views import takanamidialog
 from gui.views import playertoolbar
 
 from picking import stalta
@@ -119,6 +120,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSettings.triggered.connect(self.edit_settings)
         self.actionSTA_LTA.triggered.connect(self.doSTALTA)
         self.actionAMPA.triggered.connect(self.doAMPA)
+        self.actionTakanami.triggered.connect(self.doTakanami)
         self.actionClear_Event_List.triggered.connect(self.clear_events)
         self.actionDelete_Selected.triggered.connect(self.delete_selected_events)
         # add navigation toolbar
@@ -536,6 +538,10 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         if return_code == QtGui.QDialog.Accepted:
             n_events_found = self.document.rowCount() - n_events  # N. of events found
             self.onPickingFinished(n_events_found)
+
+    def doTakanami(self):
+        xleft, xright = self.signalViewer.get_selector_limits()
+        takanamidialog.TakanamiDialog(self.document, xleft, xright).exec_()
 
     def goToEventPosition(self, index):
         """Centers signal viewer widget to an event location.

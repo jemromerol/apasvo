@@ -293,7 +293,7 @@ class Detector(Analysis):
                                show_envelope=show_envelope,
                                **kwargs)
             if takanami:
-                record.plot_aic(event, num=2, show_envelope=show_envelope)
+                event.plot_aic(num=2, show_envelope=show_envelope)
             # Query user and process its response
             response = clt.query_custom_answers(detect_q, detect_a,
                                                   default=detect_da)
@@ -368,7 +368,7 @@ class Picker(Analysis):
                                show_specgram=show_specgram,
                                show_envelope=show_envelope)
             if takanami:
-                record.plot_aic(event, num=2, show_envelope=show_envelope)
+                event.plot_aic(num=2, show_envelope=show_envelope)
             # Query user and process its response
             response = clt.query_custom_answers(pick_q, pick_a,
                                                   default=pick_da)
