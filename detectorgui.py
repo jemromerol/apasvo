@@ -36,12 +36,12 @@ matplotlib.rcParams['backend.qt4'] = 'PySide'
 from gui.views.converted import ui_mainwindow
 from gui.delegates import cbdelegate
 from gui.models import eventlistmodel
+from gui.models import pickingtask
 from gui.views import svwidget
 from gui.views import navigationtoolbar
 from gui.views import loaddialog
 from gui.views import savedialog
 from gui.views import settingsdialog
-from gui.views import pickingtaskdialog
 from gui.views import takanamidialog
 from gui.views import playertoolbar
 
@@ -474,17 +474,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.thresholdSpinBox.setEnabled(value)
         self.signalViewer.thresholdMarker.set_visible(value)
 
-    def onPickingFinished(self, n_events):
-        """Updates current window after performing an event
-        detection/picking analysis.
-
-        Args:
-            n_events: Number of events found.
-        """
-        msgBox = QtGui.QMessageBox()
-        msgBox.setText("%s possible event(s) has been found" % n_events)
-        msgBox.exec_()
-
     def doSTALTA(self):
         """Performs event detection/picking by using STA-LTA method."""
         # Read settings
@@ -500,11 +489,11 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             threshold = None
         # Create an STA-LTA algorithm instance with selected settings
         alg = stalta.StaLta(sta_length, lta_length)
-        n_events = self.document.rowCount()  # Number of events before picking
-        return_code = pickingtaskdialog.PickingTaskDialog(self.document, alg, threshold).exec_()
-        if return_code == QtGui.QDialog.Accepted:
-            n_events_found = self.document.rowCount() - n_events  # N. of events found
-            self.onPickingFinished(n_events_found)
+        # perform task
+        self._analysis_task = pickingtask.PickingTask(self.document, alg,
+                                                            threshold)
+        self.launch_analysis_task(self._analysis_task,
+                                  label="Applying %s..." % alg.__class__.__name__.upper())
 
     def doAMPA(self):
         """Performs event detection/picking by using AMPA method."""
@@ -533,11 +522,31 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         alg = ampa.Ampa(wlen, wstep, filters, noise_thr=nthres,
                         bandwidth=bandwidth, overlap=overlap,
                         f_start=startf, f_end=endf)
-        n_events = self.document.rowCount()  # Number of events before picking
-        return_code = pickingtaskdialog.PickingTaskDialog(self.document, alg, threshold).exec_()
-        if return_code == QtGui.QDialog.Accepted:
-            n_events_found = self.document.rowCount() - n_events  # N. of events found
-            self.onPickingFinished(n_events_found)
+        # perform task
+        self._analysis_task = pickingtask.PickingTask(self.document, alg,
+                                                            threshold)
+        self.launch_analysis_task(self._analysis_task,
+                                  label="Applying %s..." % alg.__class__.__name__.upper())
+
+    def launch_analysis_task(self, task, label=""):
+        self.actionAMPA.setEnabled(False)
+        self.actionSTA_LTA.setEnabled(False)
+        self.analysis_progress_bar.show()
+        self.analysis_label.setText(label)
+        self._thread = QtCore.QThread(self)
+        task.moveToThread(self._thread)
+        self._thread.started.connect(task.run)
+        task.finished.connect(self._thread.quit)
+        task.finished.connect(self.on_analysis_finished)
+        task.finished.connect(task.deleteLater)
+        self._thread.finished.connect(self._thread.deleteLater)
+        self._thread.start()
+
+    def on_analysis_finished(self):
+        self.actionAMPA.setEnabled(True)
+        self.actionSTA_LTA.setEnabled(True)
+        self.analysis_progress_bar.hide()
+        self.analysis_label.setText("")
 
     def doTakanami(self):
         xleft, xright = self.signalViewer.get_selector_limits()

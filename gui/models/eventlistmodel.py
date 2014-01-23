@@ -27,7 +27,6 @@
 from PySide import QtCore
 from gui.models import eventcommands as commands
 from picking import record as rc
-import datetime
 
 
 class EventListModel(QtCore.QAbstractTableModel):
@@ -61,7 +60,8 @@ class EventListModel(QtCore.QAbstractTableModel):
         attr_name = self._header[index.column()]
         data = self.record.events[index.row()].__getattribute__(attr_name)
         if attr_name == 'time':
-            return str(datetime.timedelta(seconds=data / self.record.fs))
+            time = QtCore.QTime().addMSecs(1000 * data / self.record.fs)
+            return time.toString("hh 'h' mm 'm' ss.zzz 's'")
         if attr_name == 'cf_value':
             return "%.3f" % data
         return "%s" % data
