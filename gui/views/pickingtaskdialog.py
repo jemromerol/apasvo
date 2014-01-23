@@ -55,13 +55,16 @@ class PickingTask(QtCore.QObject):
                            takanami_margin=takanami_margin)
         self.finished.emit()
 
+    def abort(self):
+        pass
+
 
 class PickingTaskDialog(QtGui.QDialog):
     """A progress dialog window to provide feedback to the user while
     an event detection/picking task is being performed.
 
     Attributes:
-        record: Current opened seismic document, picking.Record object.
+        document: Current opened seismic document.
         alg: A detection/picking algorithm object, e. g. a
             picking.ampa.Ampa or picking.stalta.StaLta instance.
         threshold: Local maxima found in the characteristic function above
@@ -108,7 +111,7 @@ class PickingTaskDialog(QtGui.QDialog):
 
     def reject(self):
         self.label.setText("Canceling task...")
-        self._thread.terminate()
+        self._task.abort()
+        self.hide()
         self._thread.wait()
-        #self.record.events = self._events
         return QtGui.QDialog.reject(self)

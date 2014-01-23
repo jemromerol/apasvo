@@ -101,8 +101,7 @@ class EventListModel(QtCore.QAbstractTableModel):
 
     def createEvent(self, time, name='', comments='', method=rc.method_other,
                     mode=rc.mode_manual, status=rc.status_reported):
-        sample = int(time * self.record.fs)
-        event = rc.Event(self.record, sample, name=name, comments=comments,
+        event = rc.Event(self.record, time, name=name, comments=comments,
                          method=method, mode=mode, status=status)
         self.addEvent(event)
         return event

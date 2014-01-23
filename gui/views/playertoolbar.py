@@ -61,7 +61,7 @@ class PlayerToolBar(QtGui.QToolBar):
             played at a given interval.
     """
 
-    tick = QtCore.Signal(int)
+    tick = QtCore.Signal(float)
     intervalChanged = QtCore.Signal(float, float)
     intervalSelected = QtCore.Signal(bool)
 
@@ -131,11 +131,14 @@ class PlayerToolBar(QtGui.QToolBar):
         self.addSeparator()
         self.labelStart = QtGui.QLabel(" Start:", self)
         self.tsbStart = QtGui.QTimeEdit(self)
+        self.tsbStart.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
         self.tsbStart.setMinimumTime(QtCore.QTime().addSecs(0))
         self.labelEnd = QtGui.QLabel(" End:", self)
         self.tsbEnd = QtGui.QTimeEdit(self)
+        self.tsbEnd.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
         self.labelPosition = QtGui.QLabel(" Position:", self)
         self.tsbPosition = QtGui.QTimeEdit(self)
+        self.tsbPosition.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
         self.tsbPosition.setReadOnly(True)
         self.addWidget(self.labelStart)
         self.addWidget(self.tsbStart)
@@ -243,8 +246,8 @@ class PlayerToolBar(QtGui.QToolBar):
             self._update_qtimeedit_range()
 
     def _update_qtimeedit_range(self):
-        t_start = QtCore.QTime().addSecs(int(self._start / self.data_fs))
-        t_end = QtCore.QTime().addSecs(int(self._end / self.data_fs))
+        t_start = QtCore.QTime().addMSecs(int((self._start / self.data_fs) * 1000))
+        t_end = QtCore.QTime().addMSecs(int((self._end / self.data_fs) * 1000))
         self.tsbStart.setTime(t_start)
         self.tsbEnd.setTime(t_end)
 
@@ -254,7 +257,7 @@ class PlayerToolBar(QtGui.QToolBar):
                       (self.fs / self.data_fs))
             self.tick.emit(offset)
             t = time.strftime('%X', time.gmtime(offset))
-            self.tsbPosition.setTime(QtCore.QTime().fromString(t))
+            self.tsbPosition.setTime(QtCore.QTime().addMSecs(int(offset * 1000)))
 
     def on_start_time_changed(self, value):
         t_from = int(max(0, (QtCore.QTime().msecsTo(value) / 1000.0) *

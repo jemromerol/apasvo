@@ -201,7 +201,7 @@ class Event(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: '%.0f' % x)
+            formatter = ticker.FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
             ax.xaxis.set_major_formatter(formatter)
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
@@ -473,7 +473,7 @@ class Record(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: '%.0f' % x)
+            formatter = ticker.FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
             ax.xaxis.set_major_formatter(formatter)
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)

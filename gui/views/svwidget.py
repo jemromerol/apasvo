@@ -553,7 +553,6 @@ class SignalViewerWidget(QtGui.QWidget):
         # Draw minimap
         self.minimap.set_record(self.record, step)
         # Plot signal
-        #self.fig.axes[0].cla()
         formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
         self.fig.axes[0].xaxis.set_major_formatter(formatter)
         self.fig.axes[0].grid(True, which='both')
