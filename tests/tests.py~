@@ -35,9 +35,9 @@ from eqpickertool.picking import stalta, ampa, takanami, findpeaks
 
 class Check_prctile(unittest.TestCase):
 
-    data = sio.loadmat('tests/signal_fs_50_t0_100.mat')
+    data = sio.loadmat('signal_fs_50_t0_100.mat')
     x = data['X'][:, 0]
-    results = sio.loadmat('tests/test_prctile.mat')
+    results = sio.loadmat('test_prctile.mat')
     q = results['q'][0, :]
 
     def test_results_equal_to_matlab(self):
@@ -138,9 +138,9 @@ class Check_sta_lta(unittest.TestCase):
 
 class Check_ampa(unittest.TestCase):
 
-    data = sio.loadmat('tests/signal_fs_50_t0_100.mat')
+    data = sio.loadmat('signal_fs_50_t0_100.mat')
     x = data['X'][:, 0]
-    results = sio.loadmat('tests/results_ampa_default_settings.mat')
+    results = sio.loadmat('results_ampa_default_settings.mat')
     cf = results['ZTOT'][0, :]
     et = results['T_EVENTO'][0, :]
 
@@ -213,7 +213,7 @@ class Check_ampa(unittest.TestCase):
 
 class Check_takanami(unittest.TestCase):
 
-    results = sio.loadmat('tests/test_takanami.mat')
+    results = sio.loadmat('test_takanami.mat')
     x = results['x'][:, 0]
     aic = results['AIC_TOTAL'][0, :]
     n0 = results['n0'][0][0]
