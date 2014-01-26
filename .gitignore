@@ -1,7 +1,11 @@
+.project
+.pydevproject
 *.csv
 *.out
 *.pyc
+*.pyo
 *.bin
+.settings/*
 examples/*
 cf_data/*
 build/*

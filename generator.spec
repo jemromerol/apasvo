@@ -1,6 +1,6 @@
 # -*- mode: python -*-
-a = Analysis(['test.exe', 'bin/detectorgui.py'],
-             pathex=['/home/alcapaya/workspace/P-phase Picker/eqpickertool'],
+a = Analysis(['bin/generator.py'],
+             pathex=['/home/alcapaya/workspace/eqpickertool'],
              hiddenimports=[],
              hookspath=None,
              runtime_hooks=None)
@@ -10,7 +10,7 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='test',
+          name='generator',
           debug=False,
           strip=None,
           upx=True,

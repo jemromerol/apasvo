@@ -5,21 +5,23 @@ a = Analysis(['bin/detectorgui.py'],
              hookspath=['.'],
              runtime_hooks=None)
 
-#a.binaries = [x for x in a.binaries if not x[0].startswith("PyQt4")]
+a.binaries = [x for x in a.binaries if not x[0].startswith("PyQt4")]
+a.binaries = [x for x in a.binaries if not x[0].startswith("PySide.QtNetwork")]
+a.binaries = [x for x in a.binaries if not x[0].startswith("PySide.QtOpenGL")]
 
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
-          a.scripts,
+          a.scripts + [('O','','OPTION')],
           exclude_binaries=True,
           name='detectorgui',
           debug=False,
-          strip=False,
+          strip=None,
           upx=True,
           console=True )
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
                a.datas,
-               strip=False,
+               strip=None,
                upx=True,
                name='detectorgui')

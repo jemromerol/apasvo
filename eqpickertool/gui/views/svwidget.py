@@ -552,12 +552,14 @@ class SignalViewerWidget(QtGui.QWidget):
         self.xmax = self.time[-1]
         # Draw minimap
         self.minimap.set_record(self.record, step)
+        # Clear axes
+        self.fig.axes[0].lines = []
+        self.fig.axes[1].lines = []
+        self.fig.axes[2].lines = []
         # Plot signal
         formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
         self.fig.axes[0].xaxis.set_major_formatter(formatter)
         self.fig.axes[0].grid(True, which='both')
-        for line in self.fig.axes[0].lines:
-            line.remove()
         self._signal_data = self.fig.axes[0].plot(self.time,
                                                   self.record.signal,
                                                   color='black',
@@ -571,16 +573,12 @@ class SignalViewerWidget(QtGui.QWidget):
         self.set_cf_visible(self.record.cf.size != 0)
         self.fig.axes[1].xaxis.set_major_formatter(formatter)
         self.fig.axes[1].grid(True, which='both')
-        for line in self.fig.axes[1].lines:
-            line.remove()
         self._cf_data = self.fig.axes[1].plot(self.time[:len(self.record.cf)],
                                               self.record.cf,
                                               color='black', rasterized=True)[0]
         self.thresholdMarker = ThresholdMarker(self.fig.axes[1])
         # Plot espectrogram
         self.fig.axes[2].xaxis.set_major_formatter(formatter)
-        for line in self.fig.axes[2].lines:
-            line.remove()
         self.fig.axes[2].specgram(self.record.signal, Fs=self.record.fs,
                                   cmap='jet',
                                   xextent=(self.xmin, self.xmax),

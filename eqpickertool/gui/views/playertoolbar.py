@@ -333,12 +333,11 @@ class PlayerToolBar(QtGui.QToolBar):
             raise ValueError('Unsupported sampling rate')
         if bd not in bit_depths:
             raise ValueError('Unsupported bit depth')
-        if not self.data_loaded:
-            raise UnboundLocalError("Data not initialized.")
         if self.fs != fs or self.bd != bd:
             self.fs = fs
             self.bd = bd
-            self.load_data(self.data, self.data_fs)
+            if self.data_loaded:
+                self.load_data(self.data, self.data_fs)
 
 
 
