@@ -548,6 +548,9 @@ class SignalViewerWidget(QtGui.QWidget):
     def set_record(self, document, step=20.0):
         self.document = document
         self.record = self.document.record
+        self.signal = self.record.signal
+        self.envelope = env.envelope(self.record.signal)
+        self.cf = self.record.cf
         self.time = np.arange(len(self.record.signal)) / self.record.fs
         self.xmax = self.time[-1]
         # Draw minimap
@@ -566,7 +569,7 @@ class SignalViewerWidget(QtGui.QWidget):
                                                   rasterized=True)[0]
         # Plot envelope
         self._envelope_data = self.fig.axes[0].plot(self.time,
-                                                    env.envelope(self.record.signal),
+                                                    self.envelope,
                                                     color='red',
                                                     rasterized=True)[0]
         # Plot CF
@@ -622,7 +625,56 @@ class SignalViewerWidget(QtGui.QWidget):
         # Update minimap selector
         if (xmin, xmax) != self.minimap.get_selector_limits():
             self.minimap.set_selector_limits(xmin, xmax)
+
+        # Update data
+        xmin = int(max(0, xmin) * self.record.fs)
+        xmax = int(min(self.xmax, xmax) * self.record.fs)
+
+        pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
+
+        if self._signal_data is not None:
+            x_data, y_data = self._reduce_data(self.time, self.signal, pixel_width, xmin, xmax)
+            self._signal_data.set_xdata(x_data)
+            self._signal_data.set_ydata(y_data)
+
+        if self._envelope_data is not None:
+            x_data, y_data = self._reduce_data(self.time, self.envelope, pixel_width, xmin, xmax)
+            self._envelope_data.set_xdata(x_data)
+            self._envelope_data.set_ydata(y_data)
+
+        if self._cf_data is not None and self.fig.axes[1].get_visible():
+            x_data, y_data = self._reduce_data(self.time, self.cf, pixel_width, xmin, xmax)
+            self._cf_data.set_xdata(x_data)
+            self._cf_data.set_ydata(y_data)
+
+        # Draw graph
         self.draw_idle()
+
+    def _reduce_data(self, x, y, width, xmin, xmax):
+        n_points = 2 * width
+        data_size = xmax - xmin
+
+        if data_size <= n_points:
+            return x[xmin:xmax], y[xmin:xmax]
+
+        indexes = np.empty(n_points + 2, dtype=int)
+        indexes[0], indexes[-1] = xmin, xmax
+
+        max_indexes = np.empty(width)
+        min_indexes = np.empty(width)
+
+        limits = np.ceil(np.linspace(xmin, xmax, width + 1)).astype(int)
+        for i in xrange(int(width)):
+            left = limits[i]
+            right = limits[i + 1]
+            max_indexes[i] = left + np.argmax(y[left:right])
+            min_indexes[i] = left + np.argmin(y[left:right])
+
+        indexes[1:width + 1] = max_indexes
+        indexes[width + 1:-1] = min_indexes
+        indexes.sort()
+
+        return x[indexes], y[indexes]
 
     def set_position(self, pos):
         """"""
