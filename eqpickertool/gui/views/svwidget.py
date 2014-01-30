@@ -28,12 +28,14 @@ from PySide import QtGui
 from PySide import QtCore
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FuncFormatter
+from matplotlib import mlab
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
 from eqpickertool.picking import envelope as env
 from eqpickertool.picking import record as rc
+from eqpickertool.utils import plotting
 
 
 class SpanSelector(QtCore.QObject):
@@ -425,9 +427,9 @@ class MiniMap(QtGui.QWidget):
 
     def onpress(self, event):
         self.press_selector = event
-        xdata = round(self.get_xdata(event), 3)
-        xmin = round(xdata - (self.step / 2.0), 3)
-        xmax = round(xdata + (self.step / 2.0), 3)
+        xdata = round(self.get_xdata(event), 2)
+        xmin = round(xdata - (self.step / 2.0), 2)
+        xmax = round(xdata + (self.step / 2.0), 2)
         self.set_selector_limits(xmin, xmax)
 
     def onrelease(self, event):
@@ -435,9 +437,9 @@ class MiniMap(QtGui.QWidget):
 
     def onmove(self, event):
         if self.press_selector is not None:
-            xdata = round(self.get_xdata(event), 3)
-            xmin = round(xdata - (self.step / 2.0), 3)
-            xmax = round(xdata + (self.step / 2.0), 3)
+            xdata = round(self.get_xdata(event), 2)
+            xmin = round(xdata - (self.step / 2.0), 2)
+            xmax = round(xdata + (self.step / 2.0), 2)
             self.set_selector_limits(xmin, xmax)
 
     def get_xdata(self, event):
@@ -582,10 +584,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.thresholdMarker = ThresholdMarker(self.fig.axes[1])
         # Plot espectrogram
         self.fig.axes[2].xaxis.set_major_formatter(formatter)
-        self.fig.axes[2].specgram(self.record.signal, Fs=self.record.fs,
-                                  cmap='jet',
-                                  xextent=(self.xmin, self.xmax),
-                                  rasterized=True)
+        plotting.plot_specgram(self.fig.axes[2], self.signal, self.record.fs)
         # Set the span selector
         self.selector.set_active(False)
         self.selector.set_selection_limits(self.xmin, self.xmax)
@@ -597,6 +596,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.subplots_adjust()
 
     def update_cf(self):
+        self.cf = self.record.cf
         self._cf_data.set_xdata(self.time[:len(self.record.cf)])
         self._cf_data.set_ydata(self.record.cf)
         margin = (self.record.cf.max() - self.record.cf.min()) * 0.1
@@ -633,48 +633,26 @@ class SignalViewerWidget(QtGui.QWidget):
         pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
 
         if self._signal_data is not None:
-            x_data, y_data = self._reduce_data(self.time, self.signal, pixel_width, xmin, xmax)
+            x_data, y_data = plotting.reduce_data(self.time, self.signal,
+                                                  pixel_width, xmin, xmax)
             self._signal_data.set_xdata(x_data)
             self._signal_data.set_ydata(y_data)
 
         if self._envelope_data is not None:
-            x_data, y_data = self._reduce_data(self.time, self.envelope, pixel_width, xmin, xmax)
+            x_data, y_data = plotting.reduce_data(self.time, self.envelope,
+                                                  pixel_width, xmin, xmax)
             self._envelope_data.set_xdata(x_data)
             self._envelope_data.set_ydata(y_data)
 
         if self._cf_data is not None and self.fig.axes[1].get_visible():
-            x_data, y_data = self._reduce_data(self.time, self.cf, pixel_width, xmin, xmax)
+            x_data, y_data = plotting.reduce_data(self.time[:len(self.cf)],
+                                                  self.cf, pixel_width,
+                                                  xmin, xmax)
             self._cf_data.set_xdata(x_data)
             self._cf_data.set_ydata(y_data)
 
         # Draw graph
         self.draw_idle()
-
-    def _reduce_data(self, x, y, width, xmin, xmax):
-        n_points = 2 * width
-        data_size = xmax - xmin
-
-        if data_size <= n_points:
-            return x[xmin:xmax], y[xmin:xmax]
-
-        indexes = np.empty(n_points + 2, dtype=int)
-        indexes[0], indexes[-1] = xmin, xmax
-
-        max_indexes = np.empty(width)
-        min_indexes = np.empty(width)
-
-        limits = np.ceil(np.linspace(xmin, xmax, width + 1)).astype(int)
-        for i in xrange(int(width)):
-            left = limits[i]
-            right = limits[i + 1]
-            max_indexes[i] = left + np.argmax(y[left:right])
-            min_indexes[i] = left + np.argmin(y[left:right])
-
-        indexes[1:width + 1] = max_indexes
-        indexes[width + 1:-1] = min_indexes
-        indexes.sort()
-
-        return x[indexes], y[indexes]
 
     def set_position(self, pos):
         """"""
