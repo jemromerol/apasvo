@@ -28,12 +28,14 @@ from PySide import QtGui
 from PySide import QtCore
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FuncFormatter
+from matplotlib import mlab
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
 from eqpickertool.picking import envelope as env
 from eqpickertool.picking import record as rc
+from eqpickertool.utils import plotting
 
 
 class SpanSelector(QtCore.QObject):
@@ -425,9 +427,9 @@ class MiniMap(QtGui.QWidget):
 
     def onpress(self, event):
         self.press_selector = event
-        xdata = round(self.get_xdata(event), 3)
-        xmin = round(xdata - (self.step / 2.0), 3)
-        xmax = round(xdata + (self.step / 2.0), 3)
+        xdata = round(self.get_xdata(event), 2)
+        xmin = round(xdata - (self.step / 2.0), 2)
+        xmax = round(xdata + (self.step / 2.0), 2)
         self.set_selector_limits(xmin, xmax)
 
     def onrelease(self, event):
@@ -435,9 +437,9 @@ class MiniMap(QtGui.QWidget):
 
     def onmove(self, event):
         if self.press_selector is not None:
-            xdata = round(self.get_xdata(event), 3)
-            xmin = round(xdata - (self.step / 2.0), 3)
-            xmax = round(xdata + (self.step / 2.0), 3)
+            xdata = round(self.get_xdata(event), 2)
+            xmin = round(xdata - (self.step / 2.0), 2)
+            xmax = round(xdata + (self.step / 2.0), 2)
             self.set_selector_limits(xmin, xmax)
 
     def get_xdata(self, event):
@@ -515,27 +517,40 @@ class SignalViewerWidget(QtGui.QWidget):
 
         self.fig, _ = plt.subplots(3, 1, sharex=True)
 
+        self.signal_ax = self.fig.axes[0]
+        self.cf_ax = self.fig.axes[1]
+        self.specgram_ax = self.fig.axes[2]
+
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setMinimumSize(self.canvas.size())
         self.graphArea = QtGui.QScrollArea(self)
         self.graphArea.setWidgetResizable(True)
         self.graphArea.setWidget(self.canvas)
-#        self.toolbar = QtGui.QToolBar(self)
 
         self.eventMarkers = {}
         self.thresholdMarker = None
         self.selector = SpanSelector(self.fig)
-        self.minimap = MiniMap(self, self.fig.axes[0], None)
+        self.minimap = MiniMap(self, self.signal_ax, None)
 
-#        self.toolbar.setVisible(True)
-
+        # format axes
+        formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
         for ax in self.fig.axes:
             ax.callbacks.connect('xlim_changed', self.on_xlim_change)
+            ax.xaxis.set_major_formatter(formatter)
+            plt.setp(ax.get_xticklabels(), visible=True)
+            ax.grid(True, which='both')
+        self.specgram_ax.set_xlabel('Time (seconds)')
+        self.signal_ax.set_ylabel('Signal Amplitude')
+        self.cf_ax.set_ylabel('CF Amplitude')
+        self.specgram_ax.set_ylabel('Frequency (Hz)')
+
+        # Adjust space between subplots
+        self.fig.subplots_adjust(left=0.05, right=0.95, bottom=0.1,
+                                 top=0.95, hspace=0.2)
 
         # Set the layout
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.graphArea)
-#        self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.minimap)
 
         self.selector.toggled.connect(self.minimap.set_selection_visible)
@@ -548,58 +563,51 @@ class SignalViewerWidget(QtGui.QWidget):
     def set_record(self, document, step=20.0):
         self.document = document
         self.record = self.document.record
+        self.signal = self.record.signal
+        self.envelope = env.envelope(self.record.signal)
+        self.cf = self.record.cf
         self.time = np.arange(len(self.record.signal)) / self.record.fs
         self.xmax = self.time[-1]
         # Draw minimap
         self.minimap.set_record(self.record, step)
         # Clear axes
-        self.fig.axes[0].lines = []
-        self.fig.axes[1].lines = []
-        self.fig.axes[2].lines = []
+        self.signal_ax.lines = []
+        self.cf_ax.lines = []
+        self.specgram_ax.lines = []
+        self.specgram_ax.images = []
         # Plot signal
-        formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
-        self.fig.axes[0].xaxis.set_major_formatter(formatter)
-        self.fig.axes[0].grid(True, which='both')
-        self._signal_data = self.fig.axes[0].plot(self.time,
+        self._signal_data = self.signal_ax.plot(self.time,
                                                   self.record.signal,
                                                   color='black',
                                                   rasterized=True)[0]
         # Plot envelope
-        self._envelope_data = self.fig.axes[0].plot(self.time,
-                                                    env.envelope(self.record.signal),
+        self._envelope_data = self.signal_ax.plot(self.time,
+                                                    self.envelope,
                                                     color='red',
                                                     rasterized=True)[0]
+        plotting.adjust_axes_height(self.signal_ax)
         # Plot CF
         self.set_cf_visible(self.record.cf.size != 0)
-        self.fig.axes[1].xaxis.set_major_formatter(formatter)
-        self.fig.axes[1].grid(True, which='both')
-        self._cf_data = self.fig.axes[1].plot(self.time[:len(self.record.cf)],
+        self._cf_data = self.cf_ax.plot(self.time[:len(self.record.cf)],
                                               self.record.cf,
                                               color='black', rasterized=True)[0]
-        self.thresholdMarker = ThresholdMarker(self.fig.axes[1])
+        plotting.adjust_axes_height(self.signal_ax)
+        self.thresholdMarker = ThresholdMarker(self.cf_ax)
         # Plot espectrogram
-        self.fig.axes[2].xaxis.set_major_formatter(formatter)
-        self.fig.axes[2].specgram(self.record.signal, Fs=self.record.fs,
-                                  cmap='jet',
-                                  xextent=(self.xmin, self.xmax),
-                                  rasterized=True)
+        plotting.plot_specgram(self.specgram_ax, self.signal, self.record.fs)
         # Set the span selector
         self.selector.set_active(False)
         self.selector.set_selection_limits(self.xmin, self.xmax)
         # Set the initial xlimits
         self.set_xlim(0, step)
-        # Adjust the space between subplots
-        self.fig.subplots_adjust(left=0.05, right=0.95, bottom=0.05,
-                                 top=0.95, hspace=0.1)
         self.subplots_adjust()
 
     def update_cf(self):
-        self._cf_data.set_xdata(self.time[:len(self.record.cf)])
-        self._cf_data.set_ydata(self.record.cf)
-        margin = (self.record.cf.max() - self.record.cf.min()) * 0.1
-        self.fig.axes[1].set_ylim((self.record.cf.min() - margin,
-                                   self.record.cf.max() + margin))
-        self.set_cf_visible(self.record.cf.size != 0)
+        self.cf = self.record.cf
+        self._cf_data.set_xdata(self.time[:len(self.cf)])
+        self._cf_data.set_ydata(self.cf)
+        plotting.adjust_axes_height(self.cf_ax)
+        self.set_cf_visible(self.cf.size != 0)
 
     def create_event(self, event):
         if event not in self.eventMarkers:
@@ -615,18 +623,45 @@ class SignalViewerWidget(QtGui.QWidget):
     def set_xlim(self, l, r):
         xmin = max(0, l)
         xmax = min(self.xmax, r)
-        self.fig.axes[0].set_xlim(xmin, xmax)
+        self.signal_ax.set_xlim(xmin, xmax)
 
     def on_xlim_change(self, ax):
         xmin, xmax = ax.get_xlim()
         # Update minimap selector
         if (xmin, xmax) != self.minimap.get_selector_limits():
             self.minimap.set_selector_limits(xmin, xmax)
+
+        # Update data
+        xmin = int(max(0, xmin) * self.record.fs)
+        xmax = int(min(self.xmax, xmax) * self.record.fs)
+
+        pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
+
+        if self._signal_data is not None:
+            x_data, y_data = plotting.reduce_data(self.time, self.signal,
+                                                  pixel_width, xmin, xmax)
+            self._signal_data.set_xdata(x_data)
+            self._signal_data.set_ydata(y_data)
+
+        if self._envelope_data is not None:
+            x_data, y_data = plotting.reduce_data(self.time, self.envelope,
+                                                  pixel_width, xmin, xmax)
+            self._envelope_data.set_xdata(x_data)
+            self._envelope_data.set_ydata(y_data)
+
+        if self._cf_data is not None and self.cf_ax.get_visible():
+            x_data, y_data = plotting.reduce_data(self.time[:len(self.cf)],
+                                                  self.cf, pixel_width,
+                                                  xmin, xmax)
+            self._cf_data.set_xdata(x_data)
+            self._cf_data.set_ydata(y_data)
+
+        # Draw graph
         self.draw_idle()
 
     def set_position(self, pos):
         """"""
-        xmin, xmax = self.fig.axes[0].get_xlim()
+        xmin, xmax = self.signal_ax.get_xlim()
         mrange = xmax - xmin
         l, r = pos - mrange / 2.0, pos + mrange / 2.0
         if l < self.xmin:
@@ -645,7 +680,7 @@ class SignalViewerWidget(QtGui.QWidget):
                 self._signal_data.set_visible(show_sa)
                 show_axis = (self._signal_data.get_visible() +
                              self._envelope_data.get_visible())
-                self.fig.axes[0].set_visible(show_axis)
+                self.signal_ax.set_visible(show_axis)
                 self.subplots_adjust()
                 self.draw_idle()
 
@@ -655,22 +690,22 @@ class SignalViewerWidget(QtGui.QWidget):
                 self._envelope_data.set_visible(show_se)
                 show_axis = (self._signal_data.get_visible() +
                              self._envelope_data.get_visible())
-                self.fig.axes[0].set_visible(show_axis)
+                self.signal_ax.set_visible(show_axis)
                 self.subplots_adjust()
                 self.draw_idle()
 
     def set_cf_visible(self, show_cf):
-        if self.fig.axes[1].get_visible() != show_cf:
+        if self.cf_ax.get_visible() != show_cf:
             if len(self.record.cf) <= 0:
-                self.fig.axes[1].set_visible(False)
+                self.cf_ax.set_visible(False)
             else:
-                self.fig.axes[1].set_visible(show_cf)
+                self.cf_ax.set_visible(show_cf)
                 self.subplots_adjust()
                 self.draw_idle()
 
     def set_espectrogram_visible(self, show_eg):
-        if self.fig.axes[2].get_visible() != show_eg:
-            self.fig.axes[2].set_visible(show_eg)
+        if self.specgram_ax.get_visible() != show_eg:
+            self.specgram_ax.set_visible(show_eg)
             self.subplots_adjust()
             self.draw_idle()
 
