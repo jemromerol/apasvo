@@ -74,3 +74,16 @@ def reduce_data(x, y, width, xmin, xmax):
     indexes.sort()
 
     return x[indexes], y[indexes]
+
+
+def adjust_axes_height(ax, margin=0.1):
+    max_values = []
+    min_values = []
+    for line in ax.lines:
+        max_values.append(max(line.get_ydata()))
+        min_values.append(min(line.get_ydata()))
+    if max_values and min_values:
+        maximum = max(max_values)
+        minimum = min(min_values)
+        margin_height = (maximum - minimum) * margin
+        ax.set_ylim(minimum - margin_height, maximum + margin_height)
