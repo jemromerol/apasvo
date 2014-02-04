@@ -25,4 +25,4 @@
 '''
 
 __all__ = ['ui_loaddialog', 'ui_mainwindow', 'ui_savedialog',
-           'ui_settingsdialog']
+           'ui_settingsdialog', 'qrc_icons']

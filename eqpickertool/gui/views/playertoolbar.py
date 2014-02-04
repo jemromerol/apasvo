@@ -29,6 +29,7 @@
 from PySide import QtCore
 from PySide import QtGui
 from PySide.phonon import Phonon
+from eqpickertool.gui.views.generated import qrc_icons
 import numpy as np
 import cStringIO
 import scipy.io.wavfile as wavfile
@@ -64,6 +65,9 @@ class PlayerToolBar(QtGui.QToolBar):
     tick = QtCore.Signal(float)
     intervalChanged = QtCore.Signal(float, float)
     intervalSelected = QtCore.Signal(bool)
+    playingStateSelected = QtCore.Signal()
+    stoppedStateSelected = QtCore.Signal()
+    pausedStateSelected = QtCore.Signal()
 
     def __init__(self, parent=None, data=None, data_fs=None, fs=2000,
                  bd='int16', repeat=False, tick_interval=200):
@@ -104,20 +108,20 @@ class PlayerToolBar(QtGui.QToolBar):
         self.setEnabled(False)
         self.actionPlay = QtGui.QAction(self)
         self.actionPlay.setText("Play")
-        self.actionPlay.setIcon(QtGui.QIcon.fromTheme("media-playback-start"))
+        self.actionPlay.setIcon(QtGui.QIcon(":/play.png"))
         self.actionPlay.setEnabled(True)
         self.actionPause = QtGui.QAction(self)
         self.actionPause.setText("Pause")
-        self.actionPause.setIcon(QtGui.QIcon.fromTheme("media-playback-pause"))
+        self.actionPause.setIcon(QtGui.QIcon(":/pause.png"))
         self.actionPause.setEnabled(False)
         self.actionStop = QtGui.QAction(self)
         self.actionStop.setText("Stop")
-        self.actionStop.setIcon(QtGui.QIcon.fromTheme("media-playback-stop"))
+        self.actionStop.setIcon(QtGui.QIcon(":/stop.png"))
         self.actionStop.setEnabled(False)
         self.actionRepeat = QtGui.QAction(self)
         self.actionRepeat.setCheckable(True)
         self.actionRepeat.setText("Repeat")
-        self.actionRepeat.setIcon(QtGui.QIcon.fromTheme("media-playlist-repeat"))
+        self.actionRepeat.setIcon(QtGui.QIcon(":/repeat.png"))
         self.addAction(self.actionPlay)
         self.addAction(self.actionPause)
         self.addAction(self.actionStop)
@@ -288,18 +292,21 @@ class PlayerToolBar(QtGui.QToolBar):
             self.actionPause.setEnabled(True)
             self.tsbStart.setEnabled(False)
             self.tsbEnd.setEnabled(False)
+            self.playingStateSelected.emit()
         elif state == Phonon.StoppedState:
             self.actionPlay.setEnabled(True)
             self.actionStop.setEnabled(False)
             self.actionPause.setEnabled(False)
             self.tsbStart.setEnabled(True)
             self.tsbEnd.setEnabled(True)
+            self.stoppedStateSelected.emit()
         elif state == Phonon.PausedState:
             self.actionPlay.setEnabled(True)
             self.actionStop.setEnabled(False)
             self.actionPause.setEnabled(False)
             self.tsbStart.setEnabled(False)
             self.tsbEnd.setEnabled(False)
+            self.pausedStateSelected.emit()
 
     def connect_path(self):
         """Connect the player to an audio output."""

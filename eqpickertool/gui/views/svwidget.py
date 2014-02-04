@@ -28,7 +28,6 @@ from PySide import QtGui
 from PySide import QtCore
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FuncFormatter
-from matplotlib import mlab
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
@@ -338,18 +337,66 @@ class ThresholdMarker(QtCore.QObject):
         return xdata, ydata
 
     def set_threshold(self, value):
-        if value >= 0:
-            self.threshold = value
-            self.thresholdChanged.emit(self.threshold)
-            self.figThreshold.set_ydata(self.threshold)
-            self.figThresholdLabel.set_text("Threshold: %.2f" % self.threshold)
-            if self.figThreshold.get_visible():
+        if self.threshold != value:
+            if value >= 0:
+                self.threshold = value
+                self.thresholdChanged.emit(self.threshold)
+                self.figThreshold.set_ydata(self.threshold)
+                self.figThresholdLabel.set_text("Threshold: %.2f" % self.threshold)
+                if self.figThreshold.get_visible():
+                    self.canvas.draw_idle()
+
+    def set_visible(self, value):
+        if self.active != value:
+            self.figThreshold.set_visible(value)
+            self.active = value
+            self.canvas.draw_idle()
+
+    def get_visible(self):
+        return self.active
+
+
+class PlayBackMarker(QtCore.QObject):
+    """Plots a vertical line marker on a SignalViewerWidget when
+    signal is played to indicate the current position.
+
+    Attributes:
+        position: Current position of the marker.
+        active: Indicates whether the marker is active or not.
+    """
+
+    def __init__(self, fig, position=0.0, active=False):
+        super(PlayBackMarker, self).__init__()
+        self.fig = fig
+        self.position = position
+        self.active = active
+
+        # Set lines
+        self.markers = []
+        for ax in self.fig.axes:
+            marker = ax.axvline(self.position)
+            marker.set(color='k', lw=1, alpha=0.6)
+            marker.set_visible(self.active)
+            self.markers.append(marker)
+
+        self.canvas = self.fig.canvas
+        if self.active:
+            self.canvas.draw_idle()
+
+    def set_position(self, value):
+        if value != self.position:
+            self.position = value
+            for marker in self.markers:
+                marker.set_xdata(self.position)
+            if self.active:
                 self.canvas.draw_idle()
 
     def set_visible(self, value):
-        self.figThreshold.set_visible(value)
-        self.active = value
-        self.canvas.draw_idle()
+        if value != self.active:
+            self.active = value
+            for marker in self.markers:
+                marker.set_visible(self.active)
+            self.canvas.draw_idle()
 
     def get_visible(self):
         return self.active
@@ -503,14 +550,20 @@ class SignalViewerWidget(QtGui.QWidget):
 
     """
 
+    CF_loaded = QtCore.Signal(bool)
+
     def __init__(self, parent, document=None):
         super(SignalViewerWidget, self).__init__(parent)
 
         self.xmin = 0.0
         self.xmax = 0.0
-        self.scale = 1e3  # Conversion between scrolling and axis units
         self.time = np.array([])
 
+        self.fs = 0.0
+        self.signal = None
+        self.envelope = None
+        self.cf = None
+        self.time = None
         self._signal_data = None
         self._envelope_data = None
         self._cf_data = None
@@ -529,6 +582,7 @@ class SignalViewerWidget(QtGui.QWidget):
 
         self.eventMarkers = {}
         self.thresholdMarker = None
+        self.playback_marker = None
         self.selector = SpanSelector(self.fig)
         self.minimap = MiniMap(self, self.signal_ax, None)
 
@@ -539,6 +593,7 @@ class SignalViewerWidget(QtGui.QWidget):
             ax.xaxis.set_major_formatter(formatter)
             plt.setp(ax.get_xticklabels(), visible=True)
             ax.grid(True, which='both')
+        self.specgram_ax.callbacks.connect('ylim_changed', self.on_ylim_change)
         self.specgram_ax.set_xlabel('Time (seconds)')
         self.signal_ax.set_ylabel('Signal Amplitude')
         self.cf_ax.set_ylabel('CF Amplitude')
@@ -558,26 +613,25 @@ class SignalViewerWidget(QtGui.QWidget):
 
         self.document = document
         if self.document is not None:
-            self.set_record(document.record)
+            self.set_record(document)
+
+    @property
+    def data_loaded(self):
+        return self.document is not None
 
     def set_record(self, document, step=20.0):
         self.document = document
-        self.record = self.document.record
-        self.signal = self.record.signal
-        self.envelope = env.envelope(self.record.signal)
-        self.cf = self.record.cf
-        self.time = np.arange(len(self.record.signal)) / self.record.fs
+        self.fs = self.document.record.fs
+        self.signal = self.document.record.signal
+        self.envelope = env.envelope(self.signal)
+        self.cf = self.document.record.cf
+        self.time = np.arange(len(self.signal)) / self.fs
         self.xmax = self.time[-1]
         # Draw minimap
-        self.minimap.set_record(self.record, step)
-        # Clear axes
-        self.signal_ax.lines = []
-        self.cf_ax.lines = []
-        self.specgram_ax.lines = []
-        self.specgram_ax.images = []
+        self.minimap.set_record(self.document.record, step)
         # Plot signal
         self._signal_data = self.signal_ax.plot(self.time,
-                                                  self.record.signal,
+                                                  self.signal,
                                                   color='black',
                                                   rasterized=True)[0]
         # Plot envelope
@@ -587,27 +641,52 @@ class SignalViewerWidget(QtGui.QWidget):
                                                     rasterized=True)[0]
         plotting.adjust_axes_height(self.signal_ax)
         # Plot CF
-        self.set_cf_visible(self.record.cf.size != 0)
-        self._cf_data = self.cf_ax.plot(self.time[:len(self.record.cf)],
-                                              self.record.cf,
+        cf_loaded = (self.cf.size != 0)
+        self.set_cf_visible(cf_loaded)
+        self.CF_loaded.emit(cf_loaded)
+        self._cf_data = self.cf_ax.plot(self.time[:len(self.cf)],
+                                              self.cf,
                                               color='black', rasterized=True)[0]
         plotting.adjust_axes_height(self.signal_ax)
         self.thresholdMarker = ThresholdMarker(self.cf_ax)
         # Plot espectrogram
-        plotting.plot_specgram(self.specgram_ax, self.signal, self.record.fs)
+        plotting.plot_specgram(self.specgram_ax, self.signal, self.fs)
         # Set the span selector
         self.selector.set_active(False)
         self.selector.set_selection_limits(self.xmin, self.xmax)
+        # Set the playback marker
+        self.playback_marker = PlayBackMarker(self.fig)
         # Set the initial xlimits
         self.set_xlim(0, step)
         self.subplots_adjust()
 
+    def unset_record(self):
+        self.document = None
+        self.signal = None
+        self.envelope = None
+        self.cf = None
+        self.time = None
+        self._signal_data = None
+        self._envelope_data = None
+        self._cf_data = None
+        self.xmin, self.xmax = 0.0, 0.0
+        # Clear axes
+        self.signal_ax.lines = []
+        self.cf_ax.lines = []
+        self.specgram_ax.lines = []
+        self.specgram_ax.images = []
+
+        self.CF_loaded.emit(False)
+
     def update_cf(self):
-        self.cf = self.record.cf
-        self._cf_data.set_xdata(self.time[:len(self.cf)])
-        self._cf_data.set_ydata(self.cf)
-        plotting.adjust_axes_height(self.cf_ax)
-        self.set_cf_visible(self.cf.size != 0)
+        if self.data_loaded:
+            self.cf = self.document.record.cf
+            self._cf_data.set_xdata(self.time[:len(self.cf)])
+            self._cf_data.set_ydata(self.cf)
+            plotting.adjust_axes_height(self.cf_ax)
+            cf_loaded = (self.cf.size != 0)
+            self.CF_loaded.emit(cf_loaded)
+            self.set_cf_visible(cf_loaded)
 
     def create_event(self, event):
         if event not in self.eventMarkers:
@@ -627,37 +706,52 @@ class SignalViewerWidget(QtGui.QWidget):
 
     def on_xlim_change(self, ax):
         xmin, xmax = ax.get_xlim()
-        # Update minimap selector
-        if (xmin, xmax) != self.minimap.get_selector_limits():
-            self.minimap.set_selector_limits(xmin, xmax)
+        if self.xmin <= xmin <= xmax <= self.xmax:
+            # Update minimap selector
+            if (xmin, xmax) != self.minimap.get_selector_limits():
+                self.minimap.set_selector_limits(xmin, xmax)
 
-        # Update data
-        xmin = int(max(0, xmin) * self.record.fs)
-        xmax = int(min(self.xmax, xmax) * self.record.fs)
+            # Update data
+            xmin = int(max(0, xmin) * self.fs)
+            xmax = int(min(self.xmax, xmax) * self.fs)
 
-        pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
+            pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
 
-        if self._signal_data is not None:
-            x_data, y_data = plotting.reduce_data(self.time, self.signal,
-                                                  pixel_width, xmin, xmax)
-            self._signal_data.set_xdata(x_data)
-            self._signal_data.set_ydata(y_data)
+            if self._signal_data is not None:
+                x_data, y_data = plotting.reduce_data(self.time, self.signal,
+                                                      pixel_width, xmin, xmax)
+                self._signal_data.set_xdata(x_data)
+                self._signal_data.set_ydata(y_data)
 
-        if self._envelope_data is not None:
-            x_data, y_data = plotting.reduce_data(self.time, self.envelope,
-                                                  pixel_width, xmin, xmax)
-            self._envelope_data.set_xdata(x_data)
-            self._envelope_data.set_ydata(y_data)
+            if self._envelope_data is not None:
+                x_data, y_data = plotting.reduce_data(self.time, self.envelope,
+                                                      pixel_width, xmin, xmax)
+                self._envelope_data.set_xdata(x_data)
+                self._envelope_data.set_ydata(y_data)
 
-        if self._cf_data is not None and self.cf_ax.get_visible():
-            x_data, y_data = plotting.reduce_data(self.time[:len(self.cf)],
-                                                  self.cf, pixel_width,
-                                                  xmin, xmax)
-            self._cf_data.set_xdata(x_data)
-            self._cf_data.set_ydata(y_data)
+            if self._cf_data is not None and self.cf_ax.get_visible():
+                x_data, y_data = plotting.reduce_data(self.time[:len(self.cf)],
+                                                      self.cf, pixel_width,
+                                                      xmin, xmax)
+                self._cf_data.set_xdata(x_data)
+                self._cf_data.set_ydata(y_data)
 
-        # Draw graph
-        self.draw_idle()
+            # Draw graph
+            self.draw_idle()
+        else:
+            xmin = max(self.xmin, xmin)
+            xmax = min(self.xmax, xmax)
+            ax.set_xlim(xmin, xmax)
+
+    def on_ylim_change(self, ax):
+        if self.data_loaded:
+            if ax == self.specgram_ax:
+                ymin, ymax = ax.get_ylim()
+                nyquist_freq = (self.fs / 2.0)
+                if not 0.0 <= ymin <= ymax <= nyquist_freq:
+                    ymin = max(0.0, ymin)
+                    ymax = min(nyquist_freq, ymax)
+                    ax.set_ylim(ymin, ymax)
 
     def set_position(self, pos):
         """"""
@@ -681,8 +775,9 @@ class SignalViewerWidget(QtGui.QWidget):
                 show_axis = (self._signal_data.get_visible() +
                              self._envelope_data.get_visible())
                 self.signal_ax.set_visible(show_axis)
-                self.subplots_adjust()
-                self.draw_idle()
+                if self.data_loaded:
+                    self.subplots_adjust()
+                    self.draw_idle()
 
     def set_signal_envelope_visible(self, show_se):
         if self._signal_data is not None and self._envelope_data is not None:
@@ -691,23 +786,26 @@ class SignalViewerWidget(QtGui.QWidget):
                 show_axis = (self._signal_data.get_visible() +
                              self._envelope_data.get_visible())
                 self.signal_ax.set_visible(show_axis)
-                self.subplots_adjust()
-                self.draw_idle()
+                if self.data_loaded:
+                    self.subplots_adjust()
+                    self.draw_idle()
 
     def set_cf_visible(self, show_cf):
         if self.cf_ax.get_visible() != show_cf:
-            if len(self.record.cf) <= 0:
-                self.cf_ax.set_visible(False)
-            else:
-                self.cf_ax.set_visible(show_cf)
-                self.subplots_adjust()
-                self.draw_idle()
+            if self.data_loaded:
+                if len(self.cf) <= 0:
+                    self.cf_ax.set_visible(False)
+                else:
+                    self.cf_ax.set_visible(show_cf)
+                    self.subplots_adjust()
+                    self.draw_idle()
 
     def set_espectrogram_visible(self, show_eg):
         if self.specgram_ax.get_visible() != show_eg:
             self.specgram_ax.set_visible(show_eg)
-            self.subplots_adjust()
-            self.draw_idle()
+            if self.data_loaded:
+                self.subplots_adjust()
+                self.draw_idle()
 
     def set_minimap_visible(self, show_mm):
         if self.minimap.get_visible() != show_mm:
@@ -730,3 +828,12 @@ class SignalViewerWidget(QtGui.QWidget):
 
     def set_selector_limits(self, xleft, xright):
         self.selector.set_selector_limits(xleft, xright)
+
+    def set_playback_position(self, position):
+        if self.playback_marker is not None:
+            self.playback_marker.set_position(position)
+
+    def set_playback_marker_visible(self, show_marker):
+        if self.playback_marker is not None:
+            self.playback_marker.set_visible(show_marker)
+

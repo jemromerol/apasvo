@@ -34,6 +34,7 @@
 
 from PySide import QtCore, QtGui
 from eqpickertool.gui.views import playertoolbar
+from eqpickertool.gui.views.generated import qrc_icons
 
 
 class Ui_SettingsDialog(object):
@@ -224,9 +225,9 @@ class Ui_SettingsDialog(object):
         self.ampafiltersToolBar = QtGui.QToolBar(self.ampaFiltersGroupBox)
         self.ampafiltersToolBar.setMovable(False)
         self.actionAddFilter = QtGui.QAction(self)
-        self.actionAddFilter.setIcon(QtGui.QIcon.fromTheme("list-add"))
+        self.actionAddFilter.setIcon(QtGui.QIcon(":/add.png"))
         self.actionRemoveFilter = QtGui.QAction(self)
-        self.actionRemoveFilter.setIcon(QtGui.QIcon.fromTheme("list-remove"))
+        self.actionRemoveFilter.setIcon(QtGui.QIcon(":/remove.png"))
         self.actionRemoveFilter.setEnabled(False)
         self.ampafiltersToolBar.addAction(self.actionAddFilter)
         self.ampafiltersToolBar.addAction(self.actionRemoveFilter)
@@ -303,6 +304,7 @@ class Ui_SettingsDialog(object):
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Apply|QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
+        self.buttonBox.button(QtGui.QDialogButtonBox.Apply).setDefault(True)
         self.verticalLayout.addWidget(self.buttonBox)
 
         self.retranslateUi(SettingsDialog)

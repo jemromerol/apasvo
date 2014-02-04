@@ -43,8 +43,11 @@ class EventListModel(QtCore.QAbstractTableModel):
         QtCore.QAbstractTableModel.__init__(self)
         self.record = record
         self._header = header
-        self.empty = (len(self.record.events) != 0)
         self.command_stack = command_stack
+
+    @property
+    def empty(self):
+        return (len(self.record.events) != 0)
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self.record.events)
@@ -97,34 +100,31 @@ class EventListModel(QtCore.QAbstractTableModel):
 
     def removeRows(self, row_list, parent=QtCore.QModelIndex()):
         self.command_stack.push(commands.DeleteEvents(self, row_list))
-        self._setEmpty()
+        self.emptyList.emit(self.empty)
 
     def createEvent(self, time, name='', comments='', method=rc.method_other,
                     mode=rc.mode_manual, status=rc.status_reported):
         event = rc.Event(self.record, time, name=name, comments=comments,
                          method=method, mode=mode, status=status)
         self.addEvent(event)
+        self.emptyList.emit(self.empty)
         return event
 
     def addEvent(self, event):
         self.command_stack.push(commands.AppendEvent(self, event))
-        self._setEmpty()
+        self.emptyList.emit(self.empty)
 
     def detectEvents(self, alg, **kwargs):
         self.command_stack.push(commands.DetectEvents(self, alg, **kwargs))
+        self.emptyList.emit(self.empty)
 
     def clearEvents(self):
         if len(self.record.events) > 0:
             self.command_stack.push(commands.ClearEventList(self))
-
-    def _setEmpty(self):
-        empty = (len(self.record.events) != 0)
-        if self.empty != empty:
-            self.empty = empty
-            self.emptyList.emit(empty)
+        self.emptyList.emit(self.empty)
 
     def updateList(self):
         self.modelAboutToBeReset.emit()
-        self._setEmpty()
+        self.emptyList.emit(self.empty)
         self.modelReset.emit()
 

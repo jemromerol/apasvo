@@ -26,7 +26,7 @@
 
 from PySide import QtGui, QtCore
 
-from eqpickertool.gui.views.converted import ui_settingsdialog
+from eqpickertool.gui.views.generated import ui_settingsdialog
 from eqpickertool.gui.models import filterlistmodel
 from eqpickertool.gui.delegates import dsbdelegate
 from eqpickertool.gui.views import playertoolbar
@@ -54,6 +54,8 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
         self.treeWidget.currentItemChanged.connect(self._itemChanged)
         self.staSpinBox.valueChanged.connect(self._staChanged)
         self.ltaSpinBox.valueChanged.connect(self._ltaChanged)
+        self.ampawindowSpinBox.valueChanged.connect(self._ampawChanged)
+        self.ampawindowstepSpinBox.valueChanged.connect(self._ampawsChanged)
         self.takanamiCheckBox.toggled.connect(self.takanamiMarginLabel.setEnabled)
         self.takanamiCheckBox.toggled.connect(self.takanamiMarginSpinBox.setEnabled)
         self.startfSpinBox.valueChanged.connect(self._startfChanged)
@@ -84,6 +86,12 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
 
     def _ltaChanged(self, value):
         self.staSpinBox.setMaximum(value - self.staSpinBox.singleStep())
+
+    def _ampawChanged(self, value):
+        pass
+
+    def _ampawsChanged(self, value):
+        pass
 
     def _startfChanged(self, value):
         self.endfSpinBox.setMinimum(value + self.endfSpinBox.singleStep())

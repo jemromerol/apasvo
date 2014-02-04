@@ -1,0 +1,21 @@
+<!DOCTYPE RCC><RCC version="1.0">
+    <qresource>
+        <file alias="open.png">images/document-open.png</file>
+        <file alias="open-recent.png">images/document-open-recent.png</file>
+        <file alias="save.png">images/document-save.png</file>
+        <file alias="save-as.png">images/document-save-as.png</file>
+        <file alias="close.png">images/document-close.png</file>
+        <file alias="undo.png">images/edit-undo.png</file>
+        <file alias="redo.png">images/edit-redo.png</file>
+        <file alias="clear-list.png">images/edit-clear-list.png</file>
+        <file alias="exit.png">images/application-exit.png</file>
+        <file alias="about.png">images/help-about.png</file>
+        <file alias="settings.png">images/preferences-other.png</file>
+        <file alias="play.png">images/media-playback-start.png</file>
+        <file alias="stop.png">images/media-playback-stop.png</file>
+        <file alias="pause.png">images/media-playback-pause.png</file>
+        <file alias="repeat.png">images/media-playlist-repeat.png</file>
+        <file alias="add.png">images/list-add.png</file>
+        <file alias="remove.png">images/list-remove.png</file>
+    </qresource>
+</RCC>

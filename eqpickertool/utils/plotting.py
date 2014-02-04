@@ -58,19 +58,16 @@ def reduce_data(x, y, width, xmin, xmax):
 
     indexes = np.empty(n_points + 2, dtype=int)
     indexes[0], indexes[-1] = xmin, xmax
-
-    max_indexes = np.empty(width)
-    min_indexes = np.empty(width)
+    i = 1
 
     limits = np.ceil(np.linspace(xmin, xmax, width + 1)).astype(int)
-    for i in xrange(int(width)):
-        left = limits[i]
-        right = limits[i + 1]
-        max_indexes[i] = left + np.argmax(y[left:right])
-        min_indexes[i] = left + np.argmin(y[left:right])
-
-    indexes[1:width + 1] = max_indexes
-    indexes[width + 1:-1] = min_indexes
+    for j in xrange(int(width)):
+        left = limits[j]
+        right = limits[j + 1]
+        indexes[i] = left + np.argmax(y[left:right])
+        i += 1
+        indexes[i] = left + np.argmin(y[left:right])
+        i += 1
     indexes.sort()
 
     return x[indexes], y[indexes]

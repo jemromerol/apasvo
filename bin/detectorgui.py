@@ -33,7 +33,7 @@ import matplotlib
 matplotlib.use('Qt4Agg')
 matplotlib.rcParams['backend.qt4'] = 'PySide'
 
-from eqpickertool.gui.views.converted import ui_mainwindow
+from eqpickertool.gui.views.generated import ui_mainwindow
 from eqpickertool.gui.delegates import cbdelegate
 from eqpickertool.gui.models import eventlistmodel
 from eqpickertool.gui.models import pickingtask
@@ -143,6 +143,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarMedia)
         self.toolBarMedia.intervalChanged.connect(self.signalViewer.set_selector_limits)
         self.toolBarMedia.intervalSelected.connect(self.signalViewer.selector.set_active)
+        self.toolBarMedia.tick.connect(self.signalViewer.set_playback_position)
+        self.toolBarMedia.playingStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(True))
+        self.toolBarMedia.stoppedStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(False))
         self.signalViewer.selector.toggled.connect(self.toolBarMedia.toggle_interval_selected)
         self.signalViewer.selector.valueChanged.connect(self.toolBarMedia.set_limits)
         self.addToolBarBreak()
@@ -155,7 +158,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionCharacteristic_Function.toggled.connect(self.signalViewer.set_cf_visible)
         self.actionSignal_MiniMap.toggled.connect(self.signalViewer.set_minimap_visible)
         self.signalViewer.selector.toggled.connect(self.actionTakanami.setEnabled)
-
+        self.signalViewer.CF_loaded.connect(self.actionCharacteristic_Function.setEnabled)
+        self.signalViewer.CF_loaded.connect(self.actionCharacteristic_Function.setChecked)
         self.thresholdCheckBox.toggled.connect(self.toggle_threshold)
 
         self.actionMain_Toolbar.toggled.connect(self.toolBarMain.setVisible)
@@ -336,6 +340,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.command_stack.clear()
             self.set_modified(False)
             self.saved_filename = None
+            self.signalViewer.unset_record()
             self.signalViewer.thresholdMarker.thresholdChanged.disconnect(self.thresholdSpinBox.setValue)
             self.thresholdSpinBox.valueChanged.disconnect(self.signalViewer.thresholdMarker.set_threshold)
             self.toolBarMedia.disconnect_path()
@@ -463,7 +468,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def set_title(self):
         """Sets current window's title."""
         prefix = '' if self.document is None else "%s - " % self.document.record.filename
-        self.setWindowTitle('%sP-phase Picker v.%s' % (prefix, __version__))
+        self.setWindowTitle('%s%s v.%s' % (prefix, _application_name, __version__))
 
     def strippedName(self, fullFileName):
         return QtCore.QFileInfo(fullFileName).fileName()

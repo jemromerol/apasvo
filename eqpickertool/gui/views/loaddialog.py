@@ -25,7 +25,7 @@
 '''
 
 from PySide import QtGui
-from eqpickertool.gui.views.converted import ui_loaddialog
+from eqpickertool.gui.views.generated import ui_loaddialog
 from eqpickertool.utils import futils
 from eqpickertool.utils.formats import rawfile
 
