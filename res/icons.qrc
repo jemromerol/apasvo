@@ -17,5 +17,10 @@
         <file alias="repeat.png">images/media-playlist-repeat.png</file>
         <file alias="add.png">images/list-add.png</file>
         <file alias="remove.png">images/list-remove.png</file>
+        <file alias="ampa.png">images/ampa.png</file>
+        <file alias="stalta.png">images/stalta.png</file>
+        <file alias="takanami.png">images/takanami.png</file>
+        <file alias="threshold.png">images/threshold.png</file>
+        <file alias="app.png">images/app.png</file>
     </qresource>
 </RCC>

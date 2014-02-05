@@ -77,8 +77,14 @@ def adjust_axes_height(ax, margin=0.1):
     max_values = []
     min_values = []
     for line in ax.lines:
-        max_values.append(max(line.get_ydata()))
-        min_values.append(min(line.get_ydata()))
+        data = line.get_ydata()
+        # Y-data in horizontal lines is a float number instead of
+        # an iterable, check it
+        try:
+            max_values.append(max(data))
+            min_values.append(min(data))
+        except TypeError:
+            pass
     if max_values and min_values:
         maximum = max(max_values)
         minimum = min(min_values)

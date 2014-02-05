@@ -34,6 +34,7 @@ matplotlib.use('Qt4Agg')
 matplotlib.rcParams['backend.qt4'] = 'PySide'
 
 from eqpickertool.gui.views.generated import ui_mainwindow
+from eqpickertool.gui.views.generated import qrc_icons
 from eqpickertool.gui.delegates import cbdelegate
 from eqpickertool.gui.models import eventlistmodel
 from eqpickertool.gui.models import pickingtask
@@ -160,7 +161,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.signalViewer.selector.toggled.connect(self.actionTakanami.setEnabled)
         self.signalViewer.CF_loaded.connect(self.actionCharacteristic_Function.setEnabled)
         self.signalViewer.CF_loaded.connect(self.actionCharacteristic_Function.setChecked)
-        self.thresholdCheckBox.toggled.connect(self.toggle_threshold)
+        self.actionActivateThreshold.toggled.connect(self.toggle_threshold)
 
         self.actionMain_Toolbar.toggled.connect(self.toolBarMain.setVisible)
         self.actionMedia_Toolbar.toggled.connect(self.toolBarMedia.setVisible)
@@ -222,7 +223,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     self.signalViewer.set_cf_visible(self.actionCharacteristic_Function.isChecked())
                     self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
                     self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
-                    self.signalViewer.set_threshold_visible(self.thresholdCheckBox.isChecked())
+                    self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
                     self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
                     self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
                     self.toolBarMedia.connect_path()
@@ -488,7 +489,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         lta_length = float(settings.value('lta_window_len', 100.0))
         settings.endGroup()
         # Get threshold value
-        if self.thresholdCheckBox.checkState():
+        if self.actionActivateThreshold.isChecked():
             threshold = self.thresholdSpinBox.value()
         else:
             threshold = None
@@ -519,7 +520,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         settings.endGroup()
         settings.endGroup()
         # Get threshold value
-        if self.thresholdCheckBox.checkState():
+        if self.actionActivateThreshold.isChecked():
             threshold = self.thresholdSpinBox.value()
         else:
             threshold = None
@@ -582,6 +583,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName(_application_name)
+    app.setWindowIcon(QtGui.QIcon(":/app.png"))
     main = MainWindow()
     main.show()
     sys.exit(app.exec_())
