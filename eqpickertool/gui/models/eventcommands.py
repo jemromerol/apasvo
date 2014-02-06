@@ -127,7 +127,7 @@ class ClearEventList(QtGui.QUndoCommand):
         self.model.beginRemoveRows(QtCore.QModelIndex(), 0,
                                    len(self.events) - 1)
         self.model.record.events = []
-        for event in self.model.record.events:
+        for event in self.events:
             self.model.eventDeleted.emit(event)
         self.model.endRemoveRows()
 

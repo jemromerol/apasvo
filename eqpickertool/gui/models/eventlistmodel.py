@@ -128,3 +128,10 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.emptyList.emit(self.empty)
         self.modelReset.emit()
 
+    def indexOf(self, event):
+        if event in self.record.events:
+            return self.record.events.index(event)
+        return None
+
+    def getEventByRow(self, row):
+        return self.record.events[row]

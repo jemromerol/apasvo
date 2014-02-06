@@ -103,8 +103,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
         stateDelegate = cbdelegate.ComboBoxDelegate(self.EventsTableView, rc.Event.statuses)
         self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
-        self.EventsTableView.clicked.connect(self.goToEventPosition)
-        self.EventsTableView.clicked.connect(self.on_event_selection)
+#        self.EventsTableView.clicked.connect(self.on_event_selection)
 
         self.actionOpen.triggered.connect(self.open)
         self.actionSave.triggered.connect(self.save_events)
@@ -161,6 +160,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.signalViewer.selector.toggled.connect(self.actionTakanami.setEnabled)
         self.signalViewer.CF_loaded.connect(self.actionCharacteristic_Function.setEnabled)
         self.signalViewer.CF_loaded.connect(self.actionCharacteristic_Function.setChecked)
+        self.signalViewer.event_selected.connect(self.on_event_picked)
         self.actionActivateThreshold.toggled.connect(self.toggle_threshold)
 
         self.actionMain_Toolbar.toggled.connect(self.toolBarMain.setVisible)
@@ -210,6 +210,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     self.actionRedo = self.document.command_stack.createRedoAction(self)
                     ########
                     self.EventsTableView.setModel(self.document)
+                    model = self.EventsTableView.selectionModel()
+                    model.selectionChanged.connect(self.on_event_selection)
                     # connect document model to signalViewer
                     self.document.eventCreated.connect(self.signalViewer.create_event)
                     self.document.eventDeleted.connect(self.signalViewer.delete_event)
@@ -558,14 +560,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         xleft, xright = self.signalViewer.get_selector_limits()
         takanamidialog.TakanamiDialog(self.document, xleft, xright).exec_()
 
-    def goToEventPosition(self, index):
-        """Centers signal viewer widget to an event location.
-
-        Args:
-            index: Event row index at Events Table.
-        """
-        self.signalViewer.set_position(self.document.record.events[index.row()].time / self.document.record.fs)
-
     def clear_events(self):
         if self.document is not None:
             self.document.clearEvents()
@@ -575,10 +569,19 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             selected_rows = self.EventsTableView.selectionModel().selectedRows()
             self.document.removeRows([row.row() for row in selected_rows])
 
-    def on_event_selection(self, index):
-        n_selected = len(self.EventsTableView.selectionModel().selectedRows())
-        self.actionDelete_Selected.setEnabled(n_selected > 0)
+    def on_event_selection(self, s, d):
+        selected_events = [self.document.getEventByRow(index.row())
+                           for index in self.EventsTableView.selectionModel().selectedRows()]
+        self.actionDelete_Selected.setEnabled(len(selected_events) > 0)
+        self.signalViewer.set_event_selection(selected_events,
+                                              set_position=(len(selected_events) == 1))
 
+    def on_event_picked(self, event):
+        if self.document is not None:
+            self.EventsTableView.selectionModel().clear()
+            self.EventsTableView.selectionModel().select(self.document.index(self.document.indexOf(event), 0),
+                                                         QtGui.QItemSelectionModel.Select |
+                                                         QtGui.QItemSelectionModel.Rows)
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)

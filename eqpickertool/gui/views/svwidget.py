@@ -162,18 +162,24 @@ class EventMarker(QtCore.QObject):
         valueChanged: 'event' arrival time changed.
     """
 
-    def __init__(self, fig, document, event):
+    event_selected = QtCore.Signal(rc.Event)
+
+    def __init__(self, fig, document, event, color='r', selected_color='m'):
         super(EventMarker, self).__init__()
         self.fig = fig
         self.event = event
         self.document = document
         self.position = self.event.time
 
+        self.selected = False
+        self.color = color
+        self.selected_color = selected_color
+
         self.markers = []
         # draw markers
         for ax in self.fig.axes:
             marker = ax.axvline(self.event.time / self.event.record.fs)
-            marker.set(color='r', ls='--', lw=2, alpha=0.8, picker=5)
+            marker.set(color=self.color, ls='--', lw=2, alpha=0.8, picker=5)
             self.markers.append(marker)
         # draw label
         bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
@@ -197,8 +203,7 @@ class EventMarker(QtCore.QObject):
                 self.pick_event = pick_event
                 xfig, yfig = self._event_to_fig_coords(pick_event.mouseevent)
                 self.position_label.set_position((xfig, yfig))
-                self.position_label.set_visible(True)
-                self.canvas.draw_idle()
+                self.event_selected.emit(self.event)
 
     def onrelease(self, mouse_event):
         if self.canvas.widgetlock.isowner(self):
@@ -217,6 +222,7 @@ class EventMarker(QtCore.QObject):
             self.set_position(xdata)
             xfig, yfig = self._event_to_fig_coords(mouse_event)
             self.position_label.set_position((xfig, yfig))
+            self.position_label.set_visible(True)
             self.canvas.draw_idle()
 
     def get_xdata(self, event):
@@ -254,6 +260,14 @@ class EventMarker(QtCore.QObject):
         for ax, marker in zip(self.fig.axes, self.markers):
             ax.lines.remove(marker)
         self.canvas.draw_idle()
+
+    def set_selected(self, value):
+        if self.selected != value:
+            self.selected = value
+            color = self.selected_color if self.selected else self.color
+            for marker in self.markers:
+                marker.set(color=color)
+            self.redraw()
 
 
 class ThresholdMarker(QtCore.QObject):
@@ -551,6 +565,7 @@ class SignalViewerWidget(QtGui.QWidget):
     """
 
     CF_loaded = QtCore.Signal(bool)
+    event_selected = QtCore.Signal(rc.Event)
 
     def __init__(self, parent, document=None):
         super(SignalViewerWidget, self).__init__(parent)
@@ -585,6 +600,10 @@ class SignalViewerWidget(QtGui.QWidget):
         self.playback_marker = None
         self.selector = SpanSelector(self.fig)
         self.minimap = MiniMap(self, self.signal_ax, None)
+
+        self.event_menu = QtGui.QMenu(self)
+        self.takanami_on_event_action = QtGui.QAction("Apply Takanami on Event", self.event_menu)
+        self.event_menu.addAction(self.takanami_on_event_action)
 
         # format axes
         formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
@@ -690,7 +709,9 @@ class SignalViewerWidget(QtGui.QWidget):
 
     def create_event(self, event):
         if event not in self.eventMarkers:
-            self.eventMarkers[event] = EventMarker(self.fig, self.document, event)
+            marker = EventMarker(self.fig, self.document, event)
+            self.eventMarkers[event] = marker
+            marker.event_selected.connect(self.event_selected.emit)
 
     def delete_event(self, event):
         self.eventMarkers[event].remove()
@@ -752,6 +773,14 @@ class SignalViewerWidget(QtGui.QWidget):
                     ymin = max(0.0, ymin)
                     ymax = min(nyquist_freq, ymax)
                     ax.set_ylim(ymin, ymax)
+
+    def set_event_selection(self, events, set_position=True):
+        for event in self.eventMarkers:
+            self.eventMarkers[event].set_selected(False)
+        for event in events:
+            self.eventMarkers[event].set_selected(True)
+        if set_position and events:
+            self.set_position(events[-1].time / self.fs)
 
     def set_position(self, pos):
         """"""
