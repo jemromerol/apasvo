@@ -103,7 +103,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
         stateDelegate = cbdelegate.ComboBoxDelegate(self.EventsTableView, rc.Event.statuses)
         self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
-#        self.EventsTableView.clicked.connect(self.on_event_selection)
+        self.EventsTableView.clicked.connect(self.goto_event_position)
 
         self.actionOpen.triggered.connect(self.open)
         self.actionSave.triggered.connect(self.save_events)
@@ -569,12 +569,14 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             selected_rows = self.EventsTableView.selectionModel().selectedRows()
             self.document.removeRows([row.row() for row in selected_rows])
 
+    def goto_event_position(self, index):
+        self.signalViewer.goto_event(self.document.record.events[index.row()])
+
     def on_event_selection(self, s, d):
         selected_events = [self.document.getEventByRow(index.row())
                            for index in self.EventsTableView.selectionModel().selectedRows()]
         self.actionDelete_Selected.setEnabled(len(selected_events) > 0)
-        self.signalViewer.set_event_selection(selected_events,
-                                              set_position=(len(selected_events) == 1))
+        self.signalViewer.set_event_selection(selected_events)
 
     def on_event_picked(self, event):
         if self.document is not None:

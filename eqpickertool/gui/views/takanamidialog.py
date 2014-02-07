@@ -96,14 +96,32 @@ class TakanamiDialog(QtGui.QDialog):
             by using the estimated arrival time after clicking on 'Accept'
     """
 
-    def __init__(self, document, t_start, t_end, seismic_event=None, parent=None):
+    def __init__(self, document, t_start=None, t_end=None, seismic_event=None, parent=None):
         super(TakanamiDialog, self).__init__(parent)
 
         self.document = document
         self.record = self.document.record
 
-        self._start = int(t_start * self.record.fs)
-        self._end = int(t_end * self.record.fs)
+        self.load_settings()
+
+        self.seismic_event = seismic_event
+        self._start = t_start
+        self._end = t_end
+
+        if self.seismic_event is not None:
+            self.event_time = self.seismic_event.time
+            if self._start is None:
+                self._start = self.event_time - self.default_margin
+            if self._end is None:
+                self._end = self.event_time + self.default_margin
+        else:
+            if self._start is None or self._end is None:
+                raise ValueError("t_start and t_end values not specified")
+            else:
+                self._start = int(t_start * self.record.fs)
+                self._end = int(t_end * self.record.fs)
+                self.event_time = self._start + int((self._end - self._start) / 2)
+
         if not 0 <= self._start < len(self.record.signal):
             raise ValueError("Invalid t_start value")
         if not 0 <= self._end < len(self.record.signal):
@@ -111,17 +129,10 @@ class TakanamiDialog(QtGui.QDialog):
         if (self._end - self._start) < (MINIMUM_MARGIN_IN_SECS * self.record.fs):
             raise ValueError("Distance between t_start and t_end must be"
                              " at least of %g seconds" % MINIMUM_MARGIN_IN_SECS)
-
-        self.seismic_event = seismic_event
-        if self.seismic_event is None:
-            self.event_time = self._start + int((self._end - self._start) / 2)
-        else:
-            self.event_time = self.seismic_event.time
         if not self._start < self.event_time < self._end:
             raise ValueError("Event time must be a value between t-start and t_end")
 
         self._init_ui()
-        self.load_settings()
 
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
@@ -142,6 +153,8 @@ class TakanamiDialog(QtGui.QDialog):
         self.fig, _ = plt.subplots(2, 1, sharex=True)
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setMinimumSize(self.canvas.size())
+        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
+                                                    QtGui.QSizePolicy.Policy.Expanding))
         self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
         self.position_label = QtGui.QLabel("Estimated Arrival Time: 00 h 00 m 00.000 s")
         self.group_box = QtGui.QGroupBox(self)
@@ -178,14 +191,15 @@ class TakanamiDialog(QtGui.QDialog):
         self.layout.addWidget(self.button_box)
 
         # set spinboxes's initial values and limits
-        time_in_msecs = int((len(self.record.signal) * 1000.0) /
-                         self.record.fs)
-        self.start_point_spinbox.setTime(QtCore.QTime().addMSecs(0))
-        self.end_point_spinbox.setTime(QtCore.QTime().addMSecs(time_in_msecs))
+        max_time_in_msecs = int((len(self.record.signal) * 1000) / self.record.fs)
+        start_time_in_msecs = int((self._start * 1000.0) / self.record.fs)
+        end_time_in_msecs = int((self._end * 1000.0) / self.record.fs)
+        self.start_point_spinbox.setTime(QtCore.QTime().addMSecs(start_time_in_msecs))
+        self.end_point_spinbox.setTime(QtCore.QTime().addMSecs(end_time_in_msecs))
         self.start_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(0))
-        self.end_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(MINIMUM_MARGIN_IN_SECS * 1000))
-        self.start_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(time_in_msecs - MINIMUM_MARGIN_IN_SECS * 1000))
-        self.end_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(time_in_msecs))
+        self.end_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(start_time_in_msecs + MINIMUM_MARGIN_IN_SECS * 1000))
+        self.start_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(end_time_in_msecs - MINIMUM_MARGIN_IN_SECS * 1000))
+        self.end_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(max_time_in_msecs))
 
     def on_click(self, button):
         if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Ok:
@@ -228,10 +242,9 @@ class TakanamiDialog(QtGui.QDialog):
         """Loads settings from persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("takanami_settings")
-        default_margin = int(float(settings.value('takanami_margin', 5.0)) *
+        self.default_margin = int(float(settings.value('takanami_margin', 5.0)) *
                              self.record.fs)
         settings.endGroup()
-        self.set_margin(default_margin)
 
     def save_event(self):
         """"""
@@ -247,34 +260,3 @@ class TakanamiDialog(QtGui.QDialog):
                                       method=rc.method_takanami,
                                       mode=rc.mode_automatic,
                                       status=rc.status_reported)
-
-    def set_margin(self, margin):
-        if margin <= 0:
-            raise ValueError("margin must be a positive value")
-
-        margin = max(MINIMUM_MARGIN_IN_SECS * self.record.fs, margin)
-        self._start = max(0, self.event_time - margin)
-        self._end = min(len(self.record.signal),
-                        self.event_time + margin)
-        self.start_point_spinbox.setTime(QtCore.QTime().
-                                         addMSecs((self._start * 1000.0) /
-                                                  self.record.fs))
-        self.end_point_spinbox.setTime(QtCore.QTime().
-                                       addMSecs((self._end * 1000.0) /
-                                                self.record.fs))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

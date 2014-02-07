@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
+from eqpickertool.gui.views import takanamidialog
 from eqpickertool.picking import envelope as env
 from eqpickertool.picking import record as rc
 from eqpickertool.utils import plotting
@@ -56,6 +57,7 @@ class SpanSelector(QtCore.QObject):
 
     toggled = QtCore.Signal(bool)
     valueChanged = QtCore.Signal(float, float)
+    right_clicked = QtCore.Signal()
 
     def __init__(self, fig, xmin=0.0, xmax=0.0, minstep=0.01):
         super(SpanSelector, self).__init__()
@@ -67,7 +69,7 @@ class SpanSelector(QtCore.QObject):
         self.active = False
         self.minstep = minstep
 
-        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5)
+        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5, picker=5)
                           for ax in self.fig.axes]
         for s in self.selectors:
             s.set_visible(False)
@@ -80,23 +82,33 @@ class SpanSelector(QtCore.QObject):
         self.pick_threshold = None
 
         self.press_selector = None
-        self.fig.canvas.mpl_connect('button_press_event', self.onpress)
-        self.fig.canvas.mpl_connect('button_release_event', self.onrelease)
-        self.fig.canvas.mpl_connect('motion_notify_event', self.onmove)
+        self.canvas = self.fig.canvas
+        self.canvas.mpl_connect('pick_event', self.on_pick)
+        self.canvas.mpl_connect('button_press_event', self.onpress)
+        self.canvas.mpl_connect('button_release_event', self.onrelease)
+        self.canvas.mpl_connect('motion_notify_event', self.onmove)
+
+    def on_pick(self, pick_event):
+        if self.active:
+            if pick_event.mouseevent.button == 3:  # Right button clicked
+                if pick_event.artist in self.selectors:
+                    if not self.canvas.widgetlock.locked():
+                        self.right_clicked.emit()
 
     def onpress(self, event):
-        if not self.fig.canvas.widgetlock.locked():
-            self.fig.canvas.widgetlock(self)
-            if self.active:
-                self.set_active(False)
-            self.press_selector = event
-            self.fig.canvas.draw_idle()
+        if event.button == 1:  # Left button clicked
+            if not self.canvas.widgetlock.locked():
+                self.canvas.widgetlock(self)
+                if self.active:
+                    self.set_active(False)
+                self.press_selector = event
+                self.canvas.draw_idle()
 
     def onrelease(self, event):
-        if self.fig.canvas.widgetlock.isowner(self):
+        if self.canvas.widgetlock.isowner(self):
             self.press_selector = None
-            self.fig.canvas.draw_idle()
-            self.fig.canvas.widgetlock.release(self)
+            self.canvas.draw_idle()
+            self.canvas.widgetlock.release(self)
 
     def onmove(self, event):
         if self.press_selector is not None:
@@ -131,7 +143,7 @@ class SpanSelector(QtCore.QObject):
                 s.xy[:2, 0] = self.xleft
                 s.xy[2:4, 0] = self.xright
             self.valueChanged.emit(self.xleft, self.xright)
-            self.fig.canvas.draw_idle()
+            self.canvas.draw_idle()
 
     def get_selector_limits(self):
         return self.xleft, self.xright
@@ -148,7 +160,7 @@ class SpanSelector(QtCore.QObject):
             self.toggled.emit(value)
             for s in self.selectors:
                 s.set_visible(value)
-            self.fig.canvas.draw_idle()
+            self.canvas.draw_idle()
 
 
 class EventMarker(QtCore.QObject):
@@ -163,6 +175,7 @@ class EventMarker(QtCore.QObject):
     """
 
     event_selected = QtCore.Signal(rc.Event)
+    right_clicked = QtCore.Signal(rc.Event)
 
     def __init__(self, fig, document, event, color='r', selected_color='m'):
         super(EventMarker, self).__init__()
@@ -199,11 +212,15 @@ class EventMarker(QtCore.QObject):
     def onpick(self, pick_event):
         if pick_event.artist in self.markers:
             if not self.canvas.widgetlock.locked():
-                self.canvas.widgetlock(self)
-                self.pick_event = pick_event
-                xfig, yfig = self._event_to_fig_coords(pick_event.mouseevent)
-                self.position_label.set_position((xfig, yfig))
-                self.event_selected.emit(self.event)
+                if pick_event.mouseevent.button == 1:  # left button clicked
+                    self.canvas.widgetlock(self)
+                    self.pick_event = pick_event
+                    xfig, yfig = self._event_to_fig_coords(pick_event.mouseevent)
+                    self.position_label.set_position((xfig, yfig))
+                    self.event_selected.emit(self.event)
+                elif pick_event.mouseevent.button == 3:  # Right button clicked
+                    self.event_selected.emit(self.event)
+                    self.right_clicked.emit(self.event)
 
     def onrelease(self, mouse_event):
         if self.canvas.widgetlock.isowner(self):
@@ -308,15 +325,17 @@ class ThresholdMarker(QtCore.QObject):
         self.canvas.mpl_connect('motion_notify_event', self.onmove)
 
     def onpick(self, event):
-        if event.artist == self.figThreshold:
-            if self.active and not self.canvas.widgetlock.locked():
-                self.canvas.widgetlock(self)
-                self.pick_threshold = event
-                xdata, ydata = self.get_data(event.mouseevent)
-                # Draw legend
-                self.figThresholdLabel.set_position((xdata, ydata))
-                self.figThresholdLabel.set_visible(True)
-                self.canvas.draw_idle()
+        if self.active:
+            if event.mouseevent.button == 1:  # left button clicked
+                if event.artist == self.figThreshold:
+                    if not self.canvas.widgetlock.locked():
+                        self.canvas.widgetlock(self)
+                        self.pick_threshold = event
+                        xdata, ydata = self.get_data(event.mouseevent)
+                        # Draw legend
+                        self.figThresholdLabel.set_position((xdata, ydata))
+                        self.figThresholdLabel.set_visible(True)
+                        self.canvas.draw_idle()
 
     def onrelease(self, event):
         if self.canvas.widgetlock.isowner(self):
@@ -596,14 +615,25 @@ class SignalViewerWidget(QtGui.QWidget):
         self.graphArea.setWidget(self.canvas)
 
         self.eventMarkers = {}
+        self.last_right_clicked_event = None
         self.thresholdMarker = None
         self.playback_marker = None
         self.selector = SpanSelector(self.fig)
         self.minimap = MiniMap(self, self.signal_ax, None)
 
-        self.event_menu = QtGui.QMenu(self)
-        self.takanami_on_event_action = QtGui.QAction("Apply Takanami on Event", self.event_menu)
-        self.event_menu.addAction(self.takanami_on_event_action)
+        # Create context menus
+        self.event_context_menu = QtGui.QMenu(self)
+        self.takanami_on_event_action = QtGui.QAction("Apply Takanami to Event", self)
+        self.event_context_menu.addAction(self.takanami_on_event_action)
+        self.takanami_on_event_action.triggered.connect(self.apply_takanami_to_selected_event)
+
+        self.selection_context_menu = QtGui.QMenu(self)
+        self.create_event_action = QtGui.QAction("Create New Event on Selection", self)
+        self.takanami_on_selection_action = QtGui.QAction("Apply Takanami to Selection", self)
+        self.selection_context_menu.addAction(self.create_event_action)
+        self.selection_context_menu.addAction(self.takanami_on_selection_action)
+        self.create_event_action.triggered.connect(self.create_event_on_selection)
+        self.takanami_on_selection_action.triggered.connect(self.apply_takanami_to_selection)
 
         # format axes
         formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
@@ -629,6 +659,7 @@ class SignalViewerWidget(QtGui.QWidget):
 
         self.selector.toggled.connect(self.minimap.set_selection_visible)
         self.selector.valueChanged.connect(self.minimap.set_selection_limits)
+        self.selector.right_clicked.connect(lambda: self.selection_context_menu.exec_(QtGui.QCursor.pos()))
 
         self.document = document
         if self.document is not None:
@@ -712,6 +743,7 @@ class SignalViewerWidget(QtGui.QWidget):
             marker = EventMarker(self.fig, self.document, event)
             self.eventMarkers[event] = marker
             marker.event_selected.connect(self.event_selected.emit)
+            marker.right_clicked.connect(self.on_event_right_clicked)
 
     def delete_event(self, event):
         self.eventMarkers[event].remove()
@@ -774,13 +806,11 @@ class SignalViewerWidget(QtGui.QWidget):
                     ymax = min(nyquist_freq, ymax)
                     ax.set_ylim(ymin, ymax)
 
-    def set_event_selection(self, events, set_position=True):
+    def set_event_selection(self, events):
         for event in self.eventMarkers:
             self.eventMarkers[event].set_selected(False)
         for event in events:
             self.eventMarkers[event].set_selected(True)
-        if set_position and events:
-            self.set_position(events[-1].time / self.fs)
 
     def set_position(self, pos):
         """"""
@@ -792,6 +822,10 @@ class SignalViewerWidget(QtGui.QWidget):
         elif r > self.xmax:
             l, r = self.xmax - mrange, self.xmax
         self.set_xlim(l, r)
+
+    def goto_event(self, event):
+        if event in self.eventMarkers:
+            self.set_position(event.time / self.fs)
 
     def draw_idle(self):
         self.canvas.draw_idle()
@@ -865,4 +899,37 @@ class SignalViewerWidget(QtGui.QWidget):
     def set_playback_marker_visible(self, show_marker):
         if self.playback_marker is not None:
             self.playback_marker.set_visible(show_marker)
+
+    def on_event_right_clicked(self, event):
+        self.last_right_clicked_event = event
+        self.event_context_menu.exec_(QtGui.QCursor.pos())
+
+    def apply_takanami_to_selected_event(self):
+        takanamidialog.TakanamiDialog(self.document,
+                                      seismic_event=self.last_right_clicked_event).exec_()
+
+    def apply_takanami_to_selection(self):
+        xleft, xright = self.get_selector_limits()
+        takanamidialog.TakanamiDialog(self.document, xleft, xright).exec_()
+
+    def create_event_on_selection(self):
+        xleft, xright = self.get_selector_limits()
+        xleft, xright = xleft * self.fs, xright * self.fs
+        cf = self.cf[xleft:xright]
+        if cf.size > 0:
+            time = (xleft + np.argmax(cf))
+        else:
+            time = (xleft + ((xright - xleft) / 2.0))
+        self.document.createEvent(time=time)
+
+
+
+
+
+
+
+
+
+
+
 
