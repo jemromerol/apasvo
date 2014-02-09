@@ -44,6 +44,8 @@ from eqpickertool.gui.views import loaddialog
 from eqpickertool.gui.views import savedialog
 from eqpickertool.gui.views import settingsdialog
 from eqpickertool.gui.views import takanamidialog
+from eqpickertool.gui.views import staltadialog
+from eqpickertool.gui.views import ampadialog
 from eqpickertool.gui.views import playertoolbar
 
 from eqpickertool.picking import stalta
@@ -484,57 +486,63 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
     def doSTALTA(self):
         """Performs event detection/picking by using STA-LTA method."""
-        # Read settings
-        settings = QtCore.QSettings(_organization, _application_name)
-        settings.beginGroup('stalta_settings')
-        sta_length = float(settings.value('sta_window_len', 5.0))
-        lta_length = float(settings.value('lta_window_len', 100.0))
-        settings.endGroup()
-        # Get threshold value
-        if self.actionActivateThreshold.isChecked():
-            threshold = self.thresholdSpinBox.value()
-        else:
-            threshold = None
-        # Create an STA-LTA algorithm instance with selected settings
-        alg = stalta.StaLta(sta_length, lta_length)
-        # perform task
-        self._analysis_task = pickingtask.PickingTask(self.document, alg,
-                                                            threshold)
-        self.launch_analysis_task(self._analysis_task,
-                                  label="Applying %s..." % alg.__class__.__name__.upper())
+        dialog = staltadialog.StaLtaDialog(self.document)
+        return_code = dialog.exec_()
+        if return_code == QtGui.QDialog.Accepted:
+            # Read settings
+            settings = QtCore.QSettings(_organization, _application_name)
+            settings.beginGroup('stalta_settings')
+            sta_length = float(settings.value('sta_window_len', 5.0))
+            lta_length = float(settings.value('lta_window_len', 100.0))
+            settings.endGroup()
+            # Get threshold value
+            if self.actionActivateThreshold.isChecked():
+                threshold = self.thresholdSpinBox.value()
+            else:
+                threshold = None
+            # Create an STA-LTA algorithm instance with selected settings
+            alg = stalta.StaLta(sta_length, lta_length)
+            # perform task
+            self._analysis_task = pickingtask.PickingTask(self.document, alg,
+                                                                threshold)
+            self.launch_analysis_task(self._analysis_task,
+                                      label="Applying %s..." % alg.__class__.__name__.upper())
 
     def doAMPA(self):
         """Performs event detection/picking by using AMPA method."""
-        # Read settings
-        settings = QtCore.QSettings(_organization, _application_name)
-        settings.beginGroup('ampa_settings')
-        wlen = float(settings.value('window_len', 100.0))
-        wstep = float(settings.value('step', 50.0))
-        nthres = float(settings.value('noise_threshold', 90))
-        filters = settings.value('ampa_settings/filters', [30.0, 20.0, 10.0,
-                                                           5.0, 2.5])
-        filters = list(filters) if isinstance(filters, list) else [filters]
-        settings.beginGroup('filter_bank_settings')
-        startf = float(settings.value('startf', 2.0))
-        endf = float(settings.value('endf', 12.0))
-        bandwidth = float(settings.value('bandwidth', 3.0))
-        overlap = float(settings.value('overlap', 1.0))
-        settings.endGroup()
-        settings.endGroup()
-        # Get threshold value
-        if self.actionActivateThreshold.isChecked():
-            threshold = self.thresholdSpinBox.value()
-        else:
-            threshold = None
-        # Create an AMPA algorithm instance with selected settings
-        alg = ampa.Ampa(wlen, wstep, filters, noise_thr=nthres,
-                        bandwidth=bandwidth, overlap=overlap,
-                        f_start=startf, f_end=endf)
-        # perform task
-        self._analysis_task = pickingtask.PickingTask(self.document, alg,
-                                                            threshold)
-        self.launch_analysis_task(self._analysis_task,
-                                  label="Applying %s..." % alg.__class__.__name__.upper())
+        dialog = ampadialog.AmpaDialog(self.document)
+        return_code = dialog.exec_()
+        if return_code == QtGui.QDialog.Accepted:
+            # Read settings
+            settings = QtCore.QSettings(_organization, _application_name)
+            settings.beginGroup('ampa_settings')
+            wlen = float(settings.value('window_len', 100.0))
+            wstep = float(settings.value('step', 50.0))
+            nthres = float(settings.value('noise_threshold', 90))
+            filters = settings.value('ampa_settings/filters', [30.0, 20.0, 10.0,
+                                                               5.0, 2.5])
+            filters = list(filters) if isinstance(filters, list) else [filters]
+            settings.beginGroup('filter_bank_settings')
+            startf = float(settings.value('startf', 2.0))
+            endf = float(settings.value('endf', 12.0))
+            bandwidth = float(settings.value('bandwidth', 3.0))
+            overlap = float(settings.value('overlap', 1.0))
+            settings.endGroup()
+            settings.endGroup()
+            # Get threshold value
+            if self.actionActivateThreshold.isChecked():
+                threshold = self.thresholdSpinBox.value()
+            else:
+                threshold = None
+            # Create an AMPA algorithm instance with selected settings
+            alg = ampa.Ampa(wlen, wstep, filters, noise_thr=nthres,
+                            bandwidth=bandwidth, overlap=overlap,
+                            f_start=startf, f_end=endf)
+            # perform task
+            self._analysis_task = pickingtask.PickingTask(self.document, alg,
+                                                                threshold)
+            self.launch_analysis_task(self._analysis_task,
+                                      label="Applying %s..." % alg.__class__.__name__.upper())
 
     def launch_analysis_task(self, task, label=""):
         self.actionAMPA.setEnabled(False)

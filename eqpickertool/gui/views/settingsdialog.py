@@ -24,7 +24,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtGui, QtCore
+from PySide import QtGui
+from PySide import QtCore
 
 from eqpickertool.gui.views.generated import ui_settingsdialog
 from eqpickertool.gui.models import filterlistmodel
@@ -85,7 +86,7 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
         self.ltaSpinBox.setMinimum(value + self.ltaSpinBox.singleStep())
 
     def _ltaChanged(self, value):
-        self.staSpinBox.setMaximum(value - self.staSpinBox.singleStep())
+        self.ltaSpinBox.setMinimum(value + self.ltaSpinBox.singleStep())
 
     def _ampawChanged(self, value):
         pass
