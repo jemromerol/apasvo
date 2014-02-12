@@ -24,5 +24,4 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-__all__ = ['ui_loaddialog', 'ui_mainwindow', 'ui_savedialog',
-           'ui_settingsdialog', 'qrc_icons']
+__all__ = ['ui_loaddialog', 'ui_mainwindow', 'ui_savedialog', 'qrc_icons']

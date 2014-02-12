@@ -24,8 +24,20 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-__all__ = ['loaddialog', 'navigationtoolbar',
-           'playertoolbar', 'processingdialog', 'savedialog',
-           'settingsdialog', 'svwidget', 'staltadualog',
-           'ampadialog', 'takanamidialog',
-           'generated']
+from PySide import QtGui
+
+
+def display_error_dlg(msg, additional_info=None, parent=None):
+    """Displays an error dialog."""
+    msgBox = QtGui.QMessageBox(parent)
+    msgBox.setText("An error occurred:")
+    horizontalSpacer = QtGui.QSpacerItem(320, 0, QtGui.QSizePolicy.Minimum,
+                                         QtGui.QSizePolicy.Expanding)
+    layout = msgBox.layout()
+    layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
+    msgBox.setIcon(QtGui.QMessageBox.Critical)
+    msgBox.setInformativeText(msg)
+    if additional_info is not None:
+        msgBox.setDetailedText(additional_info)
+    msgBox.setStandardButtons(QtGui.QMessageBox.Ok)
+    msgBox.exec_()

@@ -26,6 +26,7 @@
 
 from PySide import QtCore
 
+import traceback
 from eqpickertool._version import _application_name
 from eqpickertool._version import _organization
 
@@ -39,6 +40,7 @@ class PickingTask(QtCore.QObject):
     """
 
     finished = QtCore.Signal()
+    error = QtCore.Signal(str, str)
 
     def __init__(self, document, alg, threshold=None):
         super(PickingTask, self).__init__()
@@ -50,9 +52,12 @@ class PickingTask(QtCore.QObject):
         settings = QtCore.QSettings(_organization, _application_name)
         takanami = int(settings.value('takanami_settings/takanami', False))
         takanami_margin = float(settings.value('takanami_margin', 5.0))
-        self.document.detectEvents(self.alg, threshold=self.threshold,
-                           takanami=takanami,
-                           takanami_margin=takanami_margin)
+        try:
+            self.document.detectEvents(self.alg, threshold=self.threshold,
+                               takanami=takanami,
+                               takanami_margin=takanami_margin)
+        except Exception, e:
+            self.error.emit(str(e), traceback.format_exc())
         self.finished.emit()
 
     def abort(self):

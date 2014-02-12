@@ -27,6 +27,8 @@
 from PySide import QtCore
 from PySide import QtGui
 
+from eqpickertool.gui.views import error
+
 
 class ProcessingDialog(QtGui.QDialog):
 
@@ -63,6 +65,7 @@ class ProcessingDialog(QtGui.QDialog):
         self._task.finished.connect(self._thread.quit)
         self._task.finished.connect(self.accept)
         self._task.finished.connect(self._task.deleteLater)
+        self._task.error.connect(self.on_error)
         self._thread.finished.connect(self._thread.deleteLater)
         self._thread.start()
         return self.exec_()
@@ -78,5 +81,10 @@ class ProcessingDialog(QtGui.QDialog):
     def reject(self):
         self.label.setText(self.cancel_label_text)
         self._task.abort()
+        self._thread.quit()
         self._thread.wait()
         return QtGui.QDialog.reject(self)
+
+    def on_error(self, *args, **kwargs):
+        error.display_error_dlg(*args, **kwargs)
+        self.reject()

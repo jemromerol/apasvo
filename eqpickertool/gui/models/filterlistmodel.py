@@ -76,13 +76,14 @@ class FilterListModel(QtCore.QAbstractTableModel):
 
     def removeRows(self, row, count, parent=QtCore.QModelIndex()):
         if row < 0 or row > len(self._list):
-            return
+            return False
         self.beginRemoveRows(parent, row, row + count - 1)
         while count != 0:
             del self._list[row]
             count -= 1
         self.sizeChanged.emit(len(self._list))
         self.endRemoveRows()
+        return True
 
     def addFilter(self, value=10.0):
         self.beginInsertRows(QtCore.QModelIndex(), len(self._list),

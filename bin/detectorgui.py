@@ -32,6 +32,7 @@ from PySide import QtGui, QtCore
 import matplotlib
 matplotlib.use('Qt4Agg')
 matplotlib.rcParams['backend.qt4'] = 'PySide'
+import numpy as np
 
 from eqpickertool.gui.views.generated import ui_mainwindow
 from eqpickertool.gui.views.generated import qrc_icons
@@ -47,6 +48,7 @@ from eqpickertool.gui.views import takanamidialog
 from eqpickertool.gui.views import staltadialog
 from eqpickertool.gui.views import ampadialog
 from eqpickertool.gui.views import playertoolbar
+from eqpickertool.gui.views import error
 
 from eqpickertool.picking import stalta
 from eqpickertool.picking import ampa
@@ -519,9 +521,10 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             wlen = float(settings.value('window_len', 100.0))
             wstep = float(settings.value('step', 50.0))
             nthres = float(settings.value('noise_threshold', 90))
-            filters = settings.value('ampa_settings/filters', [30.0, 20.0, 10.0,
+            filters = settings.value('filters', [30.0, 20.0, 10.0,
                                                                5.0, 2.5])
             filters = list(filters) if isinstance(filters, list) else [filters]
+            filters = np.array(filters).astype(float)
             settings.beginGroup('filter_bank_settings')
             startf = float(settings.value('startf', 2.0))
             endf = float(settings.value('endf', 12.0))
@@ -555,6 +558,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         task.finished.connect(self._thread.quit)
         task.finished.connect(self.on_analysis_finished)
         task.finished.connect(task.deleteLater)
+        task.error.connect(error.display_error_dlg)
         self._thread.finished.connect(self._thread.deleteLater)
         self._thread.start()
 

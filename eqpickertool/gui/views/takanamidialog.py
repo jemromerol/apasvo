@@ -31,6 +31,7 @@ from eqpickertool.gui.views import navigationtoolbar
 from eqpickertool.gui.views import processingdialog
 import matplotlib.pyplot as plt
 import numpy as np
+import traceback
 from eqpickertool.picking import record as rc
 from eqpickertool.picking import takanami
 from eqpickertool._version import _application_name
@@ -55,6 +56,7 @@ class TakanamiTask(QtCore.QObject):
     """
 
     finished = QtCore.Signal()
+    error = QtCore.Signal(str, str)
     position_estimated = QtCore.Signal(int, np.ndarray, int)
 
     def __init__(self, record, start, end):
@@ -72,10 +74,14 @@ class TakanamiTask(QtCore.QObject):
                             self.record.fs)
         if self._abort:  # checkpoint
             return
-        et, aic, n0_aic = self.algorithm.run(self.record.signal,
-                                             self.record.fs,
-                                             start_time_in_secs,
-                                             end_time_in_secs)
+        try:
+            et, aic, n0_aic = self.algorithm.run(self.record.signal,
+                                                 self.record.fs,
+                                                 start_time_in_secs,
+                                                 end_time_in_secs)
+        except Exception, e:
+            self.error.emit(str(e), traceback.format_exc())
+            return
         if self._abort:  # checkpoint
             return
         self.position_estimated.emit(et, aic, n0_aic)
@@ -140,14 +146,6 @@ class TakanamiDialog(QtGui.QDialog):
         self.start_point_spinbox.timeChanged.connect(self.on_start_point_changed)
         self.end_point_spinbox.timeChanged.connect(self.on_end_point_changed)
 
-        self._task = TakanamiTask(self.record, self._start, self._end)
-        self._task.position_estimated.connect(self.on_position_estimated)
-
-        self.wait_dialog = processingdialog.ProcessingDialog(label_text="Applying Takanami's AR method...")
-        self.wait_dialog.setWindowTitle("Event detection")
-
-        self.wait_dialog.run(self._task)
-
     def _init_ui(self):
         self.setWindowTitle("Takanami's Autoregressive Method")
         self.fig, _ = plt.subplots(2, 1, sharex=True)
@@ -205,9 +203,7 @@ class TakanamiDialog(QtGui.QDialog):
         if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Ok:
             self.save_event()
         if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Apply:
-            self._task = TakanamiTask(self.record, self._start, self._end)
-            self._task.position_estimated.connect(self.on_position_estimated)
-            self.wait_dialog.run(self._task)
+            self.do_takanami()
 
     def on_start_point_changed(self, value):
         time_in_msecs = QtCore.QTime().msecsTo(value)
@@ -260,3 +256,15 @@ class TakanamiDialog(QtGui.QDialog):
                                       method=rc.method_takanami,
                                       mode=rc.mode_automatic,
                                       status=rc.status_reported)
+
+    def do_takanami(self):
+        self._task = TakanamiTask(self.record, self._start, self._end)
+        self._task.position_estimated.connect(self.on_position_estimated)
+        self.wait_dialog = processingdialog.ProcessingDialog(label_text="Applying Takanami's AR method...")
+        self.wait_dialog.setWindowTitle("Event detection")
+        return self.wait_dialog.run(self._task)
+
+    def exec_(self, *args, **kwargs):
+        return_code = self.do_takanami()
+        if return_code == QtGui.QDialog.Accepted:
+            return QtGui.QDialog.exec_(self, *args, **kwargs)

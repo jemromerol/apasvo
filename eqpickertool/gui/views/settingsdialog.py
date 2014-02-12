@@ -27,16 +27,13 @@
 from PySide import QtGui
 from PySide import QtCore
 
-from eqpickertool.gui.views.generated import ui_settingsdialog
-from eqpickertool.gui.models import filterlistmodel
-from eqpickertool.gui.delegates import dsbdelegate
 from eqpickertool.gui.views import playertoolbar
 
 from eqpickertool._version import _application_name
 from eqpickertool._version import _organization
 
 
-class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
+class SettingsDialog(QtGui.QDialog):
     """A dialog window to edit application settings.
     """
 
@@ -44,35 +41,12 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
 
     def __init__(self, parent=None):
         super(SettingsDialog, self).__init__(parent)
-        self.setupUi(self)
-
-        self._filters = filterlistmodel.FilterListModel([])
-        self.filtersTable.setModel(self._filters)
-        self._filters.sizeChanged.connect(self._onSizeChanged)
-        filterDelegate = dsbdelegate.DoubleSpinBoxDelegate(self.filtersTable)
-        self.filtersTable.setItemDelegateForColumn(0, filterDelegate)
+        self.setup_ui()
 
         self.treeWidget.currentItemChanged.connect(self._itemChanged)
-        self.staSpinBox.valueChanged.connect(self._staChanged)
-        self.ltaSpinBox.valueChanged.connect(self._ltaChanged)
-        self.ampawindowSpinBox.valueChanged.connect(self._ampawChanged)
-        self.ampawindowstepSpinBox.valueChanged.connect(self._ampawsChanged)
-        self.takanamiCheckBox.toggled.connect(self.takanamiMarginLabel.setEnabled)
-        self.takanamiCheckBox.toggled.connect(self.takanamiMarginSpinBox.setEnabled)
-        self.startfSpinBox.valueChanged.connect(self._startfChanged)
-        self.endfSpinBox.valueChanged.connect(self._endfChanged)
-        self.bandwidthSpinBox.valueChanged.connect(self._bandwidthChanged)
-        self.actionAddFilter.triggered.connect(self.addFilter)
-        self.actionRemoveFilter.triggered.connect(self.removeFilter)
         self.buttonBox.clicked.connect(self.onclick)
 
         self.loadSettings()
-
-    def _onSizeChanged(self, size):
-        if size <= 1:
-            self.actionRemoveFilter.setEnabled(False)
-        else:
-            self.actionRemoveFilter.setEnabled(True)
 
     def _itemChanged(self, current, previous):
         item_name = current.text(0)
@@ -82,59 +56,9 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
                 self._settingsMenus[item_name].setVisible(True)
                 self.currentMenu = self._settingsMenus[item_name]
 
-    def _staChanged(self, value):
-        self.ltaSpinBox.setMinimum(value + self.ltaSpinBox.singleStep())
-
-    def _ltaChanged(self, value):
-        self.ltaSpinBox.setMinimum(value + self.ltaSpinBox.singleStep())
-
-    def _ampawChanged(self, value):
-        pass
-
-    def _ampawsChanged(self, value):
-        pass
-
-    def _startfChanged(self, value):
-        self.endfSpinBox.setMinimum(value + self.endfSpinBox.singleStep())
-
-    def _endfChanged(self, value):
-        self.startfSpinBox.setMaximum(value - self.startfSpinBox.singleStep())
-
-    def _bandwidthChanged(self, value):
-        self.overlapSpinBox.setMaximum(value - self.overlapSpinBox.singleStep())
-
-    def addFilter(self, value=10.0):
-        self._filters.addFilter(value)
-
-    def removeFilter(self):
-        self._filters.removeRow(self.filtersTable.currentIndex().row())
-        if self._filters.rowCount() <= 1:
-            self.actionRemoveFilter.setEnabled(False)
-
     def loadSettings(self):
         """Loads settings from persistent storage."""
         self.settings = QtCore.QSettings(_organization, _application_name)
-        self.settings.beginGroup("stalta_settings")
-        self.staSpinBox.setValue(float(self.settings.value('sta_window_len', 5.0)))
-        self.ltaSpinBox.setValue(float(self.settings.value('lta_window_len', 100.0)))
-        self.settings.endGroup()
-        self.settings.beginGroup("ampa_settings")
-        self.ampawindowSpinBox.setValue(float(self.settings.value('window_len', 100.0)))
-        self.ampawindowstepSpinBox.setValue(float(self.settings.value('overlap', 50.0)))
-        self.ampanoisethresholdSpinBox.setValue(int(self.settings.value('noise_threshold', 90)))
-        for value in self._load_filters():
-            self._filters.addFilter(float(value))
-        self.settings.beginGroup("filter_bank_settings")
-        self.startfSpinBox.setValue(float(self.settings.value('startf', 2.0)))
-        self.endfSpinBox.setValue(float(self.settings.value('endf', 12.0)))
-        self.bandwidthSpinBox.setValue(float(self.settings.value('bandwidth', 3.0)))
-        self.overlapSpinBox.setValue(float(self.settings.value('overlap', 1.0)))
-        self.settings.endGroup()
-        self.settings.endGroup()
-        self.settings.beginGroup("takanami_settings")
-        self.takanamiCheckBox.setChecked(int(self.settings.value('takanami', True)))
-        self.takanamiMarginSpinBox.setValue(float(self.settings.value('takanami_margin', 5.0)))
-        self.settings.endGroup()
         self.settings.beginGroup("player_settings")
         sample_rate_index = playertoolbar.sample_rates.index(int(self.settings.value('sample_rate', playertoolbar.sample_rates[0])))
         self.samplerateComboBox.setCurrentIndex(sample_rate_index)
@@ -145,26 +69,6 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
     def saveSettings(self):
         """Saves settings to persistent storage."""
         self.settings = QtCore.QSettings(_organization, _application_name)
-        self.settings.beginGroup("stalta_settings")
-        self.settings.setValue('sta_window_len', self.staSpinBox.value())
-        self.settings.setValue('lta_window_len', self.ltaSpinBox.value())
-        self.settings.endGroup()
-        self.settings.beginGroup("ampa_settings")
-        self.settings.setValue('window_len', self.ampawindowSpinBox.value())
-        self.settings.setValue('step', self.ampawindowstepSpinBox.value())
-        self.settings.setValue('noise_threshold', self.ampanoisethresholdSpinBox.value())
-        self.settings.setValue('filters', self._filters.list())
-        self.settings.beginGroup("filter_bank_settings")
-        self.settings.setValue('startf', self.startfSpinBox.value())
-        self.settings.setValue('endf', self.endfSpinBox.value())
-        self.settings.setValue('bandwidth', self.bandwidthSpinBox.value())
-        self.settings.setValue('overlap', self.overlapSpinBox.value())
-        self.settings.endGroup()
-        self.settings.endGroup()
-        self.settings.beginGroup("takanami_settings")
-        self.settings.setValue('takanami', self.takanamiCheckBox.checkState())
-        self.settings.setValue('takanami_margin', self.takanamiMarginSpinBox.value())
-        self.settings.endGroup()
         self.settings.beginGroup("player_settings")
         self.settings.setValue('sample_rate', self.samplerateComboBox.currentText())
         self.settings.setValue('bit_depth', self.bitdepthComboBox.currentText())
@@ -177,14 +81,77 @@ class SettingsDialog(QtGui.QDialog, ui_settingsdialog.Ui_SettingsDialog):
         if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.Ok:
             self.saveSettings()
 
-    def _load_filters(self, default=None):
-        if default is None:
-            default = [30.0, 20.0, 10.0, 5.0, 2.5]
-        settings = QtCore.QSettings(_organization, _application_name)
-        filters = settings.value('ampa_settings/filters', default)
-        if filters:
-            if isinstance(filters, list):
-                return list(filters)
-            else:
-                return [filters]
-        return default
+    def setup_ui(self):
+        self.setWindowTitle("Settings")
+        self.verticalLayout = QtGui.QVBoxLayout(self)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.widget = QtGui.QWidget(self)
+        self.widget.setObjectName("widget")
+        self.widget.setMinimumHeight(480)
+        self.widget.setMinimumWidth(640)
+        self.horizontalLayout = QtGui.QHBoxLayout(self.widget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+
+        # Set the settings tree widget
+        self.treeWidget = QtGui.QTreeWidget(self.widget)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHeightForWidth(self.treeWidget.sizePolicy().hasHeightForWidth())
+        self.treeWidget.setSizePolicy(sizePolicy)
+        self.treeWidget.setMinimumSize(QtCore.QSize(120, 0))
+        self.treeWidget.setBaseSize(QtCore.QSize(120, 0))
+        self.treeWidget.setAnimated(False)
+        self.treeWidget.setHeaderHidden(True)
+        self.treeWidget.setObjectName("treeWidget")
+        item_player = QtGui.QTreeWidgetItem(self.treeWidget)
+        self.horizontalLayout.addWidget(self.treeWidget)
+
+        # Set Player Group Box
+        self.playerGroupBox = QtGui.QGroupBox("Player", self.widget)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHeightForWidth(self.playerGroupBox.sizePolicy().hasHeightForWidth())
+        self.playerGroupBox.setSizePolicy(sizePolicy)
+        self.playerGroupBox.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.playerGroupBox.setVisible(True)
+        self.formLayout = QtGui.QFormLayout(self.playerGroupBox)
+        self.formLayout.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
+        self.formLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
+        self.formLayout.setRowWrapPolicy(QtGui.QFormLayout.DontWrapRows)
+        self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.formLayout.setFormAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
+        self.formLayout.setContentsMargins(24, 24, 24, 24)
+        self.formLayout.setHorizontalSpacing(9)
+        self.formLayout.setVerticalSpacing(24)
+        self.samplerateLabel = QtGui.QLabel("Sample rate (samples/sec.):", self.playerGroupBox)
+        self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.samplerateLabel)
+        self.samplerateComboBox = QtGui.QComboBox(self.playerGroupBox)
+        self.samplerateComboBox.addItems([str(item) for item in playertoolbar.sample_rates])
+        self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.samplerateComboBox)
+        self.bitdepthLabel = QtGui.QLabel("Bit Depth:", self.playerGroupBox)
+        self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole, self.bitdepthLabel)
+        self.bitdepthComboBox = QtGui.QComboBox(self.playerGroupBox)
+        self.bitdepthComboBox.addItems([str(item) for item in playertoolbar.bit_depths])
+        self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole, self.bitdepthComboBox)
+        self.horizontalLayout.addWidget(self.playerGroupBox)
+
+        # Button Box
+        self.verticalLayout.addWidget(self.widget)
+        self.buttonBox = QtGui.QDialogButtonBox(self)
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Apply|QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.buttonBox.button(QtGui.QDialogButtonBox.Apply).setDefault(True)
+        self.verticalLayout.addWidget(self.buttonBox)
+
+        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), self.accept)
+        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), self.reject)
+        QtCore.QMetaObject.connectSlotsByName(self)
+
+        self.treeWidget.setHeaderItem(item_player)
+        __sortingEnabled = self.treeWidget.isSortingEnabled()
+        self.treeWidget.setSortingEnabled(False)
+
+        self._settingsMenus = {}
+        self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.playerGroupBox
+        self.treeWidget.setCurrentItem(self.treeWidget.topLevelItem(0))
+        self.currentMenu = self.playerGroupBox

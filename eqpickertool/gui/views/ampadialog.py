@@ -44,13 +44,17 @@ class AmpaDialog(QtGui.QDialog):
         self.step = 1.0 / self.document.record.fs
         self.max_value = (len(self.document.record.signal) /
                           self.document.record.fs)
-
+        self.nyquist_freq = self.document.record.fs / 2.0
         self.setup_ui()
 
         self._filters = filterlistmodel.FilterListModel([])
         self.filtersTable.setModel(self._filters)
         self._filters.sizeChanged.connect(self._on_size_changed)
-        filterDelegate = dsbdelegate.DoubleSpinBoxDelegate(self.filtersTable)
+        self._filters.dataChanged.connect(self._on_data_changed)
+        filterDelegate = dsbdelegate.DoubleSpinBoxDelegate(self.filtersTable,
+                                                           minimum=self.step,
+                                                           maximum=self.max_value,
+                                                           step=self.step)
         self.filtersTable.setItemDelegateForColumn(0, filterDelegate)
 
         self.ampawindowSpinBox.valueChanged.connect(self.on_ampa_window_changed)
@@ -62,6 +66,8 @@ class AmpaDialog(QtGui.QDialog):
         self.bandwidthSpinBox.valueChanged.connect(self.on_bandwidth_changed)
         self.actionAddFilter.triggered.connect(self.addFilter)
         self.actionRemoveFilter.triggered.connect(self.removeFilter)
+        model = self.filtersTable.selectionModel()
+        model.selectionChanged.connect(self._on_filter_selected)
         self.buttonBox.clicked.connect(self.onclick)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
@@ -86,17 +92,15 @@ class AmpaDialog(QtGui.QDialog):
         self.formLayout_3.setWidget(0, QtGui.QFormLayout.LabelRole, self.ampawindowLabel)
         self.ampawindowSpinBox = QtGui.QDoubleSpinBox(self.ampaGeneralSettingsGroupBox)
         self.ampawindowSpinBox.setAccelerated(True)
-#         self.ampawindowSpinBox.setMaximum(1000.0)
-#         self.ampawindowSpinBox.setSingleStep(0.01)
-#         self.ampawindowSpinBox.setProperty("value", 100.0)
+        self.ampawindowSpinBox.setMaximum(self.max_value)
+        self.ampawindowSpinBox.setSingleStep(self.step)
         self.formLayout_3.setWidget(0, QtGui.QFormLayout.FieldRole, self.ampawindowSpinBox)
         self.ampawindowstepLabel = QtGui.QLabel("Sliding Window Step (in seconds):", self.ampaGeneralSettingsGroupBox)
         self.formLayout_3.setWidget(1, QtGui.QFormLayout.LabelRole, self.ampawindowstepLabel)
         self.ampawindowstepSpinBox = QtGui.QDoubleSpinBox(self.ampaGeneralSettingsGroupBox)
         self.ampawindowstepSpinBox.setAccelerated(True)
-#         self.ampawindowstepSpinBox.setMaximum(1000.0)
-#         self.ampawindowstepSpinBox.setSingleStep(0.01)
-#         self.ampawindowstepSpinBox.setProperty("value", 50.0)
+        self.ampawindowstepSpinBox.setMinimum(self.step)
+        self.ampawindowstepSpinBox.setSingleStep(self.step)
         self.formLayout_3.setWidget(1, QtGui.QFormLayout.FieldRole, self.ampawindowstepSpinBox)
         self.ampanoisethresholdLabel = QtGui.QLabel("Noise Threshold Percentile:", self.ampaGeneralSettingsGroupBox)
         self.formLayout_3.setWidget(2, QtGui.QFormLayout.LabelRole, self.ampanoisethresholdLabel)
@@ -119,31 +123,29 @@ class AmpaDialog(QtGui.QDialog):
         self.formLayout_2.setWidget(0, QtGui.QFormLayout.LabelRole, self.startfLabel)
         self.startfSpinBox = QtGui.QDoubleSpinBox(self.filterbankGroupBox)
         self.startfSpinBox.setAccelerated(True)
-#         self.startfSpinBox.setMaximum(100.0)
-#         self.startfSpinBox.setSingleStep(0.01)
+        self.startfSpinBox.setMinimum(0.0)
+        self.startfSpinBox.setSingleStep(0.01)
         self.formLayout_2.setWidget(0, QtGui.QFormLayout.FieldRole, self.startfSpinBox)
-        self.endfLabel = QtGui.QLabel("End Frequency (Hz):", self.filterbankGroupBox)
+        self.endfLabel = QtGui.QLabel("Max. End Frequency (Hz):", self.filterbankGroupBox)
         self.formLayout_2.setWidget(1, QtGui.QFormLayout.LabelRole, self.endfLabel)
         self.endfSpinBox = QtGui.QDoubleSpinBox(self.filterbankGroupBox)
         self.endfSpinBox.setAccelerated(True)
-#         self.endfSpinBox.setMaximum(100.0)
-#         self.endfSpinBox.setSingleStep(0.01)
+        self.endfSpinBox.setMaximum(self.nyquist_freq)
+        self.endfSpinBox.setSingleStep(0.01)
         self.formLayout_2.setWidget(1, QtGui.QFormLayout.FieldRole, self.endfSpinBox)
         self.bandwidthLabel = QtGui.QLabel("Channel Bandwidth (Hz):", self.filterbankGroupBox)
         self.formLayout_2.setWidget(2, QtGui.QFormLayout.LabelRole, self.bandwidthLabel)
         self.bandwidthSpinBox = QtGui.QDoubleSpinBox(self.filterbankGroupBox)
         self.bandwidthSpinBox.setAccelerated(True)
-#         self.bandwidthSpinBox.setMinimum(1.0)
-#         self.bandwidthSpinBox.setMaximum(100.0)
-#         self.bandwidthSpinBox.setSingleStep(0.01)
+        self.bandwidthSpinBox.setMinimum(0.1)
+        self.bandwidthSpinBox.setSingleStep(0.01)
         self.formLayout_2.setWidget(2, QtGui.QFormLayout.FieldRole, self.bandwidthSpinBox)
         self.overlapLabel = QtGui.QLabel("Channel Overlap (Hz):", self.filterbankGroupBox)
         self.formLayout_2.setWidget(3, QtGui.QFormLayout.LabelRole, self.overlapLabel)
         self.overlapSpinBox = QtGui.QDoubleSpinBox(self.filterbankGroupBox)
         self.overlapSpinBox.setAccelerated(True)
-#         self.overlapSpinBox.setMinimum(0.0)
-#         self.overlapSpinBox.setMaximum(100.0)
-#         self.overlapSpinBox.setSingleStep(0.01)
+        self.overlapSpinBox.setMinimum(0.0)
+        self.overlapSpinBox.setSingleStep(0.01)
         self.formLayout_2.setWidget(3, QtGui.QFormLayout.FieldRole, self.overlapSpinBox)
         self.verticalLayout.addWidget(self.filterbankGroupBox)
 
@@ -207,13 +209,14 @@ class AmpaDialog(QtGui.QDialog):
         self.verticalLayout.addWidget(self.buttonBox)
 
     def on_ampa_window_changed(self, value):
-        pass
+        self.ampawindowstepSpinBox.setMaximum(value)
 
     def on_ampa_window_step_changed(self, value):
         pass
 
     def on_startf_changed(self, value):
         self.endfSpinBox.setMinimum(value + self.endfSpinBox.singleStep())
+        self.bandwidthSpinBox.setMaximum(self.nyquist_freq - value - self.bandwidthSpinBox.singleStep())
 
     def on_endf_changed(self, value):
         self.startfSpinBox.setMaximum(value - self.startfSpinBox.singleStep())
@@ -223,11 +226,16 @@ class AmpaDialog(QtGui.QDialog):
 
     def addFilter(self, value=10.0):
         self._filters.addFilter(value)
+        self.ampawindowSpinBox.setMinimum(max(self._filters.list()) +
+                                          self.step)
 
     def removeFilter(self):
-        self._filters.removeRow(self.filtersTable.currentIndex().row())
-        if self._filters.rowCount() <= 1:
-            self.actionRemoveFilter.setEnabled(False)
+        if len(self.filtersTable.selectionModel().selectedRows()) > 0:
+            self._filters.removeRow(self.filtersTable.currentIndex().row())
+            if self._filters.rowCount() <= 1:
+                self.actionRemoveFilter.setEnabled(False)
+            self.ampawindowSpinBox.setMinimum(max(self._filters.list()) +
+                                              self.step)
 
     def load_settings(self):
         # Read settings
@@ -237,7 +245,7 @@ class AmpaDialog(QtGui.QDialog):
         self.ampawindowstepSpinBox.setValue(float(settings.value('overlap', 50.0)))
         self.ampanoisethresholdSpinBox.setValue(int(settings.value('noise_threshold', 90)))
         for value in self._load_filters():
-            self._filters.addFilter(float(value))
+            self.addFilter(float(value))
         settings.beginGroup("filter_bank_settings")
         self.startfSpinBox.setValue(float(settings.value('startf', 2.0)))
         self.endfSpinBox.setValue(float(settings.value('endf', 12.0)))
@@ -281,8 +289,10 @@ class AmpaDialog(QtGui.QDialog):
     def _on_size_changed(self, size):
         if size <= 1:
             self.actionRemoveFilter.setEnabled(False)
-        else:
-            self.actionRemoveFilter.setEnabled(True)
+
+    def _on_data_changed(self, top_left, bottom_right):
+        self.ampawindowSpinBox.setMinimum(max(self._filters.list()) +
+                                          self.step)
 
     def _load_filters(self, default=None):
         if default is None:
@@ -296,23 +306,6 @@ class AmpaDialog(QtGui.QDialog):
                 return [filters]
         return default
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def _on_filter_selected(self, s, d):
+        self.actionRemoveFilter.setEnabled(len(self.filtersTable.selectionModel()
+                                               .selectedRows()) > 0)

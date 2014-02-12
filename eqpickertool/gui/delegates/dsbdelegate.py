@@ -46,7 +46,7 @@ class DoubleSpinBoxDelegate(QtGui.QStyledItemDelegate):
         return editor
 
     def setEditorData(self, spinBox, index):
-        value = index.model().data(index, QtCore.Qt.DisplayRole)
+        value = float(index.model().data(index, QtCore.Qt.DisplayRole))
         spinBox.setValue(value)
 
     def setModelData(self, spinBox, model, index):
