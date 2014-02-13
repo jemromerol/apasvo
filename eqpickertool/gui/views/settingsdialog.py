@@ -45,34 +45,116 @@ class SettingsDialog(QtGui.QDialog):
 
         self.treeWidget.currentItemChanged.connect(self._itemChanged)
         self.buttonBox.clicked.connect(self.onclick)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
 
         self.loadSettings()
 
-    def _itemChanged(self, current, previous):
-        item_name = current.text(0)
-        if item_name in self._settingsMenus:
-            if self.currentMenu != self._settingsMenus[item_name]:
-                self.currentMenu.setVisible(False)
-                self._settingsMenus[item_name].setVisible(True)
-                self.currentMenu = self._settingsMenus[item_name]
+    def setup_ui(self):
+        self.setWindowTitle("Settings")
+        self.setMinimumHeight(480)
+        self.setMinimumWidth(640)
+
+        # Set the settings tree widget
+        self.treeWidget = QtGui.QTreeWidget(self)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum,
+                                       QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHeightForWidth(self.treeWidget.sizePolicy().
+                                     hasHeightForWidth())
+        self.treeWidget.setSizePolicy(sizePolicy)
+        self.treeWidget.setMinimumSize(QtCore.QSize(120, 0))
+        self.treeWidget.setBaseSize(QtCore.QSize(120, 0))
+        self.treeWidget.setAnimated(False)
+        self.treeWidget.setHeaderHidden(True)
+
+        # Set Player Group Box
+        self.playerGroupBox = QtGui.QGroupBox("Player", self)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                       QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHeightForWidth(self.playerGroupBox.sizePolicy().
+                                     hasHeightForWidth())
+        self.playerGroupBox.setSizePolicy(sizePolicy)
+        self.playerGroupBox.setAlignment(QtCore.Qt.AlignLeading |
+                                         QtCore.Qt.AlignLeft |
+                                         QtCore.Qt.AlignVCenter)
+        self.playerGroupBox.setVisible(True)
+        self.formLayout = QtGui.QFormLayout(self.playerGroupBox)
+        self.formLayout.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
+        self.formLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
+        self.formLayout.setRowWrapPolicy(QtGui.QFormLayout.DontWrapRows)
+        self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight |
+                                          QtCore.Qt.AlignTrailing |
+                                          QtCore.Qt.AlignVCenter)
+        self.formLayout.setFormAlignment(QtCore.Qt.AlignLeading |
+                                         QtCore.Qt.AlignLeft |
+                                         QtCore.Qt.AlignTop)
+        self.formLayout.setContentsMargins(24, 24, 24, 24)
+        self.formLayout.setHorizontalSpacing(9)
+        self.formLayout.setVerticalSpacing(24)
+        self.samplerateLabel = QtGui.QLabel("Sample rate (samples/sec.):",
+                                            self.playerGroupBox)
+        self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole,
+                                  self.samplerateLabel)
+        self.samplerateComboBox = QtGui.QComboBox(self.playerGroupBox)
+        self.samplerateComboBox.addItems([str(item) for item in playertoolbar.sample_rates])
+        self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole,
+                                  self.samplerateComboBox)
+        self.bitdepthLabel = QtGui.QLabel("Bit Depth:", self.playerGroupBox)
+        self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole,
+                                  self.bitdepthLabel)
+        self.bitdepthComboBox = QtGui.QComboBox(self.playerGroupBox)
+        self.bitdepthComboBox.addItems([str(item) for item in playertoolbar.bit_depths])
+        self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole,
+                                  self.bitdepthComboBox)
+
+        # Button Box
+        self.buttonBox = QtGui.QDialogButtonBox(self)
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Apply |
+                                          QtGui.QDialogButtonBox.Cancel |
+                                          QtGui.QDialogButtonBox.Ok)
+        self.buttonBox.button(QtGui.QDialogButtonBox.Apply).setDefault(True)
+
+        # Set layouts
+        self.settings_frame = QtGui.QFrame(self)
+        self.horizontalLayout = QtGui.QHBoxLayout(self.settings_frame)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.addWidget(self.treeWidget)
+        self.horizontalLayout.addWidget(self.playerGroupBox)
+
+        self.verticalLayout = QtGui.QVBoxLayout(self)
+        self.verticalLayout.addWidget(self.settings_frame)
+        self.verticalLayout.addWidget(self.buttonBox)
+        self.setLayout(self.verticalLayout)
+
+        self.item_player = QtGui.QTreeWidgetItem(self.treeWidget)
+        self.item_player.setText(0, self.playerGroupBox.title())
+
+        self.treeWidget.addTopLevelItem(self.item_player)
+        self.treeWidget.setSortingEnabled(False)
+
+        self._settingsMenus = {}
+        self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.playerGroupBox
+        self.treeWidget.setCurrentItem(self.treeWidget.topLevelItem(0))
+        self.currentMenu = self.playerGroupBox
 
     def loadSettings(self):
         """Loads settings from persistent storage."""
-        self.settings = QtCore.QSettings(_organization, _application_name)
-        self.settings.beginGroup("player_settings")
-        sample_rate_index = playertoolbar.sample_rates.index(int(self.settings.value('sample_rate', playertoolbar.sample_rates[0])))
+        settings = QtCore.QSettings(_organization, _application_name)
+        settings.beginGroup("player_settings")
+        sample_rate_index = playertoolbar.sample_rates.index(int(settings.value('sample_rate', playertoolbar.sample_rates[0])))
         self.samplerateComboBox.setCurrentIndex(sample_rate_index)
-        bit_depth_index = playertoolbar.bit_depths.index(self.settings.value('bit_depth', playertoolbar.bit_depths[0]))
+        bit_depth_index = playertoolbar.bit_depths.index(settings.value('bit_depth', playertoolbar.bit_depths[0]))
         self.bitdepthComboBox.setCurrentIndex(bit_depth_index)
-        self.settings.endGroup()
+        settings.endGroup()
 
     def saveSettings(self):
         """Saves settings to persistent storage."""
-        self.settings = QtCore.QSettings(_organization, _application_name)
-        self.settings.beginGroup("player_settings")
-        self.settings.setValue('sample_rate', self.samplerateComboBox.currentText())
-        self.settings.setValue('bit_depth', self.bitdepthComboBox.currentText())
-        self.settings.endGroup()
+        settings = QtCore.QSettings(_organization, _application_name)
+        settings.beginGroup("player_settings")
+        settings.setValue('sample_rate', self.samplerateComboBox.currentText())
+        settings.setValue('bit_depth', self.bitdepthComboBox.currentText())
+        settings.endGroup()
         self.saved.emit()
 
     def onclick(self, button):
@@ -81,77 +163,10 @@ class SettingsDialog(QtGui.QDialog):
         if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.Ok:
             self.saveSettings()
 
-    def setup_ui(self):
-        self.setWindowTitle("Settings")
-        self.verticalLayout = QtGui.QVBoxLayout(self)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.widget = QtGui.QWidget(self)
-        self.widget.setObjectName("widget")
-        self.widget.setMinimumHeight(480)
-        self.widget.setMinimumWidth(640)
-        self.horizontalLayout = QtGui.QHBoxLayout(self.widget)
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-
-        # Set the settings tree widget
-        self.treeWidget = QtGui.QTreeWidget(self.widget)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        sizePolicy.setHeightForWidth(self.treeWidget.sizePolicy().hasHeightForWidth())
-        self.treeWidget.setSizePolicy(sizePolicy)
-        self.treeWidget.setMinimumSize(QtCore.QSize(120, 0))
-        self.treeWidget.setBaseSize(QtCore.QSize(120, 0))
-        self.treeWidget.setAnimated(False)
-        self.treeWidget.setHeaderHidden(True)
-        self.treeWidget.setObjectName("treeWidget")
-        item_player = QtGui.QTreeWidgetItem(self.treeWidget)
-        self.horizontalLayout.addWidget(self.treeWidget)
-
-        # Set Player Group Box
-        self.playerGroupBox = QtGui.QGroupBox("Player", self.widget)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-        sizePolicy.setHeightForWidth(self.playerGroupBox.sizePolicy().hasHeightForWidth())
-        self.playerGroupBox.setSizePolicy(sizePolicy)
-        self.playerGroupBox.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
-        self.playerGroupBox.setVisible(True)
-        self.formLayout = QtGui.QFormLayout(self.playerGroupBox)
-        self.formLayout.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
-        self.formLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
-        self.formLayout.setRowWrapPolicy(QtGui.QFormLayout.DontWrapRows)
-        self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.formLayout.setFormAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
-        self.formLayout.setContentsMargins(24, 24, 24, 24)
-        self.formLayout.setHorizontalSpacing(9)
-        self.formLayout.setVerticalSpacing(24)
-        self.samplerateLabel = QtGui.QLabel("Sample rate (samples/sec.):", self.playerGroupBox)
-        self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.samplerateLabel)
-        self.samplerateComboBox = QtGui.QComboBox(self.playerGroupBox)
-        self.samplerateComboBox.addItems([str(item) for item in playertoolbar.sample_rates])
-        self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.samplerateComboBox)
-        self.bitdepthLabel = QtGui.QLabel("Bit Depth:", self.playerGroupBox)
-        self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole, self.bitdepthLabel)
-        self.bitdepthComboBox = QtGui.QComboBox(self.playerGroupBox)
-        self.bitdepthComboBox.addItems([str(item) for item in playertoolbar.bit_depths])
-        self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole, self.bitdepthComboBox)
-        self.horizontalLayout.addWidget(self.playerGroupBox)
-
-        # Button Box
-        self.verticalLayout.addWidget(self.widget)
-        self.buttonBox = QtGui.QDialogButtonBox(self)
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Apply|QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
-        self.buttonBox.button(QtGui.QDialogButtonBox.Apply).setDefault(True)
-        self.verticalLayout.addWidget(self.buttonBox)
-
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), self.accept)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), self.reject)
-        QtCore.QMetaObject.connectSlotsByName(self)
-
-        self.treeWidget.setHeaderItem(item_player)
-        __sortingEnabled = self.treeWidget.isSortingEnabled()
-        self.treeWidget.setSortingEnabled(False)
-
-        self._settingsMenus = {}
-        self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.playerGroupBox
-        self.treeWidget.setCurrentItem(self.treeWidget.topLevelItem(0))
-        self.currentMenu = self.playerGroupBox
+    def _itemChanged(self, current, previous):
+        item_name = current.text(0)
+        if item_name in self._settingsMenus:
+            if self.currentMenu != self._settingsMenus[item_name]:
+                self.currentMenu.setVisible(False)
+                self._settingsMenus[item_name].setVisible(True)
+                self.currentMenu = self._settingsMenus[item_name]

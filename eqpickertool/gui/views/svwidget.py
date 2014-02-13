@@ -132,8 +132,12 @@ class SpanSelector(QtCore.QObject):
                 xmin, xmax = self.fig.axes[0].get_xlim()
                 if xleft < xmin:
                     xleft = xmin
+                elif xleft > xmax:
+                    xleft = xmax
                 if xright > xmax:
                     xright = xmax
+                elif xright < xmin:
+                    xright = xmin
                 if xleft < self.xmin:
                     xleft = self.xmin
                 if xright > self.xmax:
@@ -254,7 +258,7 @@ class EventMarker(QtCore.QObject):
     def set_position(self, value):
         time_in_samples = int(value * self.event.record.fs)
         if time_in_samples != self.position:
-            if 0 <= self.position <= len(self.event.record.signal):
+            if 0 <= time_in_samples <= len(self.event.record.signal):
                 self.position = time_in_samples
                 time_in_seconds = time_in_samples / float(self.event.record.fs)
                 for marker in self.markers:

@@ -66,7 +66,7 @@ class EventListModel(QtCore.QAbstractTableModel):
             time = QtCore.QTime().addMSecs(1000 * data / self.record.fs)
             return time.toString("hh 'h' mm 'm' ss.zzz 's'")
         if attr_name == 'cf_value':
-            return "%.3f" % data
+            return "%.6g" % data
         return "%s" % data
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):

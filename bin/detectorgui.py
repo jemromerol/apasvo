@@ -374,6 +374,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         settings.beginGroup('player_settings')
         fs = int(settings.value('sample_rate', playertoolbar.sample_rates[0]))
         bd = settings.value('bit_depth', playertoolbar.bit_depths[1])
+        settings.endGroup()
         self.toolBarMedia.set_audio_format(fs, bd)
 
     def push_recent_list(self, filename):
