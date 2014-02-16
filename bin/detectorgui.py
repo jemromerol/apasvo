@@ -33,6 +33,7 @@ import matplotlib
 matplotlib.use('Qt4Agg')
 matplotlib.rcParams['backend.qt4'] = 'PySide'
 import numpy as np
+import traceback
 
 from eqpickertool.gui.views.generated import ui_mainwindow
 from eqpickertool.gui.views.generated import qrc_icons
@@ -604,4 +605,9 @@ if __name__ == '__main__':
     app.setWindowIcon(QtGui.QIcon(":/app.png"))
     main = MainWindow()
     main.show()
-    sys.exit(app.exec_())
+    try:
+        app.exec_()
+    except Exception, e:
+        error.display_error_dlg(str(e), traceback.format_exc())
+        sys.exit(1)
+    sys.exit(0)

@@ -69,16 +69,11 @@ class SpanSelector(QtCore.QObject):
         self.active = False
         self.minstep = minstep
 
-        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5, picker=5)
+        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5, picker=5, animated=True)
                           for ax in self.fig.axes]
         for s in self.selectors:
             s.set_visible(False)
 
-#         bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
-#         self.selectorLeftLabel = matplotlib.text.Text(0, 0, "0.00", bbox=bbox)
-#         self.selectorLeftLabel.set_visible(False)
-#         self.selectorRightLabel = matplotlib.text.Text(0, 0, "0.00", bbox=bbox)
-#         self.selectorRightLabel.set_visible(False)
         self.pick_threshold = None
 
         self.press_selector = None
@@ -87,6 +82,10 @@ class SpanSelector(QtCore.QObject):
         self.canvas.mpl_connect('button_press_event', self.onpress)
         self.canvas.mpl_connect('button_release_event', self.onrelease)
         self.canvas.mpl_connect('motion_notify_event', self.onmove)
+
+        self.background = None
+        self.size = None
+        self.animated = False
 
     def on_pick(self, pick_event):
         if self.active:
@@ -102,11 +101,18 @@ class SpanSelector(QtCore.QObject):
                 if self.active:
                     self.set_active(False)
                 self.press_selector = event
-                self.canvas.draw_idle()
+                # Start animation
+                self._set_animated(True)
+                self.canvas.draw()
+                self.background = self.canvas.copy_from_bbox(self.fig.bbox)
+                self.size = (self.fig.bbox.width, self.fig.bbox.height)
+#                self.draw_animate()
 
     def onrelease(self, event):
         if self.canvas.widgetlock.isowner(self):
             self.press_selector = None
+            # End animation
+            self._set_animated(False)
             self.canvas.draw_idle()
             self.canvas.widgetlock.release(self)
 
@@ -120,6 +126,7 @@ class SpanSelector(QtCore.QObject):
                 if not self.active:
                     self.set_active(True)
                 self.set_selector_limits(xleft, xright, adjust_to_viewport=True)
+                self.draw_animate()
 
     def get_xdata(self, event):
         inv = self.fig.axes[0].transData.inverted()
@@ -147,7 +154,6 @@ class SpanSelector(QtCore.QObject):
                 s.xy[:2, 0] = self.xleft
                 s.xy[2:4, 0] = self.xright
             self.valueChanged.emit(self.xleft, self.xright)
-            self.canvas.draw_idle()
 
     def get_selector_limits(self):
         return self.xleft, self.xright
@@ -165,6 +171,25 @@ class SpanSelector(QtCore.QObject):
             for s in self.selectors:
                 s.set_visible(value)
             self.canvas.draw_idle()
+
+    def draw_animate(self):
+        size = self.fig.bbox.width, self.fig.bbox.height
+        if size != self.size:
+            self.size = size
+            self.canvas.draw()
+            self.background = self.canvas.copy_from_bbox(self.fig.bbox)
+        self.canvas.restore_region(self.background)
+        if self.active:
+            for s in self.selectors:
+                if s.get_axes().get_visible() and s.get_visible():
+                    self.fig.draw_artist(s)
+            self.canvas.blit(self.fig.bbox)
+
+    def _set_animated(self, value):
+        if self.animated != value:
+            self.animated = value
+            for s in self.selectors:
+                s.set_animated(value)
 
 
 class EventMarker(QtCore.QObject):
@@ -210,7 +235,11 @@ class EventMarker(QtCore.QObject):
         self.canvas.mpl_connect('button_release_event', self.onrelease)
         self.canvas.mpl_connect('motion_notify_event', self.onmove)
         self.pick_event = None
-        # draw canvas
+
+        self.background = None
+        self.size = None
+        self.animated = False
+
         self.canvas.draw_idle()
 
     def onpick(self, pick_event):
@@ -219,6 +248,13 @@ class EventMarker(QtCore.QObject):
                 if pick_event.mouseevent.button == 1:  # left button clicked
                     self.canvas.widgetlock(self)
                     self.pick_event = pick_event
+                    # Start animation
+                    self._set_animated(True)
+                    self.canvas.draw()
+                    self.background = self.canvas.copy_from_bbox(self.fig.bbox)
+                    self.size = (self.fig.bbox.width, self.fig.bbox.height)
+                    self.draw_animate()
+
                     xfig, yfig = self._event_to_fig_coords(pick_event.mouseevent)
                     self.position_label.set_position((xfig, yfig))
                     self.event_selected.emit(self.event)
@@ -230,7 +266,10 @@ class EventMarker(QtCore.QObject):
         if self.canvas.widgetlock.isowner(self):
             self.position_label.set_visible(False)
             self.pick_event = None
+            # End animation
+            self._set_animated(False)
             self.canvas.draw_idle()
+
             self.canvas.widgetlock.release(self)
             if self.position != self.event.time:
                 self.document.editEvent(self.event, time=self.position,
@@ -244,7 +283,7 @@ class EventMarker(QtCore.QObject):
             xfig, yfig = self._event_to_fig_coords(mouse_event)
             self.position_label.set_position((xfig, yfig))
             self.position_label.set_visible(True)
-            self.canvas.draw_idle()
+            self.draw_animate()
 
     def get_xdata(self, event):
         inv = self.fig.axes[0].transData.inverted()
@@ -290,6 +329,27 @@ class EventMarker(QtCore.QObject):
                 marker.set(color=color)
             self.redraw()
 
+    def draw_animate(self):
+        size = self.fig.bbox.width, self.fig.bbox.height
+        if size != self.size:
+            self.size = size
+            self.canvas.draw()
+            self.background = self.canvas.copy_from_bbox(self.fig.bbox)
+        self.canvas.restore_region(self.background)
+        for marker in self.markers:
+            if marker.get_axes().get_visible() and marker.get_visible():
+                self.fig.draw_artist(marker)
+        if self.position_label.get_visible():
+            self.fig.draw_artist(self.position_label)
+        self.canvas.blit(self.fig.bbox)
+
+    def _set_animated(self, value):
+        if self.animated != value:
+            self.animated = value
+            for marker in self.markers:
+                marker.set_animated(value)
+            self.position_label.set_animated(value)
+
 
 class ThresholdMarker(QtCore.QObject):
     """Plots an horizontal line marker on a SignalViewerWidget to
@@ -328,6 +388,10 @@ class ThresholdMarker(QtCore.QObject):
         self.canvas.mpl_connect('button_release_event', self.onrelease)
         self.canvas.mpl_connect('motion_notify_event', self.onmove)
 
+        self.background = None
+        self.size = None
+        self.animated = False
+
     def onpick(self, event):
         if self.active:
             if event.mouseevent.button == 1:  # left button clicked
@@ -339,13 +403,19 @@ class ThresholdMarker(QtCore.QObject):
                         # Draw legend
                         self.figThresholdLabel.set_position((xdata, ydata))
                         self.figThresholdLabel.set_visible(True)
-                        self.canvas.draw_idle()
+                        # Start animation
+                        self._set_animated(True)
+                        self.canvas.draw()
+                        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
 
     def onrelease(self, event):
         if self.canvas.widgetlock.isowner(self):
             self.figThresholdLabel.set_visible(False)
             self.pick_threshold = None
+            # End animation
+            self._set_animated(False)
             self.canvas.draw_idle()
+
             self.canvas.widgetlock.release(self)
 
     def onmove(self, event):
@@ -354,7 +424,7 @@ class ThresholdMarker(QtCore.QObject):
             self.set_threshold(round(ydata, 2))
             # Draw legend
             self.figThresholdLabel.set_position((xdata, ydata))
-            self.canvas.draw_idle()
+            self.draw_animate()
 
     def get_data(self, event):
         inv = self.ax.transData.inverted()
@@ -391,6 +461,25 @@ class ThresholdMarker(QtCore.QObject):
 
     def get_visible(self):
         return self.active
+
+    def draw_animate(self):
+        size = self.ax.bbox.width, self.ax.bbox.height
+        if size != self.size:
+            self.size = size
+            self.canvas.draw()
+            self.background = self.canvas.copy_from_bbox(self.ax.bbox)
+        self.canvas.restore_region(self.background)
+        if self.ax.get_visible() and self.figThreshold.get_visible():
+            self.ax.draw_artist(self.figThreshold)
+        if self.figThresholdLabel.get_visible():
+            self.ax.draw_artist(self.figThresholdLabel)
+        self.canvas.blit(self.ax.bbox)
+
+    def _set_animated(self, value):
+        if self.animated != value:
+            self.animated = value
+            self.figThreshold.set_animated(value)
+            self.figThresholdLabel.set_animated(value)
 
 
 class PlayBackMarker(QtCore.QObject):
@@ -833,6 +922,14 @@ class SignalViewerWidget(QtGui.QWidget):
 
     def draw_idle(self):
         self.canvas.draw_idle()
+        self.minimap.draw_animate()
+
+    def showEvent(self, event):
+        self.canvas.draw()
+        self.minimap.draw_animate()
+
+    def resizeEvent(self, event):
+        self.canvas.draw()
         self.minimap.draw_animate()
 
     def set_signal_amplitude_visible(self, show_sa):
