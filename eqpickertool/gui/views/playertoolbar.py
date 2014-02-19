@@ -136,7 +136,6 @@ class PlayerToolBar(QtGui.QToolBar):
         self.labelStart = QtGui.QLabel(" Start:", self)
         self.tsbStart = QtGui.QTimeEdit(self)
         self.tsbStart.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
-        self.tsbStart.setMinimumTime(QtCore.QTime().addSecs(0))
         self.labelEnd = QtGui.QLabel(" End:", self)
         self.tsbEnd = QtGui.QTimeEdit(self)
         self.tsbEnd.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
@@ -233,27 +232,25 @@ class PlayerToolBar(QtGui.QToolBar):
             raise UnboundLocalError("Data not initialized.")
         t_from = int(max(0, t_from) * self.data_fs)
         t_to = int(min(len(self.data), t_to) * self.data_fs)
-        if t_from > t_to:
+        if not 0 <= t_from <= t_to <= len(self.data):
             raise ValueError("t_to must be greater or equal than t_from")
-        if (t_from, t_to) != (self._start, self._end):
-            if t_from == t_to:
-                self.toggle_interval_selected(False)
-                self._start = 0
-                self._end = len(self.data)
-            else:
+        if t_from != t_to:
+            if (t_from, t_to) != (self._start, self._end):
                 self.toggle_interval_selected(True)
                 self._start = t_from
                 self._end = t_to
-            self.buffer_loaded = False
-            self.intervalChanged.emit(self._start / self.data_fs, self._end / self.data_fs)
-            # update ui
-            self._update_qtimeedit_range()
+                self.buffer_loaded = False
+                self.intervalChanged.emit(self._start / self.data_fs, self._end / self.data_fs)
+                # update ui
+                self._update_qtimeedit_range()
 
     def _update_qtimeedit_range(self):
         t_start = QtCore.QTime().addMSecs(int((self._start / self.data_fs) * 1000))
         t_end = QtCore.QTime().addMSecs(int((self._end / self.data_fs) * 1000))
         self.tsbStart.setTime(t_start)
+        self.tsbEnd.setMinimumTime(t_start)
         self.tsbEnd.setTime(t_end)
+        self.tsbStart.setMaximumTime(t_end)
 
     def on_tick(self, value):
         if self.data_loaded and self.buffer_loaded:

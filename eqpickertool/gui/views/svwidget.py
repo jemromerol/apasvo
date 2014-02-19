@@ -59,17 +59,17 @@ class SpanSelector(QtCore.QObject):
     valueChanged = QtCore.Signal(float, float)
     right_clicked = QtCore.Signal()
 
-    def __init__(self, fig, xmin=0.0, xmax=0.0, minstep=0.01):
+    def __init__(self, fig, fs=50.0, xmin=0.0, xmax=0.0):
         super(SpanSelector, self).__init__()
         self.fig = fig
-        self.xleft = 0.0
-        self.xright = 0.0
-        self.xmin = xmin
-        self.xmax = xmax
+        self._xleft_in_samples = 0
+        self._xright_in_samples = 0
+        self.fs = fs
+        self._xmin_in_samples = int(xmin * self.fs)
+        self._xmax_in_samples = int(xmax * self.fs)
         self.active = False
-        self.minstep = minstep
 
-        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5, picker=5, animated=True)
+        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5, picker=5)
                           for ax in self.fig.axes]
         for s in self.selectors:
             s.set_visible(False)
@@ -84,8 +84,31 @@ class SpanSelector(QtCore.QObject):
         self.canvas.mpl_connect('motion_notify_event', self.onmove)
 
         self.background = None
-        self.size = None
         self.animated = False
+
+    @property
+    def xleft(self):
+        return self._xleft_in_samples / self.fs
+
+    @property
+    def xright(self):
+        return self._xright_in_samples / self.fs
+
+    @property
+    def xmin(self):
+        return self._xmin_in_samples / self.fs
+
+    @property
+    def xmax(self):
+        return self._xmax_in_samples / self.fs
+
+    @xmin.setter
+    def xmin(self, value):
+        self._xmin_in_samples = int(value * self.fs)
+
+    @xmax.setter
+    def xmax(self, value):
+        self._xmax_in_samples = int(value * self.fs)
 
     def on_pick(self, pick_event):
         if self.active:
@@ -103,30 +126,26 @@ class SpanSelector(QtCore.QObject):
                 self.press_selector = event
                 # Start animation
                 self._set_animated(True)
-                self.canvas.draw()
-                self.background = self.canvas.copy_from_bbox(self.fig.bbox)
-                self.size = (self.fig.bbox.width, self.fig.bbox.height)
-#                self.draw_animate()
+                xpos = self.get_xdata(self.press_selector)
+                self.set_selector_limits(xpos, xpos, adjust_to_viewport=True)
 
     def onrelease(self, event):
         if self.canvas.widgetlock.isowner(self):
             self.press_selector = None
             # End animation
             self._set_animated(False)
-            self.canvas.draw_idle()
+            self.draw()
             self.canvas.widgetlock.release(self)
 
     def onmove(self, event):
         if self.press_selector is not None:
-            xleft = round(self.get_xdata(self.press_selector), 3)
-            xright = round(self.get_xdata(event), 3)
+            xleft = self.get_xdata(self.press_selector)
+            xright = self.get_xdata(event)
             if xright < xleft:
                 xleft, xright = xright, xleft
-            if xright - xleft >= self.minstep:
-                if not self.active:
-                    self.set_active(True)
-                self.set_selector_limits(xleft, xright, adjust_to_viewport=True)
-                self.draw_animate()
+            if not self.active:
+                self.set_active(True)
+            self.set_selector_limits(xleft, xright, adjust_to_viewport=True)
 
     def get_xdata(self, event):
         inv = self.fig.axes[0].transData.inverted()
@@ -134,9 +153,12 @@ class SpanSelector(QtCore.QObject):
         return xdata
 
     def set_selector_limits(self, xleft, xright, adjust_to_viewport=False):
-        if (xleft, xright) != (self.xleft, self.xright):
+        xleft = int(xleft * self.fs)
+        xright = int(xright * self.fs)
+        if (xleft, xright) != (self._xleft_in_samples, self._xright_in_samples):
             if adjust_to_viewport:
                 xmin, xmax = self.fig.axes[0].get_xlim()
+                xmin, xmax = int(xmin * self.fs), int(xmax * self.fs)
                 if xleft < xmin:
                     xleft = xmin
                 elif xleft > xmax:
@@ -145,15 +167,16 @@ class SpanSelector(QtCore.QObject):
                     xright = xmax
                 elif xright < xmin:
                     xright = xmin
-                if xleft < self.xmin:
-                    xleft = self.xmin
-                if xright > self.xmax:
-                    xright = self.xmax
-            self.xleft, self.xright = xleft, xright
+                if xleft < self._xmin_in_samples:
+                    xleft = self._xmin_in_samples
+                if xright > self._xmax_in_samples:
+                    xright = self._xmax_in_samples
+            self._xleft_in_samples, self._xright_in_samples = xleft, xright
             for s in self.selectors:
                 s.xy[:2, 0] = self.xleft
                 s.xy[2:4, 0] = self.xright
             self.valueChanged.emit(self.xleft, self.xright)
+            self.draw()
 
     def get_selector_limits(self):
         return self.xleft, self.xright
@@ -170,18 +193,19 @@ class SpanSelector(QtCore.QObject):
             self.toggled.emit(value)
             for s in self.selectors:
                 s.set_visible(value)
+            self.draw()
+
+    def draw(self):
+        if self.animated:
+            self.draw_animate()
+        else:
             self.canvas.draw_idle()
 
     def draw_animate(self):
-        size = self.fig.bbox.width, self.fig.bbox.height
-        if size != self.size:
-            self.size = size
-            self.canvas.draw()
-            self.background = self.canvas.copy_from_bbox(self.fig.bbox)
         self.canvas.restore_region(self.background)
         if self.active:
             for s in self.selectors:
-                if s.get_axes().get_visible() and s.get_visible():
+                if s.get_axes().get_visible():
                     self.fig.draw_artist(s)
             self.canvas.blit(self.fig.bbox)
 
@@ -190,6 +214,9 @@ class SpanSelector(QtCore.QObject):
             self.animated = value
             for s in self.selectors:
                 s.set_animated(value)
+            if self.animated == True:
+                self.canvas.draw()
+                self.background = self.canvas.copy_from_bbox(self.fig.bbox)
 
 
 class EventMarker(QtCore.QObject):
@@ -405,7 +432,7 @@ class ThresholdMarker(QtCore.QObject):
                         self.figThresholdLabel.set_visible(True)
                         # Start animation
                         self._set_animated(True)
-                        self.canvas.draw()
+                        self.canvas.draw_idle()
                         self.background = self.canvas.copy_from_bbox(self.ax.bbox)
 
     def onrelease(self, event):
@@ -451,7 +478,10 @@ class ThresholdMarker(QtCore.QObject):
                 self.figThreshold.set_ydata(self.threshold)
                 self.figThresholdLabel.set_text("Threshold: %.2f" % self.threshold)
                 if self.figThreshold.get_visible():
-                    self.canvas.draw_idle()
+                    if self.animated:
+                        self.draw_animate()
+                    else:
+                        self.canvas.draw_idle()
 
     def set_visible(self, value):
         if self.active != value:
@@ -466,7 +496,7 @@ class ThresholdMarker(QtCore.QObject):
         size = self.ax.bbox.width, self.ax.bbox.height
         if size != self.size:
             self.size = size
-            self.canvas.draw()
+            self.canvas.draw_idle()
             self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.canvas.restore_region(self.background)
         if self.ax.get_visible() and self.figThreshold.get_visible():
@@ -795,6 +825,7 @@ class SignalViewerWidget(QtGui.QWidget):
         # Plot espectrogram
         plotting.plot_specgram(self.specgram_ax, self.signal, self.fs)
         # Set the span selector
+        self.selector.fs = self.fs
         self.selector.set_active(False)
         self.selector.set_selection_limits(self.xmin, self.xmax)
         # Set the playback marker
