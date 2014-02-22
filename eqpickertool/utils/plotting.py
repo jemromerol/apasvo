@@ -49,7 +49,7 @@ def plot_specgram(ax, data, fs, nfft=256, overlap=0.9, cmap='jet',
 def reduce_data(x, y, width, xmin, xmax):
     if len(x) != len(y):
         raise ValueError("x and y must have the same length.")
-    xmax = min(len(x) - 1, xmax)
+    xmax = min(len(x) - 1, xmax + 2)
     n_points = 2 * width
     data_size = xmax - xmin
 
