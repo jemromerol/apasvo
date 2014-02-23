@@ -25,6 +25,18 @@
 '''
 
 import sys
+import datetime
+
+
+def float_secs_2_string_date(x):
+    """"""
+    times = str(datetime.timedelta(seconds=x)).split('.')
+    if len(times) == 1:
+        return times[0]
+    elif len(times) == 2:
+        return "%s.%s" % (times[0], times[1][:-3])
+    else:
+        raise ValueError("input float value could not be formated")
 
 
 def print_msg(msg):

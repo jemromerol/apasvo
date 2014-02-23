@@ -162,7 +162,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionEspectrogram.toggled.connect(self.signalViewer.set_espectrogram_visible)
         self.actionCharacteristic_Function.toggled.connect(self.signalViewer.set_cf_visible)
         self.actionSignal_MiniMap.toggled.connect(self.signalViewer.set_minimap_visible)
-        self.signalViewer.selector.toggled.connect(self.actionTakanami.setEnabled)
+        self.signalViewer.selector.toggled.connect(self.on_selection_toggled)
+        self.signalViewer.selector.valueChanged.connect(self.on_selection_changed)
         self.signalViewer.CF_loaded.connect(self.actionCharacteristic_Function.setEnabled)
         self.signalViewer.CF_loaded.connect(self.actionCharacteristic_Function.setChecked)
         self.signalViewer.event_selected.connect(self.on_event_picked)
@@ -598,6 +599,16 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.EventsTableView.selectionModel().select(self.document.index(self.document.indexOf(event), 0),
                                                          QtGui.QItemSelectionModel.Select |
                                                          QtGui.QItemSelectionModel.Rows)
+
+    def on_selection_toggled(self, value):
+        self.on_selection_changed(*self.signalViewer.get_selector_limits())
+
+    def on_selection_changed(self, xleft, xright):
+        selection_length = abs(xleft - xright)
+        enable_takanami = (self.signalViewer.selector.active and
+                           (selection_length >= (takanamidialog.MINIMUM_MARGIN_IN_SECS * 2)))
+        self.actionTakanami.setEnabled(enable_takanami)
+
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)

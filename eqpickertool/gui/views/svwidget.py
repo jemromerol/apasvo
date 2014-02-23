@@ -36,6 +36,7 @@ from eqpickertool.gui.views import takanamidialog
 from eqpickertool.picking import envelope as env
 from eqpickertool.picking import record as rc
 from eqpickertool.utils import plotting
+from eqpickertool.utils import clt
 
 
 class SpanSelector(QtCore.QObject):
@@ -197,11 +198,11 @@ class SpanSelector(QtCore.QObject):
 
     def draw(self):
         if self.animated:
-            self.draw_animate()
+            self._draw_animate()
         else:
             self.canvas.draw_idle()
 
-    def draw_animate(self):
+    def _draw_animate(self):
         self.canvas.restore_region(self.background)
         if self.active:
             for s in self.selectors:
@@ -263,8 +264,8 @@ class EventMarker(QtCore.QObject):
         self.canvas.mpl_connect('motion_notify_event', self.onmove)
         self.pick_event = None
 
+        # Animation related attrs.
         self.background = None
-        self.size = None
         self.animated = False
 
         self.canvas.draw_idle()
@@ -277,10 +278,7 @@ class EventMarker(QtCore.QObject):
                     self.pick_event = pick_event
                     # Start animation
                     self._set_animated(True)
-                    self.canvas.draw()
-                    self.background = self.canvas.copy_from_bbox(self.fig.bbox)
-                    self.size = (self.fig.bbox.width, self.fig.bbox.height)
-                    self.draw_animate()
+                    self.draw()
 
                     xfig, yfig = self._event_to_fig_coords(pick_event.mouseevent)
                     self.position_label.set_position((xfig, yfig))
@@ -295,7 +293,7 @@ class EventMarker(QtCore.QObject):
             self.pick_event = None
             # End animation
             self._set_animated(False)
-            self.canvas.draw_idle()
+            self.draw()
 
             self.canvas.widgetlock.release(self)
             if self.position != self.event.time:
@@ -310,7 +308,7 @@ class EventMarker(QtCore.QObject):
             xfig, yfig = self._event_to_fig_coords(mouse_event)
             self.position_label.set_position((xfig, yfig))
             self.position_label.set_visible(True)
-            self.draw_animate()
+            self.draw()
 
     def get_xdata(self, event):
         inv = self.fig.axes[0].transData.inverted()
@@ -341,12 +339,12 @@ class EventMarker(QtCore.QObject):
         self.position = self.event.time
         for marker in self.markers:
             marker.set_xdata(self.position / float(self.event.record.fs))
-        self.canvas.draw_idle()
+        self.draw()
 
     def remove(self):
         for ax, marker in zip(self.fig.axes, self.markers):
             ax.lines.remove(marker)
-        self.canvas.draw_idle()
+        self.draw()
 
     def set_selected(self, value):
         if self.selected != value:
@@ -356,12 +354,13 @@ class EventMarker(QtCore.QObject):
                 marker.set(color=color)
             self.redraw()
 
-    def draw_animate(self):
-        size = self.fig.bbox.width, self.fig.bbox.height
-        if size != self.size:
-            self.size = size
-            self.canvas.draw()
-            self.background = self.canvas.copy_from_bbox(self.fig.bbox)
+    def draw(self):
+        if self.animated:
+            self._draw_animate()
+        else:
+            self.canvas.draw_idle()
+
+    def _draw_animate(self):
         self.canvas.restore_region(self.background)
         for marker in self.markers:
             if marker.get_axes().get_visible() and marker.get_visible():
@@ -376,6 +375,9 @@ class EventMarker(QtCore.QObject):
             for marker in self.markers:
                 marker.set_animated(value)
             self.position_label.set_animated(value)
+            if self.animated == True:
+                self.canvas.draw()
+                self.background = self.canvas.copy_from_bbox(self.fig.bbox)
 
 
 class ThresholdMarker(QtCore.QObject):
@@ -415,8 +417,8 @@ class ThresholdMarker(QtCore.QObject):
         self.canvas.mpl_connect('button_release_event', self.onrelease)
         self.canvas.mpl_connect('motion_notify_event', self.onmove)
 
+        # Animation related attrs.
         self.background = None
-        self.size = None
         self.animated = False
 
     def onpick(self, event):
@@ -432,8 +434,7 @@ class ThresholdMarker(QtCore.QObject):
                         self.figThresholdLabel.set_visible(True)
                         # Start animation
                         self._set_animated(True)
-                        self.canvas.draw_idle()
-                        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
+                        self.draw()
 
     def onrelease(self, event):
         if self.canvas.widgetlock.isowner(self):
@@ -441,7 +442,7 @@ class ThresholdMarker(QtCore.QObject):
             self.pick_threshold = None
             # End animation
             self._set_animated(False)
-            self.canvas.draw_idle()
+            self.draw()
 
             self.canvas.widgetlock.release(self)
 
@@ -451,7 +452,7 @@ class ThresholdMarker(QtCore.QObject):
             self.set_threshold(round(ydata, 2))
             # Draw legend
             self.figThresholdLabel.set_position((xdata, ydata))
-            self.draw_animate()
+            self.draw()
 
     def get_data(self, event):
         inv = self.ax.transData.inverted()
@@ -477,27 +478,24 @@ class ThresholdMarker(QtCore.QObject):
                 self.thresholdChanged.emit(self.threshold)
                 self.figThreshold.set_ydata(self.threshold)
                 self.figThresholdLabel.set_text("Threshold: %.2f" % self.threshold)
-                if self.figThreshold.get_visible():
-                    if self.animated:
-                        self.draw_animate()
-                    else:
-                        self.canvas.draw_idle()
+                self.draw()
 
     def set_visible(self, value):
         if self.active != value:
             self.figThreshold.set_visible(value)
             self.active = value
-            self.canvas.draw_idle()
+            self.draw()
 
     def get_visible(self):
         return self.active
 
-    def draw_animate(self):
-        size = self.ax.bbox.width, self.ax.bbox.height
-        if size != self.size:
-            self.size = size
+    def draw(self):
+        if self.animated:
+            self._draw_animate()
+        else:
             self.canvas.draw_idle()
-            self.background = self.canvas.copy_from_bbox(self.ax.bbox)
+
+    def _draw_animate(self):
         self.canvas.restore_region(self.background)
         if self.ax.get_visible() and self.figThreshold.get_visible():
             self.ax.draw_artist(self.figThreshold)
@@ -510,6 +508,9 @@ class ThresholdMarker(QtCore.QObject):
             self.animated = value
             self.figThreshold.set_animated(value)
             self.figThresholdLabel.set_animated(value)
+            if self.animated == True:
+                self.canvas.draw()
+                self.background = self.canvas.copy_from_bbox(self.ax.bbox)
 
 
 class PlayBackMarker(QtCore.QObject):
@@ -605,6 +606,9 @@ class MiniMap(QtGui.QWidget):
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.minimapCanvas)
 
+        # Animation related attributes
+        self.parentViewer = parent
+
         self.record = None
         if record is not None:
             self.set_record(record)
@@ -633,10 +637,16 @@ class MiniMap(QtGui.QWidget):
         xdata = round(self.get_xdata(event), 2)
         xmin = round(xdata - (self.step / 2.0), 2)
         xmax = round(xdata + (self.step / 2.0), 2)
+
+        # Animate parent
+        self.parentViewer._set_animated(True)
         self.set_selector_limits(xmin, xmax)
 
     def onrelease(self, event):
         self.press_selector = None
+
+        # Finish parent animation
+        self.parentViewer._set_animated(False)
 
     def onmove(self, event):
         if self.press_selector is not None:
@@ -651,22 +661,26 @@ class MiniMap(QtGui.QWidget):
         return xdata
 
     def set_selector_limits(self, xmin, xmax):
-        self.step = xmax - xmin
-        if self.step >= self.xmax - self.xmin:
-            xleft = self.xmin
-            xright = self.xmax
-        if xmin < self.xmin:
-            xleft = self.xmin
-            xright = self.step
-        elif xmax > self.xmax:
-            xleft = self.xmax - self.step
-            xright = self.xmax
+        if (xmin, xmax) != (self.minimapSelector.xy[1, 0], self.minimapSelector.xy[2, 0]):
+            self.step = xmax - xmin
+            if self.step >= self.xmax - self.xmin:
+                xleft = self.xmin
+                xright = self.xmax
+            if xmin < self.xmin:
+                xleft = self.xmin
+                xright = self.step
+            elif xmax > self.xmax:
+                xleft = self.xmax - self.step
+                xright = self.xmax
+            else:
+                xleft = xmin
+                xright = xmax
+            self.minimapSelector.xy[:2, 0] = xleft
+            self.minimapSelector.xy[2:4, 0] = xright
+            self.ax.set_xlim(xleft, xright)
+            self.draw_animate()
         else:
-            xleft = xmin
-            xright = xmax
-        self.minimapSelector.xy[:2, 0] = xleft
-        self.minimapSelector.xy[2:4, 0] = xright
-        self.ax.set_xlim(xleft, xright)
+            self.parentViewer.draw()
 
     def get_selector_limits(self):
         return self.minimapSelector.xy[0, 0], self.minimapSelector.xy[2, 0]
@@ -714,6 +728,8 @@ class SignalViewerWidget(QtGui.QWidget):
 
         self.xmin = 0.0
         self.xmax = 0.0
+        self.xleft = 0.0
+        self.xright = 0.0
         self.time = np.array([])
 
         self.fs = 0.0
@@ -725,7 +741,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self._envelope_data = None
         self._cf_data = None
 
-        self.fig, _ = plt.subplots(3, 1, sharex=True)
+        self.fig, _ = plt.subplots(3, 1)
 
         self.signal_ax = self.fig.axes[0]
         self.cf_ax = self.fig.axes[1]
@@ -744,6 +760,10 @@ class SignalViewerWidget(QtGui.QWidget):
         self.selector = SpanSelector(self.fig)
         self.minimap = MiniMap(self, self.signal_ax, None)
 
+        # Animation related attributes
+        self.background = None
+        self.animated = False
+
         # Create context menus
         self.event_context_menu = QtGui.QMenu(self)
         self.takanami_on_event_action = QtGui.QAction("Apply Takanami to Event", self)
@@ -759,7 +779,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.takanami_on_selection_action.triggered.connect(self.apply_takanami_to_selection)
 
         # format axes
-        formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
+        formatter = FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
         for ax in self.fig.axes:
             ax.callbacks.connect('xlim_changed', self.on_xlim_change)
             ax.xaxis.set_major_formatter(formatter)
@@ -805,12 +825,12 @@ class SignalViewerWidget(QtGui.QWidget):
         # Plot signal
         self._signal_data = self.signal_ax.plot(self.time,
                                                   self.signal,
-                                                  color='black',
+                                                  color='blue',
                                                   rasterized=True)[0]
         # Plot envelope
         self._envelope_data = self.signal_ax.plot(self.time,
                                                     self.envelope,
-                                                    color='red',
+                                                    color='green',
                                                     rasterized=True)[0]
         plotting.adjust_axes_height(self.signal_ax)
         # Plot CF
@@ -883,52 +903,59 @@ class SignalViewerWidget(QtGui.QWidget):
 
     def on_xlim_change(self, ax):
         xmin, xmax = ax.get_xlim()
-        if self.xmin <= xmin <= xmax <= self.xmax:
-            # Update minimap selector
-            if (xmin, xmax) != self.minimap.get_selector_limits():
-                self.minimap.set_selector_limits(xmin, xmax)
+        if (self.xleft, self.xright) != (xmin, xmax):
+            self.xleft, self.xright = xmin, xmax
+            if self.xmin <= xmin <= xmax <= self.xmax:
+                # Update minimap selector
+                if (xmin, xmax) != self.minimap.get_selector_limits():
+                    self.minimap.set_selector_limits(xmin, xmax)
 
-            # Update data
-            xmin = int(max(0, xmin) * self.fs)
-            xmax = int(min(self.xmax, xmax) * self.fs)
+                # Update axes
+                for axes in self.fig.axes:
+                    if ax != axes:
+                        axes.set_xlim(xmin, xmax)
 
-            pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
+                # Update data
+                xmin = int(max(0, xmin) * self.fs)
+                xmax = int(min(self.xmax, xmax) * self.fs)
 
-            if self._signal_data is not None:
-                x_data, y_data = plotting.reduce_data(self.time, self.signal,
-                                                      pixel_width, xmin, xmax)
-                self._signal_data.set_xdata(x_data)
-                self._signal_data.set_ydata(y_data)
+                pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
 
-            if self._envelope_data is not None:
-                x_data, y_data = plotting.reduce_data(self.time, self.envelope,
-                                                      pixel_width, xmin, xmax)
-                self._envelope_data.set_xdata(x_data)
-                self._envelope_data.set_ydata(y_data)
+                if self._signal_data is not None:
+                    x_data, y_data = plotting.reduce_data(self.time, self.signal,
+                                                          pixel_width, xmin, xmax)
+                    self._signal_data.set_xdata(x_data)
+                    self._signal_data.set_ydata(y_data)
 
-            if self._cf_data is not None and self.cf_ax.get_visible():
-                x_data, y_data = plotting.reduce_data(self.time[:len(self.cf)],
-                                                      self.cf, pixel_width,
-                                                      xmin, xmax)
-                self._cf_data.set_xdata(x_data)
-                self._cf_data.set_ydata(y_data)
+                if self._envelope_data is not None:
+                    x_data, y_data = plotting.reduce_data(self.time, self.envelope,
+                                                          pixel_width, xmin, xmax)
+                    self._envelope_data.set_xdata(x_data)
+                    self._envelope_data.set_ydata(y_data)
 
-            # Draw graph
-            self.draw_idle()
-        else:
-            xmin = max(self.xmin, xmin)
-            xmax = min(self.xmax, xmax)
-            ax.set_xlim(xmin, xmax)
+                if self._cf_data is not None and self.cf_ax.get_visible():
+                    x_data, y_data = plotting.reduce_data(self.time[:len(self.cf)],
+                                                          self.cf, pixel_width,
+                                                          xmin, xmax)
+                    self._cf_data.set_xdata(x_data)
+                    self._cf_data.set_ydata(y_data)
+                # Draw graph
+                self.draw()
+
+            else:
+                xmin = max(self.xmin, xmin)
+                xmax = min(self.xmax, xmax)
+                ax.set_xlim(xmin, xmax)
 
     def on_ylim_change(self, ax):
         if self.data_loaded:
             if ax == self.specgram_ax:
                 ymin, ymax = ax.get_ylim()
                 nyquist_freq = (self.fs / 2.0)
-                if not 0.0 <= ymin <= ymax <= nyquist_freq:
-                    ymin = max(0.0, ymin)
-                    ymax = min(nyquist_freq, ymax)
-                    ax.set_ylim(ymin, ymax)
+                if ymin < 0.0:
+                    ax.set_ylim(0.0, ymax)
+                elif ymax > nyquist_freq:
+                    ax.set_ylim(ymin, nyquist_freq)
 
     def set_event_selection(self, events):
         for event in self.eventMarkers:
@@ -951,16 +978,12 @@ class SignalViewerWidget(QtGui.QWidget):
         if event in self.eventMarkers:
             self.set_position(event.time / self.fs)
 
-    def draw_idle(self):
-        self.canvas.draw_idle()
-        self.minimap.draw_animate()
-
     def showEvent(self, event):
-        self.canvas.draw()
+        self.draw()
         self.minimap.draw_animate()
 
     def resizeEvent(self, event):
-        self.canvas.draw()
+        self.draw()
         self.minimap.draw_animate()
 
     def set_signal_amplitude_visible(self, show_sa):
@@ -972,7 +995,7 @@ class SignalViewerWidget(QtGui.QWidget):
                 self.signal_ax.set_visible(show_axis)
                 if self.data_loaded:
                     self.subplots_adjust()
-                    self.draw_idle()
+                    self.draw()
 
     def set_signal_envelope_visible(self, show_se):
         if self._signal_data is not None and self._envelope_data is not None:
@@ -983,7 +1006,7 @@ class SignalViewerWidget(QtGui.QWidget):
                 self.signal_ax.set_visible(show_axis)
                 if self.data_loaded:
                     self.subplots_adjust()
-                    self.draw_idle()
+                    self.draw()
 
     def set_cf_visible(self, show_cf):
         if self.cf_ax.get_visible() != show_cf:
@@ -993,14 +1016,14 @@ class SignalViewerWidget(QtGui.QWidget):
                 else:
                     self.cf_ax.set_visible(show_cf)
                     self.subplots_adjust()
-                    self.draw_idle()
+                    self.draw()
 
     def set_espectrogram_visible(self, show_eg):
         if self.specgram_ax.get_visible() != show_eg:
             self.specgram_ax.set_visible(show_eg)
             if self.data_loaded:
                 self.subplots_adjust()
-                self.draw_idle()
+                self.draw()
 
     def set_minimap_visible(self, show_mm):
         if self.minimap.get_visible() != show_mm:
@@ -1011,7 +1034,7 @@ class SignalViewerWidget(QtGui.QWidget):
         if self.thresholdMarker:
             if self.thresholdMarker.get_visible() != show_thr:
                 self.thresholdMarker.set_visible(show_thr)
-                self.draw_idle()
+                self.draw()
 
     def subplots_adjust(self):
         visible_subplots = [ax for ax in self.fig.get_axes() if ax.get_visible()]
@@ -1054,8 +1077,52 @@ class SignalViewerWidget(QtGui.QWidget):
             time = (xleft + ((xright - xleft) / 2.0))
         self.document.createEvent(time=time)
 
+    def draw(self):
+        if self.animated:
+            self._draw_animate()
+        else:
+            self.canvas.draw_idle()
 
+    def _draw_animate(self):
+        self.canvas.restore_region(self.background)
+        for artist in self._get_animated_artists():
+            if artist.get_visible():
+                ax = artist.get_axes()
+                if ax is not None:
+                    if artist.get_axes().get_visible():
+                        self.fig.draw_artist(artist)
+                else:
+                    self.fig.draw_artist(artist)
+        self.canvas.blit(self.fig.bbox)
 
+    def _set_animated(self, value):
+        if self.animated != value:
+            self.animated = value
+            for artist in self._get_animated_artists():
+                artist.set_animated(value)
+            if self.animated == True:
+                images = []
+                for ax in self.fig.axes:
+                    images.extend(ax.images)
+                for image in images:
+                    image.set_visible(False)
+
+                self.canvas.draw()
+                self.background = self.canvas.copy_from_bbox(self.fig.bbox)
+
+                for image in images:
+                    image.set_visible(True)
+
+    def _get_animated_artists(self):
+        artists = []
+        for ax in self.fig.axes:
+            artists.extend(ax.lines)
+            artists.extend(ax.images)
+            artists.append(ax.xaxis)
+            artists.append(ax.yaxis)
+            artists.extend(ax.patches)
+        for artist in artists:
+            yield artist
 
 
 
