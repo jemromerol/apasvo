@@ -36,6 +36,7 @@ from eqpickertool.gui.views import takanamidialog
 from eqpickertool.picking import envelope as env
 from eqpickertool.picking import record as rc
 from eqpickertool.utils import plotting
+from eqpickertool.utils import clt
 
 
 class SpanSelector(QtCore.QObject):
@@ -778,7 +779,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.takanami_on_selection_action.triggered.connect(self.apply_takanami_to_selection)
 
         # format axes
-        formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
+        formatter = FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
         for ax in self.fig.axes:
             ax.callbacks.connect('xlim_changed', self.on_xlim_change)
             ax.xaxis.set_major_formatter(formatter)
@@ -951,10 +952,10 @@ class SignalViewerWidget(QtGui.QWidget):
             if ax == self.specgram_ax:
                 ymin, ymax = ax.get_ylim()
                 nyquist_freq = (self.fs / 2.0)
-                if not 0.0 <= ymin <= ymax <= nyquist_freq:
-                    ymin = max(0.0, ymin)
-                    ymax = min(nyquist_freq, ymax)
-                    ax.set_ylim(ymin, ymax)
+                if ymin < 0.0:
+                    ax.set_ylim(0.0, ymax)
+                elif ymax > nyquist_freq:
+                    ax.set_ylim(ymin, nyquist_freq)
 
     def set_event_selection(self, events):
         for event in self.eventMarkers:

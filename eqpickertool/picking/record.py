@@ -34,6 +34,7 @@ import datetime
 from eqpickertool.picking import takanami
 from eqpickertool.picking import envelope as env
 from eqpickertool.utils.formats import rawfile
+from eqpickertool.utils import clt
 
 method_other = 'other'
 method_takanami = 'Takanami'
@@ -201,8 +202,9 @@ class Event(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
             ax.xaxis.set_major_formatter(formatter)
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(prune='lower'))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw signal
@@ -473,8 +475,9 @@ class Record(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
             ax.xaxis.set_major_formatter(formatter)
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(prune='lower'))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw axes
