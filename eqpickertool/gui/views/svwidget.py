@@ -69,6 +69,7 @@ class SpanSelector(QtCore.QObject):
         self._xmin_in_samples = int(xmin * self.fs)
         self._xmax_in_samples = int(xmax * self.fs)
         self.active = False
+        self.enabled = True
 
         self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5, picker=5)
                           for ax in self.fig.axes]
@@ -119,16 +120,17 @@ class SpanSelector(QtCore.QObject):
                         self.right_clicked.emit()
 
     def onpress(self, event):
-        if event.button == 1:  # Left button clicked
-            if not self.canvas.widgetlock.locked():
-                self.canvas.widgetlock(self)
-                if self.active:
-                    self.set_active(False)
-                self.press_selector = event
-                # Start animation
-                self._set_animated(True)
-                xpos = self.get_xdata(self.press_selector)
-                self.set_selector_limits(xpos, xpos, adjust_to_viewport=True)
+        if self.enabled:
+            if event.button == 1:  # Left button clicked
+                if not self.canvas.widgetlock.locked():
+                    self.canvas.widgetlock(self)
+                    if self.active:
+                        self.set_active(False)
+                    self.press_selector = event
+                    # Start animation
+                    self._set_animated(True)
+                    xpos = self.get_xdata(self.press_selector)
+                    self.set_selector_limits(xpos, xpos, adjust_to_viewport=True)
 
     def onrelease(self, event):
         if self.canvas.widgetlock.isowner(self):
@@ -195,6 +197,17 @@ class SpanSelector(QtCore.QObject):
             for s in self.selectors:
                 s.set_visible(value)
             self.draw()
+
+    def set_enabled(self, value):
+        if value != self.enabled:
+            self.enabled = value
+            for s in self.selectors:
+                if value == True:
+                    s.set_edgecolor('Red')
+                    s.set_facecolor('LightCoral')
+                else:
+                    s.set_edgecolor('DarkSlateGray')
+                    s.set_facecolor('Gray')
 
     def draw(self):
         if self.animated:
@@ -589,7 +602,7 @@ class MiniMap(QtGui.QWidget):
                                                                alpha=0.5,
                                                                animated=True)
         self.minimapSelection = self.minimapFig.axes[0].axvspan(0, self.step,
-                                                                color = 'LightCoral',
+                                                                color='LightCoral',
                                                                 alpha = 0.5,
                                                                 animated=True)
         self.minimapSelection.set_visible(False)
@@ -1047,6 +1060,9 @@ class SignalViewerWidget(QtGui.QWidget):
     def set_selector_limits(self, xleft, xright):
         self.selector.set_selector_limits(xleft, xright)
 
+    def set_selection_enabled(self, value):
+        self.selector.set_enabled(value)
+
     def set_playback_position(self, position):
         if self.playback_marker is not None:
             self.playback_marker.set_position(position)
@@ -1123,7 +1139,6 @@ class SignalViewerWidget(QtGui.QWidget):
             artists.extend(ax.patches)
         for artist in artists:
             yield artist
-
 
 
 

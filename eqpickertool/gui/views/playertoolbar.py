@@ -1,4 +1,3 @@
-#!/usr/bin/python2.7
 # encoding: utf-8
 
 '''
@@ -68,6 +67,7 @@ class PlayerToolBar(QtGui.QToolBar):
     playingStateSelected = QtCore.Signal()
     stoppedStateSelected = QtCore.Signal()
     pausedStateSelected = QtCore.Signal()
+    playingStateChanged = QtCore.Signal(bool)
 
     def __init__(self, parent=None, data=None, data_fs=None, fs=2000,
                  bd='int16', repeat=False, tick_interval=200):
@@ -151,7 +151,7 @@ class PlayerToolBar(QtGui.QToolBar):
         self.addWidget(self.tsbPosition)
         # connect ui
         self.actionPlay.triggered.connect(self.on_play)
-        self.actionStop.triggered.connect(self._mediaObject.stop)
+        self.actionStop.triggered.connect(self.on_stop)
         self.actionPause.triggered.connect(self._mediaObject.pause)
         self.actionRepeat.toggled.connect(self.toggle_repeat)
         self.tsbStart.timeChanged.connect(self.on_start_time_changed)
@@ -167,6 +167,8 @@ class PlayerToolBar(QtGui.QToolBar):
         self._mediaObject.stop()
         if self.repeat:
             self.on_play()
+        else:
+            self.playingStateChanged.emit(False)
 
     def toggle_repeat(self, value):
         if value != self.repeat:
@@ -183,7 +185,13 @@ class PlayerToolBar(QtGui.QToolBar):
             if not self.buffer_loaded:
                 self._load_buffer()
             self._mediaObject.setCurrentSource(self._buffer)
+        self.tick.emit(self._start / self.data_fs)
+        self.playingStateChanged.emit(True)
         self._mediaObject.play()
+
+    def on_stop(self):
+        self._mediaObject.stop()
+        self.playingStateChanged.emit(False)
 
     def load_data(self, data, data_fs):
         """Loads a seismic signal onto the player.

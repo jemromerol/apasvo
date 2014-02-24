@@ -81,10 +81,11 @@ class EventListModel(QtCore.QAbstractTableModel):
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role == QtCore.Qt.EditRole:
-            params = {self._header[index.column()]: value}
-            self.command_stack.push(commands.EditEvent(self, self.record.events[index.row()],
-                                                       **params))
-            #self.dataChanged.emit(index, index)
+            key = self._header[index.column()]
+            event = self.record.events[index.row()]
+            if event.__getattribute__(key) != value:
+                self.command_stack.push(commands.EditEvent(self, event,
+                                                           **{key: value}))
             return True
         return False
 

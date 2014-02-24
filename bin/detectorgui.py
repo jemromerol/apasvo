@@ -40,6 +40,7 @@ from eqpickertool.gui.views.generated import qrc_icons
 from eqpickertool.gui.delegates import cbdelegate
 from eqpickertool.gui.models import eventlistmodel
 from eqpickertool.gui.models import pickingtask
+from eqpickertool.gui.views import aboutdialog
 from eqpickertool.gui.views import svwidget
 from eqpickertool.gui.views import navigationtoolbar
 from eqpickertool.gui.views import loaddialog
@@ -128,6 +129,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionTakanami.triggered.connect(self.doTakanami)
         self.actionClear_Event_List.triggered.connect(self.clear_events)
         self.actionDelete_Selected.triggered.connect(self.delete_selected_events)
+        self.actionAbout.triggered.connect(self.show_about)
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
         self.splitter.addWidget(self.signalViewer)
@@ -150,6 +152,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.toolBarMedia.intervalSelected.connect(self.signalViewer.selector.set_active)
         self.toolBarMedia.tick.connect(self.signalViewer.set_playback_position)
         self.toolBarMedia.playingStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(True))
+        self.toolBarMedia.playingStateChanged.connect(lambda x: self.signalViewer.set_selection_enabled(not x))
         self.toolBarMedia.stoppedStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(False))
         self.signalViewer.selector.toggled.connect(self.toolBarMedia.toggle_interval_selected)
         self.signalViewer.selector.valueChanged.connect(self.toolBarMedia.set_limits)
@@ -241,7 +244,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     # Update GUI
                     self.centralwidget.setVisible(True)
                     self.actionClose.setEnabled(True)
-                    self.actionCreate_New_Event.setEnabled(True)
                     self.actionClear_Event_List.setEnabled(True)
                     self.actionSTA_LTA.setEnabled(True)
                     self.actionAMPA.setEnabled(True)
@@ -356,7 +358,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             # Update GUI
             self.centralwidget.setVisible(False)
             self.actionClose.setEnabled(False)
-            self.actionCreate_New_Event.setEnabled(False)
             self.actionClear_Event_List.setEnabled(False)
             self.actionSTA_LTA.setEnabled(False)
             self.actionAMPA.setEnabled(False)
@@ -608,6 +609,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         enable_takanami = (self.signalViewer.selector.active and
                            (selection_length >= (takanamidialog.MINIMUM_MARGIN_IN_SECS * 2)))
         self.actionTakanami.setEnabled(enable_takanami)
+
+    def show_about(self):
+        aboutdialog.AboutDialog(self).exec_()
 
 
 if __name__ == '__main__':
