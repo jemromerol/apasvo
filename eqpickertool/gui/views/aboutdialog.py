@@ -30,6 +30,7 @@ from PySide import QtCore
 from PySide import QtGui
 
 from eqpickertool import _version
+from eqpickertool.gui.views.generated import qrc_icons
 from eqpickertool.gui.views.generated import qrc_strings
 
 
@@ -49,7 +50,21 @@ class AboutDialog(QtGui.QDialog):
         self.setMinimumSize(640, 480)
         # Application tab
         self.version_widget = QtGui.QWidget(self)
+        self.version_icon = QtGui.QLabel(self)
+        self.version_icon.setPixmap(QtGui.QPixmap(':/app.png'))
+        self.version_text = QtGui.QTextEdit(self)
+        self.version_text.setReadOnly(True)
+
+        mfile = QtCore.QFile(':/version.html')
+        if not mfile.open(QtCore.QIODevice.ReadOnly | QtCore.QIODevice.Text):
+            self.reject()
+        mversion = QtCore.QTextStream(mfile)
+
+        self.version_text.setText(mversion.readAll())
         self.version_layout = QtGui.QVBoxLayout(self.version_widget)
+        self.version_layout.addWidget(self.version_icon)
+        self.version_layout.setAlignment(self.version_icon, QtCore.Qt.AlignHCenter)
+        self.version_layout.addWidget(self.version_text)
 
         # License tab
         self.license_widget = QtGui.QWidget(self)
@@ -59,7 +74,7 @@ class AboutDialog(QtGui.QDialog):
 
         mfile = QtCore.QFile(':/license.txt')
         if not mfile.open(QtCore.QIODevice.ReadOnly | QtCore.QIODevice.Text):
-            return
+            self.reject()
         mlicense = QtCore.QTextStream(mfile)
 
         self.license_text_edit.setPlainText(mlicense.readAll())
