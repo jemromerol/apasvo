@@ -640,6 +640,7 @@ class MiniMap(QtGui.QWidget):
         ax.grid(True, which='both')
         ax.plot(self.xrange, self.record.signal, color='black', rasterized=True)
         ax.set_xlim(self.xmin, self.xmax)
+        plotting.adjust_axes_height(ax)
         # Draw canvas
         self.minimapCanvas.draw()
         self.minimapBackground = self.minimapCanvas.copy_from_bbox(self.minimapFig.bbox)

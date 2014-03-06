@@ -64,9 +64,9 @@ def reduce_data(x, y, width, xmin, xmax):
     for j in xrange(int(width)):
         left = limits[j]
         right = limits[j + 1]
-        indexes[i] = left + np.argmax(y[left:right])
+        indexes[i] = left + y[left:right].argmax(axis=0)
         i += 1
-        indexes[i] = left + np.argmin(y[left:right])
+        indexes[i] = left + y[left:right].argmin(axis=0)
         i += 1
     indexes.sort()
 

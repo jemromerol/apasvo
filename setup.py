@@ -25,11 +25,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from setuptools import setup, find_packages
+from setuptools import setup
+from setuptools import find_packages
 import re
 
+
 def get_version_number():
-    VERSIONFILE="eqpickertool/_version.py"
+    VERSIONFILE = "eqpickertool/_version.py"
     verstrline = open(VERSIONFILE, "rt").read()
     VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
     mo = re.search(VSRE, verstrline, re.M)
@@ -39,15 +41,15 @@ def get_version_number():
         raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
     return verstr
 
-setup(name = "EQ Picker Tool",
-      version = get_version_number(),
-      description = "A set of tools to perform seismic event detection and picking",
-      author = "Jose Emilio Romero Lopez",
-      author_email = "jemromerol@gmail.com",
-      url = "",
-      license = "LGPL",
-      scripts = ["bin/detector.py", "bin/generator.py", "bin/detectorgui.py"],
-      install_requires = ['numpy > 1.7', 'scipy', 'matplotlib', 'PySide'],
-      packages = find_packages()
+setup(name="EQ Picker Tool",
+      version=get_version_number(),
+      description="A set of tools to perform seismic event detection and picking",
+      author="Jose Emilio Romero Lopez",
+      author_email="jemromerol@gmail.com",
+      url="",
+      license="LGPL",
+      scripts=["bin/detector.py", "bin/generator.py", "bin/detectorgui.py"],
+      install_requires=['numpy > 1.7', 'scipy', 'matplotlib', 'PySide'],
+      packages=find_packages()
       )
 

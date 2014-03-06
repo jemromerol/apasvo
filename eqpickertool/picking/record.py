@@ -272,12 +272,11 @@ class Record(object):
             self.filename = fileobj.name
         else:
             self.filename = fileobj
-        self.fhandler = rawfile.get_file_handler(fileobj, fmt=fmt, dtype=dtype,
+        fhandler = rawfile.get_file_handler(fileobj, fmt=fmt, dtype=dtype,
                                             byteorder=byteorder)
-        self.signal = self.fhandler.read()
+        self.signal = fhandler.read().astype(rawfile.datatype_float64, casting='safe')
         self.fs = fs
-        self.cf = np.array([])
-        self.cf_fhandler = None
+        self.cf = np.array([], dtype=rawfile.datatype_float64)
         self.events = []
         if label == '':
             _, rname = os.path.split(self.filename)

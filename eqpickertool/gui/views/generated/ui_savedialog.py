@@ -40,6 +40,9 @@ class Ui_SaveDialog(object):
         SaveDialog.setObjectName("SaveDialog")
         self.verticalLayout = QtGui.QVBoxLayout(SaveDialog)
         self.verticalLayout.setObjectName("verticalLayout")
+        self.setMinimumSize(400, 200)
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
+                                                    QtGui.QSizePolicy.Policy.Expanding))
         self.groupBox = QtGui.QGroupBox(SaveDialog)
         self.groupBox.setAutoFillBackground(False)
         self.groupBox.setFlat(False)

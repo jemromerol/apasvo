@@ -24,4 +24,4 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-__all__ = ['formats', 'clt', 'collections', 'futils', 'parse']
+__all__ = ['formats', 'clt', 'collections', 'futils', 'parse', 'plotting']

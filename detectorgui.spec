@@ -5,7 +5,15 @@ a = Analysis(['bin/detectorgui.py'],
              hookspath=['.'],
              runtime_hooks=None)
 
-#a.binaries = [x for x in a.binaries if not x[0].startswith("PyQt4")]
+a.binaries = [x for x in a.binaries if not x[0].startswith("wx")]
+
+a.binaries = a.binaries - TOC([
+ ('libnvidia-glcore', '', ''),
+ ('libnvidia-tls', '', ''),
+ ('tk85.dll', '', ''),
+ ('_sqlite3', '', ''),
+ ('_ssl', '', ''),
+ ('_tkinter', '', '')])
 
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
@@ -15,7 +23,7 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          console=True )
+          console=False )
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
