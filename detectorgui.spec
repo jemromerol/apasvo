@@ -1,6 +1,6 @@
 # -*- mode: python -*-
-a = Analysis(['bin/detectorgui.py'],
-             pathex=['/home/alcapaya/workspace/eqpickertool'],
+a = Analysis(['bin\detectorgui.py'],
+             pathex=['HOME\workspace\eqpickertool'],
              hiddenimports=['scipy.special._ufuncs_cxx'],
              hookspath=['.'],
              runtime_hooks=None)
@@ -15,15 +15,16 @@ a.binaries = a.binaries - TOC([
  ('_ssl', '', ''),
  ('_tkinter', '', '')])
 
+
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
-          a.scripts,
+          a.scripts + [('O','','OPTION')],
           exclude_binaries=True,
-          name='detectorgui',
+          name='detectorgui.exe',
           debug=False,
           strip=False,
           upx=True,
-          console=False )
+          console=True )
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
