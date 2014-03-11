@@ -674,20 +674,21 @@ class MiniMap(QtGui.QWidget):
         return xdata
 
     def set_selector_limits(self, xmin, xmax):
-        if (xmin, xmax) != (self.minimapSelector.xy[1, 0], self.minimapSelector.xy[2, 0]):
-            self.step = xmax - xmin
-            if self.step >= self.xmax - self.xmin:
-                xleft = self.xmin
-                xright = self.xmax
-            if xmin < self.xmin:
-                xleft = self.xmin
-                xright = self.step
-            elif xmax > self.xmax:
-                xleft = self.xmax - self.step
-                xright = self.xmax
-            else:
-                xleft = xmin
-                xright = xmax
+        step = xmax - xmin
+        if step >= self.xmax - self.xmin:
+            xleft = self.xmin
+            xright = self.xmax
+        if xmin < self.xmin:
+            xleft = self.xmin
+            xright = self.step
+        elif xmax > self.xmax:
+            xleft = self.xmax - step
+            xright = self.xmax
+        else:
+            xleft = xmin
+            xright = xmax
+        if (xleft, xright) != (self.minimapSelector.xy[1, 0], self.minimapSelector.xy[2, 0]):
+            self.step = step
             self.minimapSelector.xy[:2, 0] = xleft
             self.minimapSelector.xy[2:4, 0] = xright
             self.ax.set_xlim(xleft, xright)
@@ -1132,11 +1133,12 @@ class SignalViewerWidget(QtGui.QWidget):
     def _get_animated_artists(self):
         artists = []
         for ax in self.fig.axes:
-            artists.extend(ax.lines)
             artists.extend(ax.images)
+            artists.extend(ax.lines)
             artists.append(ax.xaxis)
             artists.append(ax.yaxis)
             artists.extend(ax.patches)
+            artists.extend(ax.spines.values())
         for artist in artists:
             yield artist
 
