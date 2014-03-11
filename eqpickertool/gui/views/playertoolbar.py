@@ -49,8 +49,6 @@ class PlayerToolBar(QtGui.QToolBar):
             Default: 2000 samples/sec.
         bd: Bit depth of 'data' samples once loaded. Available values
             are 'int8' and 'int16', i.e. 8 and 16 bits depth.
-        repeat: Determines whether to replay or not.
-            Default: False.
         connected: Indicates whether the media player is connected to an
             audio output or not.
         data_loaded: Indicates whether a seismic signal has been loaded
@@ -70,7 +68,7 @@ class PlayerToolBar(QtGui.QToolBar):
     playingStateChanged = QtCore.Signal(bool)
 
     def __init__(self, parent=None, data=None, data_fs=None, fs=2000,
-                 bd='int16', repeat=False, tick_interval=200):
+                 bd='int16', tick_interval=200):
         if fs not in sample_rates:
             raise ValueError('Unsupported sampling rate: %s' % fs)
         if bd not in bit_depths:
@@ -93,7 +91,6 @@ class PlayerToolBar(QtGui.QToolBar):
         self._start = 0
         self._end = np.inf
         self._interval_selected = False
-        self.repeat = repeat
         self.fs = fs
         self.bd = bd
         if data is not None:
@@ -118,15 +115,9 @@ class PlayerToolBar(QtGui.QToolBar):
         self.actionStop.setText("Stop")
         self.actionStop.setIcon(QtGui.QIcon(":/stop.png"))
         self.actionStop.setEnabled(False)
-        self.actionRepeat = QtGui.QAction(self)
-        self.actionRepeat.setCheckable(True)
-        self.actionRepeat.setText("Repeat")
-        self.actionRepeat.setIcon(QtGui.QIcon(":/repeat.png"))
         self.addAction(self.actionPlay)
         self.addAction(self.actionPause)
         self.addAction(self.actionStop)
-        self.addSeparator()
-        self.addAction(self.actionRepeat)
         self.addSeparator()
         self.volumeSlider = Phonon.VolumeSlider(self)
         self.volumeSlider.setMaximumWidth(200)
@@ -153,7 +144,6 @@ class PlayerToolBar(QtGui.QToolBar):
         self.actionPlay.triggered.connect(self.on_play)
         self.actionStop.triggered.connect(self.on_stop)
         self.actionPause.triggered.connect(self._mediaObject.pause)
-        self.actionRepeat.toggled.connect(self.toggle_repeat)
         self.tsbStart.timeChanged.connect(self.on_start_time_changed)
         self.tsbEnd.timeChanged.connect(self.on_end_time_changed)
 
@@ -165,14 +155,7 @@ class PlayerToolBar(QtGui.QToolBar):
 
     def finished(self):
         self._mediaObject.stop()
-        if self.repeat:
-            self.on_play()
-        else:
-            self.playingStateChanged.emit(False)
-
-    def toggle_repeat(self, value):
-        if value != self.repeat:
-            self.repeat = value
+        self.playingStateChanged.emit(False)
 
     def set_enabled(self, value):
         if self.data_loaded and self.connected:
