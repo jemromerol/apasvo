@@ -49,7 +49,11 @@ setup(name="EQ Picker Tool",
       url="",
       license="LGPL",
       scripts=["bin/detector.py", "bin/generator.py", "bin/detectorgui.py"],
+<<<<<<< HEAD
       install_requires=['numpy >= 1.8', 'scipy >= 0.13', 'matplotlib >= 1.3', 'PySide >= 1.2.1'],
+=======
+      install_requires=['numpy > 1.7', 'scipy >= 0.13', 'matplotlib', 'PySide'],
+>>>>>>> f436cee869c8893451159507edd992c6251fc0c7
       packages=find_packages()
       )
 
