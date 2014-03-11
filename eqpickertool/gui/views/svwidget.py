@@ -340,12 +340,12 @@ class EventMarker(QtCore.QObject):
                 time_in_seconds = time_in_samples / float(self.event.record.fs)
                 for marker in self.markers:
                     marker.set_xdata(time_in_seconds)
-                t = str(datetime.timedelta(seconds=time_in_seconds))
                 if 0 <= self.position < len(self.event.record.cf):
                     cf_value = self.event.record.cf[self.position]
                 else:
                     cf_value = np.nan
-                self.position_label.set_text(clt.float_secs_2_string_date(cf_value))
+                self.position_label.set_text("Time: %s seconds.\nCF value: %.6g" %
+                                             (clt.float_secs_2_string_date(time_in_seconds), cf_value))
 
     def redraw(self):
         self.position = self.event.time
