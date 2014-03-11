@@ -345,8 +345,7 @@ class EventMarker(QtCore.QObject):
                     cf_value = self.event.record.cf[self.position]
                 else:
                     cf_value = np.nan
-                self.position_label.set_text("Time: %s seconds\nCF value: %.4g" %
-                                             (t[:-3], cf_value))
+                self.position_label.set_text(clt.float_secs_2_string_date(cf_value))
 
     def redraw(self):
         self.position = self.event.time
