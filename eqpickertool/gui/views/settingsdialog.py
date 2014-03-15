@@ -91,19 +91,20 @@ class SettingsDialog(QtGui.QDialog):
         self.formLayout.setContentsMargins(24, 24, 24, 24)
         self.formLayout.setHorizontalSpacing(9)
         self.formLayout.setVerticalSpacing(24)
-        self.samplerateLabel = QtGui.QLabel("Sample rate (samples/sec.):",
+        self.playbackfreqLabel = QtGui.QLabel("Playback frequency (Hz):",
                                             self.playerGroupBox)
         self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole,
-                                  self.samplerateLabel)
-        self.samplerateComboBox = QtGui.QComboBox(self.playerGroupBox)
-        self.samplerateComboBox.addItems([str(item) for item in playertoolbar.sample_rates])
+                                  self.playbackfreqLabel)
+        self.playbackrateSpinBox = QtGui.QSpinBox(self.playerGroupBox)
+        self.playbackrateSpinBox.setMinimum(100)
+        self.playbackrateSpinBox.setMaximum(16000)
         self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole,
-                                  self.samplerateComboBox)
-        self.bitdepthLabel = QtGui.QLabel("Bit Depth:", self.playerGroupBox)
+                                  self.playbackrateSpinBox)
+        self.bitdepthLabel = QtGui.QLabel("Sample Format:", self.playerGroupBox)
         self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole,
                                   self.bitdepthLabel)
         self.bitdepthComboBox = QtGui.QComboBox(self.playerGroupBox)
-        self.bitdepthComboBox.addItems([str(item) for item in playertoolbar.bit_depths])
+        self.bitdepthComboBox.addItems(playertoolbar.bit_depths.keys())
         self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole,
                                   self.bitdepthComboBox)
 
@@ -142,9 +143,8 @@ class SettingsDialog(QtGui.QDialog):
         """Loads settings from persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("player_settings")
-        sample_rate_index = playertoolbar.sample_rates.index(int(settings.value('sample_rate', playertoolbar.sample_rates[0])))
-        self.samplerateComboBox.setCurrentIndex(sample_rate_index)
-        bit_depth_index = playertoolbar.bit_depths.index(settings.value('bit_depth', playertoolbar.bit_depths[0]))
+        self.playbackrateSpinBox.setValue(int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ)))
+        bit_depth_index = playertoolbar.bit_depths.values().index(settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH))
         self.bitdepthComboBox.setCurrentIndex(bit_depth_index)
         settings.endGroup()
 
@@ -152,8 +152,9 @@ class SettingsDialog(QtGui.QDialog):
         """Saves settings to persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("player_settings")
-        settings.setValue('sample_rate', self.samplerateComboBox.currentText())
-        settings.setValue('bit_depth', self.bitdepthComboBox.currentText())
+        settings.setValue('playback_freq', self.playbackrateSpinBox.value())
+        settings.setValue('bit_depth',
+                          playertoolbar.bit_depths[self.bitdepthComboBox.currentText()])
         settings.endGroup()
         self.saved.emit()
 

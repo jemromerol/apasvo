@@ -610,6 +610,7 @@ class MiniMap(QtGui.QWidget):
                             self.minimapFig.bbox.height)
 
         self.press_selector = None
+        self.playback_marker = None
         self.minimapCanvas.mpl_connect('button_press_event', self.onpress)
         self.minimapCanvas.mpl_connect('button_release_event', self.onrelease)
         self.minimapCanvas.mpl_connect('motion_notify_event', self.onmove)
@@ -640,6 +641,8 @@ class MiniMap(QtGui.QWidget):
         ax.plot(self.xrange, self.record.signal, color='black', rasterized=True)
         ax.set_xlim(self.xmin, self.xmax)
         plotting.adjust_axes_height(ax)
+        # Set the playback marker
+        self.playback_marker = PlayBackMarker(self.minimapFig)
         # Draw canvas
         self.minimapCanvas.draw()
         self.minimapBackground = self.minimapCanvas.copy_from_bbox(self.minimapFig.bbox)
@@ -826,7 +829,7 @@ class SignalViewerWidget(QtGui.QWidget):
     def data_loaded(self):
         return self.document is not None
 
-    def set_record(self, document, step=20.0):
+    def set_record(self, document, step=60.0):
         self.document = document
         self.fs = self.document.record.fs
         self.signal = self.document.record.signal
@@ -1067,10 +1070,12 @@ class SignalViewerWidget(QtGui.QWidget):
     def set_playback_position(self, position):
         if self.playback_marker is not None:
             self.playback_marker.set_position(position)
+            self.minimap.playback_marker.set_position(position)
 
     def set_playback_marker_visible(self, show_marker):
         if self.playback_marker is not None:
             self.playback_marker.set_visible(show_marker)
+            self.minimap.playback_marker.set_visible(show_marker)
 
     def on_event_right_clicked(self, event):
         self.last_right_clicked_event = event

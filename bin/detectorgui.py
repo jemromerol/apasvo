@@ -143,10 +143,10 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         # add media toolbar
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup('player_settings')
-        fs = int(settings.value('sample_rate', playertoolbar.sample_rates[0]))
-        bd = settings.value('bit_depth', playertoolbar.bit_depths[1])
+        fs = int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ))
+        bd = settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH)
         settings.endGroup()
-        self.toolBarMedia = playertoolbar.PlayerToolBar(self, fs=fs, bd=bd)
+        self.toolBarMedia = playertoolbar.PlayerToolBar(self, sample_freq=fs, bd=bd)
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarMedia)
         self.toolBarMedia.intervalChanged.connect(self.signalViewer.set_selector_limits)
         self.toolBarMedia.intervalSelected.connect(self.signalViewer.selector.set_active)
@@ -375,8 +375,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         settings = QtCore.QSettings(_organization, _application_name)
         # update player settings
         settings.beginGroup('player_settings')
-        fs = int(settings.value('sample_rate', playertoolbar.sample_rates[0]))
-        bd = settings.value('bit_depth', playertoolbar.bit_depths[1])
+        fs = int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ))
+        bd = settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH)
         settings.endGroup()
         self.toolBarMedia.set_audio_format(fs, bd)
 
