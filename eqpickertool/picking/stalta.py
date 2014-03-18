@@ -32,7 +32,7 @@ from numpy.lib import stride_tricks
 
 
 def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
-            peak_window=1.):
+            peak_window=1., method='convolution'):
     """Event picking/detection using STA-LTA algorithm.
 
     The STA-LTA algorithm processes seismic signals by using two moving time
@@ -63,6 +63,10 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
             point to be a local maximum.
             If 'threshold' is None, this parameter has no effect.
             Default value is 1 s.
+        method: 'strides', 'convolution' or 'iterative'.
+            Warning: 'strides' method may throw an 'array too big' ValueError
+            exception on 32 bit builds if x is large enough.
+            Default: 'convolution'
 
     Returns:
         event_t: A list of possible event locations, given in samples from the
@@ -82,18 +86,35 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
         raise ValueError("lta_length must be a positive value")
     if sta_length >= lta_length:
         raise ValueError("lta_length must be greater than sta_length")
+    if method not in ('convolution', 'strides', 'iterative'):
+        raise ValueError("method not supported")
+
     sta = sta_length * fs
     lta = lta_length * fs
     peak_window = int(peak_window * fs / 2.)
     x_norm = np.abs(x - np.mean(x))
     cf = np.zeros(len(x))
-    # FASTER VERSION USING STRIDES
+    results_len = int(len(x_norm) - lta + 1)
+
     if len(cf) > 0:
-        sta_win = stride_tricks.as_strided(x_norm, shape=(len(x_norm) - lta + 1, sta),
-                                           strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
-        lta_win = stride_tricks.as_strided(x_norm, shape=(len(x_norm) - lta + 1, lta),
-                                           strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
-        cf[:len(x_norm) - lta + 1] = sta_win.mean(axis=1) / lta_win.mean(axis=1)
+        if method == 'strides':
+            sta_win = stride_tricks.as_strided(x_norm, shape=(results_len, sta),
+                                               strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
+            lta_win = stride_tricks.as_strided(x_norm, shape=(results_len, lta),
+                                               strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
+            cf[:results_len] = sta_win.mean(axis=1) / lta_win.mean(axis=1)
+        elif method == 'convolution':
+            sta_filt = np.ones(sta) / sta
+            lta_filt = np.ones(lta) / lta
+            sta_win = np.convolve(x_norm, sta_filt, mode='valid')[:results_len]
+            lta_win = np.convolve(x_norm, lta_filt, mode='valid')
+            cf[:results_len] = sta_win / lta_win
+        elif method == 'iterative':
+            for i in xrange(results_len):
+                sta_to = int(min(len(x_norm), i + sta))
+                lta_to = int(min(len(x_norm), i + lta))
+                cf[i] = np.mean(x_norm[i:sta_to]) / np.mean(x_norm[i:lta_to])
+
     event_t = findpeaks.find_peaks(cf, threshold, order=peak_window * fs)
     return event_t, cf
 

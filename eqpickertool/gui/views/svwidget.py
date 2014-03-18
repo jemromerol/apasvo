@@ -661,6 +661,8 @@ class MiniMap(QtGui.QWidget):
         xdata = round(self.get_xdata(event), 2)
         xmin = round(xdata - (self.step / 2.0), 2)
         xmax = round(xdata + (self.step / 2.0), 2)
+        self.parentViewer._set_animated(True)
+        self.set_selector_limits(xmin, xmax)
 
     def onrelease(self, event):
         self.press_selector = None

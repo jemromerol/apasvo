@@ -1,20 +1,8 @@
 # -*- mode: python -*-
 a = Analysis(['bin/detectorgui.py'],
-             pathex=['HOME/workspace/eqpickertool'],
-             hiddenimports=['scipy.special._ufuncs_cxx'],
-             hookspath=['.'],
-             runtime_hooks=None)
-
-a.binaries = [x for x in a.binaries if not x[0].startswith("wx")]
-
-a.binaries = a.binaries - TOC([
- ('libnvidia-glcore', '', ''),
- ('libnvidia-tls', '', ''),
- ('tk85.dll', '', ''),
- ('_sqlite3', '', ''),
- ('_ssl', '', ''),
- ('_tkinter', '', '')])
-
+             pathex=['/eqpickertool'],
+             hiddenimports=['scipy.special._ufuncs_cxx', 'PySide.phonon'],
+             hookspath=['.'])
 
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
@@ -22,14 +10,14 @@ exe = EXE(pyz,
           exclude_binaries=True,
           name='detectorgui.exe',
           debug=False,
-          strip=False,
+          strip=None,
           upx=True,
-          console=False,
-          icon='res/image/app.ico')
+          console=True,
+          icon='res/images/app.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
                a.datas,
-               strip=False,
+               strip=None,
                upx=True,
                name='detectorgui')

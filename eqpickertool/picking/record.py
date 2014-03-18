@@ -204,7 +204,7 @@ class Event(object):
             ax.grid(True, which='both')
             formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
             ax.xaxis.set_major_formatter(formatter)
-            ax.xaxis.set_major_locator(ticker.MaxNLocator(prune='lower'))
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=8))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw signal

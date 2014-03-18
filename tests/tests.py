@@ -135,6 +135,16 @@ class Check_sta_lta(unittest.TestCase):
         self.assertTrue(np.all(et == fet))
         self.assertTrue(np.all(cf == fcf))
 
+    def test_different_methods_return_same_results(self):
+        x = np.random.randn(10000)
+        et1, cf1 = stalta.sta_lta(x, 50.0, method='convolution')
+        et2, cf2 = stalta.sta_lta(x, 50.0, method='strides')
+        et3, cf3 = stalta.sta_lta(x, 50.0, method='iterative')
+        self.assertTrue(np.all(et1 == et2 == et3))
+        self.assertTrue(np.allclose(cf1, cf2))
+        self.assertTrue(np.allclose(cf1, cf3))
+        self.assertTrue(np.allclose(cf2, cf3))
+
 
 class Check_ampa(unittest.TestCase):
 
