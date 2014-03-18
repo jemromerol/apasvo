@@ -11,3 +11,4 @@ cf_data/*
 build/*
 dist/*
 *.egg-info/*
+*~

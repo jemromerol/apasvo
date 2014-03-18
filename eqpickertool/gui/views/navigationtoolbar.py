@@ -24,6 +24,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+import matplotlib
+matplotlib.rcParams['backend.qt4'] = 'PySide'
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg
 
 navigation_bar_items = ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save', '')
