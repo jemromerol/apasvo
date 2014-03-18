@@ -26,10 +26,14 @@
 
 from PySide import QtCore
 from PySide import QtGui
+
+import matplotlib
+matplotlib.rcParams['backend.qt4'] = 'PySide'
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from eqpickertool.gui.views import navigationtoolbar
 from eqpickertool.gui.views import processingdialog
 import matplotlib.pyplot as plt
+
 import numpy as np
 import traceback
 from eqpickertool.picking import record as rc

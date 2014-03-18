@@ -26,6 +26,9 @@
 
 from PySide import QtGui
 from PySide import QtCore
+
+import matplotlib
+matplotlib.rcParams['backend.qt4'] = 'PySide'
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FuncFormatter
 import matplotlib.pyplot as plt
@@ -534,9 +537,10 @@ class PlayBackMarker(QtCore.QObject):
         active: Indicates whether the marker is active or not.
     """
 
-    def __init__(self, fig, position=0.0, active=False):
+    def __init__(self, fig, parent, position=0.0, active=False):
         super(PlayBackMarker, self).__init__()
         self.fig = fig
+        self.parent = parent
         self.position = position
         self.active = active
 
@@ -550,7 +554,7 @@ class PlayBackMarker(QtCore.QObject):
 
         self.canvas = self.fig.canvas
         if self.active:
-            self.canvas.draw_idle()
+            self.parent.draw()
 
     def set_position(self, value):
         if value != self.position:
@@ -558,14 +562,14 @@ class PlayBackMarker(QtCore.QObject):
             for marker in self.markers:
                 marker.set_xdata(self.position)
             if self.active:
-                self.canvas.draw_idle()
+                self.parent.draw()
 
     def set_visible(self, value):
         if value != self.active:
             self.active = value
             for marker in self.markers:
                 marker.set_visible(self.active)
-            self.canvas.draw_idle()
+            self.parent.draw()
 
     def get_visible(self):
         return self.active
@@ -615,6 +619,10 @@ class MiniMap(QtGui.QWidget):
         self.minimapCanvas.mpl_connect('button_release_event', self.onrelease)
         self.minimapCanvas.mpl_connect('motion_notify_event', self.onmove)
 
+        # Animation related attrs.
+        self.background = None
+        self.animated = False
+
         # Set the layout
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.minimapCanvas)
@@ -642,7 +650,7 @@ class MiniMap(QtGui.QWidget):
         ax.set_xlim(self.xmin, self.xmax)
         plotting.adjust_axes_height(ax)
         # Set the playback marker
-        self.playback_marker = PlayBackMarker(self.minimapFig)
+        self.playback_marker = PlayBackMarker(self.minimapFig, self)
         # Draw canvas
         self.minimapCanvas.draw()
         self.minimapBackground = self.minimapCanvas.copy_from_bbox(self.minimapFig.bbox)
@@ -653,10 +661,6 @@ class MiniMap(QtGui.QWidget):
         xdata = round(self.get_xdata(event), 2)
         xmin = round(xdata - (self.step / 2.0), 2)
         xmax = round(xdata + (self.step / 2.0), 2)
-
-        # Animate parent
-        self.parentViewer._set_animated(True)
-        self.set_selector_limits(xmin, xmax)
 
     def onrelease(self, event):
         self.press_selector = None
@@ -702,6 +706,9 @@ class MiniMap(QtGui.QWidget):
     def get_selector_limits(self):
         return self.minimapSelector.xy[0, 0], self.minimapSelector.xy[2, 0]
 
+    def draw(self):
+        self.draw_animate()
+
     def draw_animate(self):
         size = self.minimapFig.bbox.width, self.minimapFig.bbox.height
         if size != self.minimapSize:
@@ -711,6 +718,7 @@ class MiniMap(QtGui.QWidget):
         self.minimapCanvas.restore_region(self.minimapBackground)
         self.minimapFig.draw_artist(self.minimapSelection)
         self.minimapFig.draw_artist(self.minimapSelector)
+        self.minimapFig.draw_artist(self.playback_marker.markers[0])
         self.minimapCanvas.blit(self.minimapFig.bbox)
 
     def set_visible(self, value):
@@ -866,7 +874,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.selector.set_active(False)
         self.selector.set_selection_limits(self.xmin, self.xmax)
         # Set the playback marker
-        self.playback_marker = PlayBackMarker(self.fig)
+        self.playback_marker = PlayBackMarker(self.fig, self)
         # Set the initial xlimits
         self.set_xlim(0, step)
         self.subplots_adjust()

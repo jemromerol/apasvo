@@ -151,8 +151,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.toolBarMedia.intervalChanged.connect(self.signalViewer.set_selector_limits)
         self.toolBarMedia.intervalSelected.connect(self.signalViewer.selector.set_active)
         self.toolBarMedia.tick.connect(self.signalViewer.set_playback_position)
-        self.toolBarMedia.playingStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(True))
         self.toolBarMedia.playingStateChanged.connect(lambda x: self.signalViewer.set_selection_enabled(not x))
+        self.toolBarMedia.playingStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(True))
         self.toolBarMedia.stoppedStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(False))
         self.signalViewer.selector.toggled.connect(self.toolBarMedia.toggle_interval_selected)
         self.signalViewer.selector.valueChanged.connect(self.toolBarMedia.set_limits)
@@ -461,10 +461,12 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def closeEvent(self, event):
         """Current window's close event"""
         if self.maybeSave():
+            # prevent toolBarMedia firing signals if it's on playing or paused state
+            self.toolBarMedia.blockSignals(True)
+            self.toolBarMedia.disconnect_path()
             event.accept()
         else:
             event.ignore()
-        self.toolBarMedia.disconnect_path()
 
     def set_modified(self, value):
         """Sets 'isModified' attribute's value"""

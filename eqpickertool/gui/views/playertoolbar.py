@@ -191,7 +191,8 @@ class PlayerToolBar(QtGui.QToolBar):
             if not self.buffer_loaded:
                 self._load_buffer()
             self._mediaObject.setCurrentSource(self._buffer)
-        self.tick.emit(self._start * self.samps_2_secs_ratio)
+        if self._mediaObject.state() == Phonon.StoppedState:
+            self.tick.emit(self._start * self.samps_2_secs_ratio)
         self.playingStateChanged.emit(True)
         self._mediaObject.play()
 
@@ -346,7 +347,7 @@ class PlayerToolBar(QtGui.QToolBar):
             self.stoppedStateSelected.emit()
         elif state == Phonon.PausedState:
             self.actionPlay.setEnabled(True)
-            self.actionStop.setEnabled(False)
+            self.actionStop.setEnabled(True)
             self.actionPause.setEnabled(False)
             self.tsbStart.setEnabled(False)
             self.tsbEnd.setEnabled(False)

@@ -1,6 +1,6 @@
 # -*- mode: python -*-
-a = Analysis(['bin\detectorgui.py'],
-             pathex=['HOME\workspace\eqpickertool'],
+a = Analysis(['bin/detectorgui.py'],
+             pathex=['HOME/workspace/eqpickertool'],
              hiddenimports=['scipy.special._ufuncs_cxx'],
              hookspath=['.'],
              runtime_hooks=None)
@@ -24,7 +24,8 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          console=True )
+          console=False,
+          icon='res/image/app.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
