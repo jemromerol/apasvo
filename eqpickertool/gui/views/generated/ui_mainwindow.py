@@ -56,6 +56,7 @@ class Ui_MainWindow(object):
         self.EventsTableView.resizeColumnsToContents()
         self.EventsTableView.verticalHeader().setVisible(True)
         self.EventsTableView.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        self.EventsTableView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
         self.menubar.setObjectName("menubar")

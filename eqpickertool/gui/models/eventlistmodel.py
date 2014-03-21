@@ -25,8 +25,13 @@
 '''
 
 from PySide import QtCore
+from PySide import QtGui
 from eqpickertool.gui.models import eventcommands as commands
+from eqpickertool.gui.views.settingsdialog import COLOR_KEYS
 from eqpickertool.picking import record as rc
+
+from eqpickertool._version import _application_name
+from eqpickertool._version import _organization
 
 
 class EventListModel(QtCore.QAbstractTableModel):
@@ -44,6 +49,9 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.record = record
         self._header = header
         self.command_stack = command_stack
+        self.color_key = None
+        self.color_map = {}
+        self.loadColorMap()
 
     @property
     def empty(self):
@@ -58,16 +66,37 @@ class EventListModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
-        elif role != QtCore.Qt.DisplayRole:
+        elif role == QtCore.Qt.DisplayRole:
+            attr_name = self._header[index.column()]
+            data = self.record.events[index.row()].__getattribute__(attr_name)
+            if attr_name == 'time':
+                time = QtCore.QTime().addMSecs(1000 * data / self.record.fs)
+                return time.toString("hh 'h' mm 'm' ss.zzz 's'")
+            if attr_name == 'cf_value':
+                return "%.6g" % data
+            return "%s" % data
+        elif role == QtCore.Qt.BackgroundRole:
+            return self.calculateEventColor(index)
+        else:
             return None
-        attr_name = self._header[index.column()]
-        data = self.record.events[index.row()].__getattribute__(attr_name)
-        if attr_name == 'time':
-            time = QtCore.QTime().addMSecs(1000 * data / self.record.fs)
-            return time.toString("hh 'h' mm 'm' ss.zzz 's'")
-        if attr_name == 'cf_value':
-            return "%.6g" % data
-        return "%s" % data
+
+    def calculateEventColor(self, index):
+        if index.isValid():
+            if self.color_key is not None:
+                value = self.record.events[index.row()].__getattribute__(self.color_key)
+                return self.color_map.get(value)
+        return None
+
+    def loadColorMap(self):
+        settings = QtCore.QSettings(_organization, _application_name)
+        self.color_map = {}
+        settings.beginGroup("color_settings")
+        for key in settings.childKeys():
+            if key == 'color_key':
+                self.color_key = COLOR_KEYS[int(settings.value(key))]
+            else:
+                self.color_map[key] = QtGui.QColor(settings.value(key))
+        settings.endGroup()
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:

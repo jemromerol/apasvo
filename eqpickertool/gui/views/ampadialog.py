@@ -77,7 +77,7 @@ class AmpaDialog(QtGui.QDialog):
     def setup_ui(self):
         self.setWindowTitle("AMPA Settings")
         self.verticalLayout = QtGui.QVBoxLayout(self)
-
+        self.setMinimumWidth(480)
         # Set AMPA General Settings Group Box
         self.ampaGeneralSettingsGroupBox = QtGui.QGroupBox("General settings", self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
@@ -86,7 +86,7 @@ class AmpaDialog(QtGui.QDialog):
         self.formLayout_3 = QtGui.QFormLayout(self.ampaGeneralSettingsGroupBox)
         self.formLayout_3.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.formLayout_3.setContentsMargins(12, 12, 12, 12)
-        self.formLayout_3.setHorizontalSpacing(9)
+        self.formLayout_3.setHorizontalSpacing(24)
         self.formLayout_3.setObjectName("formLayout_3")
         self.ampawindowLabel = QtGui.QLabel("Sliding Window Length (in seconds):", self.ampaGeneralSettingsGroupBox)
         self.formLayout_3.setWidget(0, QtGui.QFormLayout.LabelRole, self.ampawindowLabel)
@@ -118,7 +118,7 @@ class AmpaDialog(QtGui.QDialog):
         self.formLayout_2 = QtGui.QFormLayout(self.filterbankGroupBox)
         self.formLayout_2.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.formLayout_2.setContentsMargins(12, 12, 12, 12)
-        self.formLayout_2.setHorizontalSpacing(9)
+        self.formLayout_2.setHorizontalSpacing(24)
         self.startfLabel = QtGui.QLabel("Start Frequency (Hz):", self.filterbankGroupBox)
         self.formLayout_2.setWidget(0, QtGui.QFormLayout.LabelRole, self.startfLabel)
         self.startfSpinBox = QtGui.QDoubleSpinBox(self.filterbankGroupBox)
@@ -186,7 +186,7 @@ class AmpaDialog(QtGui.QDialog):
         self.takanamiformLayout = QtGui.QFormLayout(self.takanamiGroupBox)
         self.takanamiformLayout.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.takanamiformLayout.setContentsMargins(12, 12, 12, 12)
-        self.takanamiformLayout.setHorizontalSpacing(9)
+        self.takanamiformLayout.setHorizontalSpacing(24)
         self.takanamiCheckBox = QtGui.QCheckBox("Apply Takanami on results", self.takanamiGroupBox)
         self.takanamiCheckBox.setChecked(True)
         self.takanamiformLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.takanamiCheckBox)

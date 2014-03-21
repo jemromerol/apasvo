@@ -25,13 +25,40 @@
 '''
 
 from matplotlib import mlab
+from scipy import signal
 import numpy as np
+import scipy
 
 
-def plot_specgram(ax, data, fs, nfft=256, overlap=0.9, cmap='jet',
-                   interpolation='bilinear', rasterized=True):
+SPECGRAM_WINDOWS = ("boxcar", "hamming", "hann", "bartlett",
+                            'blackman', "blackmanharris")
+
+SPECGRAM_WINDOWS_NAMES = ("Rectangular", "Hamming", "Hann", "Bartlett",
+                          "Blackman", "Blackman-Harris")
+
+
+def plot_specgram(ax, data, fs, nfft=256, noverlap=128, window='hann',
+                  cmap='jet', interpolation='bilinear', rasterized=True):
+
+    if window not in SPECGRAM_WINDOWS:
+        raise ValueError("Window not supported")
+
+    elif window == "boxcar":
+        mwindow = signal.boxcar(nfft)
+    elif window == "hamming":
+        mwindow = signal.hamming(nfft)
+    elif window == "hann":
+        mwindow = signal.hann(nfft)
+    elif window == "bartlett":
+        mwindow = signal.bartlett(nfft)
+    elif window == "blackman":
+        mwindow = signal.blackman(nfft)
+    elif window == "blackmanharris":
+        mwindow = signal.blackmanharris(nfft)
+
     specgram, freqs, time = mlab.specgram(data, NFFT=nfft, Fs=fs,
-                                          noverlap=int(nfft * overlap))
+                                          window=mwindow,
+                                          noverlap=noverlap)
     specgram = 10 * np.log10(specgram[1:, :])
     specgram = np.flipud(specgram)
 

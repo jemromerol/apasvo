@@ -111,6 +111,11 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
         self.EventsTableView.clicked.connect(self.goto_event_position)
 
+        # Create context menu for events table
+        self.event_context_menu = QtGui.QMenu(self)
+        self.event_context_menu.addAction(self.actionDelete_Selected)
+        self.EventsTableView.customContextMenuRequested.connect(lambda: self.event_context_menu.exec_(QtGui.QCursor.pos()))
+
         self.actionOpen.triggered.connect(self.open)
         self.actionSave.triggered.connect(self.save_events)
         self.actionSave.triggered.connect(self.save_cf)
@@ -205,52 +210,57 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                 if return_code == QtGui.QDialog.Accepted:
                     values = dialog.get_values()
                     # Load and visualize the opened record
-                    QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                    record = rc.Record(filename, **values)
-                    self.document = eventlistmodel.EventListModel(record, ['name', 'time',
-                                                                  'cf_value',
-                                                                  'mode',
-                                                                  'method',
-                                                                  'status',
-                                                                  'comments'],
-                                                                  self.command_stack)
-                    self.document.emptyList.connect(self.set_modified)
-                    self.actionUndo = self.document.command_stack.createUndoAction(self)
-                    self.actionRedo = self.document.command_stack.createRedoAction(self)
-                    ########
-                    self.EventsTableView.setModel(self.document)
-                    model = self.EventsTableView.selectionModel()
-                    model.selectionChanged.connect(self.on_event_selection)
-                    # connect document model to signalViewer
-                    self.document.eventCreated.connect(self.signalViewer.create_event)
-                    self.document.eventDeleted.connect(self.signalViewer.delete_event)
-                    self.document.eventModified.connect(self.signalViewer.update_event)
-                    self.document.detectionPerformed.connect(self.signalViewer.update_cf)
-                    # load document data into signal viewer
-                    self.signalViewer.set_record(self.document)
-                    self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
-                    self.signalViewer.set_signal_amplitude_visible(self.actionSignal_Amplitude.isChecked())
-                    self.signalViewer.set_signal_envelope_visible(self.actionSignal_Envelope.isChecked())
-                    self.signalViewer.set_cf_visible(self.actionCharacteristic_Function.isChecked())
-                    self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
-                    self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
-                    self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
-                    self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
-                    self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
-                    self.toolBarMedia.connect_path()
-                    QtGui.QApplication.restoreOverrideCursor()
-                    # Update recent list
-                    self.push_recent_list(filename)
-                    # Update GUI
-                    self.centralwidget.setVisible(True)
-                    self.actionClose.setEnabled(True)
-                    self.actionClear_Event_List.setEnabled(True)
-                    self.actionSTA_LTA.setEnabled(True)
-                    self.actionAMPA.setEnabled(True)
-                    self.toolBarNavigation.setEnabled(True)
-                    self.toolBarAnalysis.setEnabled(True)
-                    self.toolBarMedia.set_enabled(True)
-                    self.set_title()
+                    try:
+                        QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                        record = rc.Record(filename, **values)
+                        self.document = eventlistmodel.EventListModel(record, ['name', 'time',
+                                                                      'cf_value',
+                                                                      'mode',
+                                                                      'method',
+                                                                      'status',
+                                                                      'comments'],
+                                                                      self.command_stack)
+                        self.document.emptyList.connect(self.set_modified)
+                        self.actionUndo = self.document.command_stack.createUndoAction(self)
+                        self.actionRedo = self.document.command_stack.createRedoAction(self)
+                        ########
+                        self.EventsTableView.setModel(self.document)
+                        model = self.EventsTableView.selectionModel()
+                        model.selectionChanged.connect(self.on_event_selection)
+                        # connect document model to signalViewer
+                        self.document.eventCreated.connect(self.signalViewer.create_event)
+                        self.document.eventDeleted.connect(self.signalViewer.delete_event)
+                        self.document.eventModified.connect(self.signalViewer.update_event)
+                        self.document.detectionPerformed.connect(self.signalViewer.update_cf)
+                        # load document data into signal viewer
+                        self.signalViewer.set_record(self.document)
+                        self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
+                        self.signalViewer.set_signal_amplitude_visible(self.actionSignal_Amplitude.isChecked())
+                        self.signalViewer.set_signal_envelope_visible(self.actionSignal_Envelope.isChecked())
+                        self.signalViewer.set_cf_visible(self.actionCharacteristic_Function.isChecked())
+                        self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
+                        self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
+                        self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
+                        self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
+                        self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
+                        self.toolBarMedia.connect_path()
+                        # Update recent list
+                        self.push_recent_list(filename)
+                        # Update GUI
+                        self.centralwidget.setVisible(True)
+                        self.actionClose.setEnabled(True)
+                        self.actionClear_Event_List.setEnabled(True)
+                        self.actionSTA_LTA.setEnabled(True)
+                        self.actionAMPA.setEnabled(True)
+                        self.toolBarNavigation.setEnabled(True)
+                        self.toolBarAnalysis.setEnabled(True)
+                        self.toolBarMedia.set_enabled(True)
+                        self.set_title()
+                    except Exception, e:
+                        error.display_error_dlg(str(e), traceback.format_exc())
+                        self.close()
+                    finally:
+                        QtGui.QApplication.restoreOverrideCursor()
             else:
                 other = MainWindow(filename=filename)
                 MainWindow.windowList.append(other)
@@ -346,14 +356,13 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         the user whether to save data or not.
         """
         if self.maybeSave():
-            self.document.emptyList.disconnect(self.set_modified)
-            self.document = None
+            if self.document is not None:
+                self.document.emptyList.disconnect(self.set_modified)
+                self.document = None
             self.command_stack.clear()
             self.set_modified(False)
             self.saved_filename = None
             self.signalViewer.unset_record()
-            self.signalViewer.thresholdMarker.thresholdChanged.disconnect(self.thresholdSpinBox.setValue)
-            self.thresholdSpinBox.valueChanged.disconnect(self.signalViewer.thresholdMarker.set_threshold)
             self.toolBarMedia.disconnect_path()
             # Update GUI
             self.centralwidget.setVisible(False)
@@ -372,6 +381,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         dialog.exec_()
 
     def update_settings(self):
+        QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         settings = QtCore.QSettings(_organization, _application_name)
         # update player settings
         settings.beginGroup('player_settings')
@@ -379,6 +389,13 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         bd = settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH)
         settings.endGroup()
         self.toolBarMedia.set_audio_format(fs, bd)
+        # update event colors
+        if self.document is not None:
+            self.document.loadColorMap()
+        # update spectrogram
+        if self.signalViewer is not None:
+            self.signalViewer.update_specgram_settings()
+        QtGui.QApplication.restoreOverrideCursor()
 
     def push_recent_list(self, filename):
         """Adds a document to recent opened list.

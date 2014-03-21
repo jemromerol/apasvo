@@ -36,10 +36,14 @@ import numpy as np
 import datetime
 
 from eqpickertool.gui.views import takanamidialog
+from eqpickertool.gui.views import settingsdialog
 from eqpickertool.picking import envelope as env
 from eqpickertool.picking import record as rc
 from eqpickertool.utils import plotting
 from eqpickertool.utils import clt
+
+from eqpickertool._version import _application_name
+from eqpickertool._version import _organization
 
 
 class SpanSelector(QtCore.QObject):
@@ -250,7 +254,7 @@ class EventMarker(QtCore.QObject):
     event_selected = QtCore.Signal(rc.Event)
     right_clicked = QtCore.Signal(rc.Event)
 
-    def __init__(self, fig, document, event, color='r', selected_color='m'):
+    def __init__(self, fig, document, event, color='b', selected_color='r'):
         super(EventMarker, self).__init__()
         self.fig = fig
         self.event = event
@@ -265,7 +269,7 @@ class EventMarker(QtCore.QObject):
         # draw markers
         for ax in self.fig.axes:
             marker = ax.axvline(self.event.time / self.event.record.fs)
-            marker.set(color=self.color, ls='--', lw=2, alpha=0.8, picker=5)
+            marker.set(color=self.color, ls='-.', lw=2, dash_capstyle='projecting', alpha=0.8, picker=5)
             self.markers.append(marker)
         # draw label
         bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
@@ -753,6 +757,7 @@ class SignalViewerWidget(QtGui.QWidget):
     def __init__(self, parent, document=None):
         super(SignalViewerWidget, self).__init__(parent)
 
+        self.document = document
         self.xmin = 0.0
         self.xmax = 0.0
         self.xleft = 0.0
@@ -786,6 +791,9 @@ class SignalViewerWidget(QtGui.QWidget):
         self.playback_marker = None
         self.selector = SpanSelector(self.fig)
         self.minimap = MiniMap(self, self.signal_ax, None)
+
+        # Load Spectrogram settings
+        self.update_specgram_settings()
 
         # Animation related attributes
         self.background = None
@@ -831,7 +839,6 @@ class SignalViewerWidget(QtGui.QWidget):
         self.selector.valueChanged.connect(self.minimap.set_selection_limits)
         self.selector.right_clicked.connect(lambda: self.selection_context_menu.exec_(QtGui.QCursor.pos()))
 
-        self.document = document
         if self.document is not None:
             self.set_record(document)
 
@@ -870,7 +877,10 @@ class SignalViewerWidget(QtGui.QWidget):
         plotting.adjust_axes_height(self.signal_ax)
         self.thresholdMarker = ThresholdMarker(self.cf_ax)
         # Plot espectrogram
-        plotting.plot_specgram(self.specgram_ax, self.signal, self.fs)
+        plotting.plot_specgram(self.specgram_ax, self.signal, self.fs,
+                               nfft=self.specgram_windowlen,
+                               noverlap=self.specgram_noverlap,
+                               window=self.specgram_window)
         # Set the span selector
         self.selector.fs = self.fs
         self.selector.set_active(False)
@@ -1157,7 +1167,22 @@ class SignalViewerWidget(QtGui.QWidget):
         for artist in artists:
             yield artist
 
+    def update_specgram_settings(self):
+        # load specgram settings
+        settings = QtCore.QSettings(_organization, _application_name)
 
+        settings.beginGroup("specgram_settings")
+        self.specgram_windowlen = int(settings.value('window_len', settingsdialog.SPECGRAM_WINDOW_LENGTHS[4]))
+        self.specgram_noverlap = int(settings.value('noverlap', self.specgram_windowlen / 2))
+        self.specgram_window = settings.value('window', plotting.SPECGRAM_WINDOWS[2])
+        settings.endGroup()
+
+        if self.data_loaded:
+            # Plot espectrogram
+            plotting.plot_specgram(self.specgram_ax, self.signal, self.fs,
+                                   nfft=self.specgram_windowlen,
+                                   noverlap=self.specgram_noverlap,
+                                   window=self.specgram_window)
 
 
 
