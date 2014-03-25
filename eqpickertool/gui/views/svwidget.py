@@ -254,9 +254,10 @@ class EventMarker(QtCore.QObject):
     event_selected = QtCore.Signal(rc.Event)
     right_clicked = QtCore.Signal(rc.Event)
 
-    def __init__(self, fig, document, event, color='b', selected_color='r'):
+    def __init__(self, fig, minimap, document, event, color='b', selected_color='r'):
         super(EventMarker, self).__init__()
         self.fig = fig
+        self.minimap = minimap
         self.event = event
         self.document = document
         self.position = self.event.time
@@ -267,10 +268,13 @@ class EventMarker(QtCore.QObject):
 
         self.markers = []
         # draw markers
+        pos = self.event.time / self.event.record.fs
         for ax in self.fig.axes:
-            marker = ax.axvline(self.event.time / self.event.record.fs)
-            marker.set(color=self.color, ls='-.', lw=2, dash_capstyle='projecting', alpha=0.8, picker=5)
+            marker = ax.axvline(pos)
+            marker.set(color=self.color, ls='--', lw=2, picker=5)
             self.markers.append(marker)
+        # draw minimap marker
+        self.minimap.create_marker(event, pos, color=self.color, ls='-', lw=1)
         # draw label
         bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
         self.position_label = self.fig.text(0, 0,
@@ -288,7 +292,7 @@ class EventMarker(QtCore.QObject):
         self.background = None
         self.animated = False
 
-        self.canvas.draw_idle()
+        self.draw()
 
     def onpick(self, pick_event):
         if pick_event.artist in self.markers:
@@ -353,16 +357,20 @@ class EventMarker(QtCore.QObject):
                     cf_value = np.nan
                 self.position_label.set_text("Time: %s seconds.\nCF value: %.6g" %
                                              (clt.float_secs_2_string_date(time_in_seconds), cf_value))
+                self.minimap.set_marker_position(self.event, time_in_seconds)
 
     def redraw(self):
         self.position = self.event.time
+        time_in_seconds = self.position / float(self.event.record.fs)
         for marker in self.markers:
-            marker.set_xdata(self.position / float(self.event.record.fs))
+            marker.set_xdata(time_in_seconds)
+        self.minimap.set_marker_position(self.event, time_in_seconds)
         self.draw()
 
     def remove(self):
         for ax, marker in zip(self.fig.axes, self.markers):
             ax.lines.remove(marker)
+        self.minimap.delete_marker(self.event)
         self.draw()
 
     def set_selected(self, value):
@@ -371,6 +379,7 @@ class EventMarker(QtCore.QObject):
             color = self.selected_color if self.selected else self.color
             for marker in self.markers:
                 marker.set(color=color)
+            self.minimap.set_marker(self.event, color=color)
             self.redraw()
 
     def draw(self):
@@ -378,6 +387,7 @@ class EventMarker(QtCore.QObject):
             self._draw_animate()
         else:
             self.canvas.draw_idle()
+        self.minimap.draw()
 
     def _draw_animate(self):
         self.canvas.restore_region(self.background)
@@ -634,6 +644,9 @@ class MiniMap(QtGui.QWidget):
         # Animation related attributes
         self.parentViewer = parent
 
+        # Set Markers dict
+        self.markers = {}
+
         self.record = None
         if record is not None:
             self.set_record(record)
@@ -655,6 +668,7 @@ class MiniMap(QtGui.QWidget):
         plotting.adjust_axes_height(ax)
         # Set the playback marker
         self.playback_marker = PlayBackMarker(self.minimapFig, self)
+        self.playback_marker.markers[0].set_animated(True)
         # Draw canvas
         self.minimapCanvas.draw()
         self.minimapBackground = self.minimapCanvas.copy_from_bbox(self.minimapFig.bbox)
@@ -725,6 +739,8 @@ class MiniMap(QtGui.QWidget):
         self.minimapFig.draw_artist(self.minimapSelection)
         self.minimapFig.draw_artist(self.minimapSelector)
         self.minimapFig.draw_artist(self.playback_marker.markers[0])
+        for marker in self.markers.values():
+            self.minimapFig.draw_artist(marker)
         self.minimapCanvas.blit(self.minimapFig.bbox)
 
     def set_visible(self, value):
@@ -741,6 +757,30 @@ class MiniMap(QtGui.QWidget):
     def set_selection_visible(self, value):
         self.minimapSelection.set_visible(value)
         self.draw_animate()
+
+    def create_marker(self, key, position, **kwargs):
+        if self.xmin <= position <= self.xmax:
+            marker = self.minimapFig.axes[0].axvline(position, animated=True)
+            self.markers[key] = marker
+            self.markers[key].set(**kwargs)
+
+    def set_marker_position(self, key, value):
+        marker = self.markers.get(key)
+        if marker is not None:
+            if self.xmin <= value <= self.xmax:
+                marker.set_xdata(value)
+
+    def set_marker(self, key, **kwargs):
+        marker = self.markers.get(key)
+        if marker is not None:
+            kwargs.pop("animated", None)  # marker's animated property must be always true to be drawn properly
+            marker.set(**kwargs)
+
+    def delete_marker(self, key):
+        marker = self.markers.get(key)
+        if marker is not None:
+            self.minimapFig.axes[0].lines.remove(marker)
+            self.markers.pop(key)
 
 
 class SignalViewerWidget(QtGui.QWidget):
@@ -826,10 +866,6 @@ class SignalViewerWidget(QtGui.QWidget):
         self.cf_ax.set_ylabel('CF Amplitude')
         self.specgram_ax.set_ylabel('Frequency (Hz)')
 
-        # Adjust space between subplots
-        self.fig.subplots_adjust(left=0.05, right=0.95, bottom=0.1,
-                                 top=0.95, hspace=0.2)
-
         # Set the layout
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.graphArea)
@@ -859,12 +895,12 @@ class SignalViewerWidget(QtGui.QWidget):
         # Plot signal
         self._signal_data = self.signal_ax.plot(self.time,
                                                   self.signal,
-                                                  color='blue',
+                                                  color='black',
                                                   rasterized=True)[0]
         # Plot envelope
         self._envelope_data = self.signal_ax.plot(self.time,
                                                     self.envelope,
-                                                    color='green',
+                                                    color='red',
                                                     rasterized=True)[0]
         plotting.adjust_axes_height(self.signal_ax)
         # Plot CF
@@ -921,7 +957,7 @@ class SignalViewerWidget(QtGui.QWidget):
 
     def create_event(self, event):
         if event not in self.eventMarkers:
-            marker = EventMarker(self.fig, self.document, event)
+            marker = EventMarker(self.fig, self.minimap, self.document, event)
             self.eventMarkers[event] = marker
             marker.event_selected.connect(self.event_selected.emit)
             marker.right_clicked.connect(self.on_event_right_clicked)
@@ -1076,7 +1112,12 @@ class SignalViewerWidget(QtGui.QWidget):
     def subplots_adjust(self):
         visible_subplots = [ax for ax in self.fig.get_axes() if ax.get_visible()]
         for i, ax in enumerate(visible_subplots):
-            ax.change_geometry(len(visible_subplots), 1, i + 1)
+            correct_geometry = (len(visible_subplots), 1, i + 1)
+            if correct_geometry != ax.get_geometry():
+                ax.change_geometry(len(visible_subplots), 1, i + 1)
+        # Adjust space between subplots
+        self.fig.subplots_adjust(left=0.06, right=0.95, bottom=0.1,
+                                 top=0.95, hspace=0.2)
 
     def get_selector_limits(self):
         return self.selector.get_selector_limits()
@@ -1179,12 +1220,14 @@ class SignalViewerWidget(QtGui.QWidget):
 
         if self.data_loaded:
             # Plot espectrogram
+            self.specgram_ax.images = []
             plotting.plot_specgram(self.specgram_ax, self.signal, self.fs,
                                    nfft=self.specgram_windowlen,
                                    noverlap=self.specgram_noverlap,
                                    window=self.specgram_window)
 
-
+    def paintEvent(self, paintEvent):
+        super(SignalViewerWidget, self).paintEvent(paintEvent)
 
 
 

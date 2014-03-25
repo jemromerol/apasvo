@@ -140,6 +140,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.splitter.addWidget(self.signalViewer)
         self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.signalViewer.canvas, self)
         self.toolBarNavigation.setEnabled(False)
+        self.toolBarNavigation.view_restored.connect(self.signalViewer.subplots_adjust)
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarNavigation)
         self.addToolBarBreak()
         # add analysis toolbar

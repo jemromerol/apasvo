@@ -24,6 +24,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+from PySide import QtCore
 import matplotlib
 matplotlib.rcParams['backend.qt4'] = 'PySide'
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg
@@ -33,6 +34,8 @@ navigation_bar_items = ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save', '')
 
 class NavigationToolBar(NavigationToolbar2QTAgg):
 
+    view_restored = QtCore.Signal()
+
     def __init__(self, canvas, parent=None):
         super(NavigationToolBar, self).__init__(canvas, parent)
         # remove actions not in navigation_bar_items
@@ -41,3 +44,5 @@ class NavigationToolBar(NavigationToolbar2QTAgg):
         for action in self.actions():
             if action.text() not in navigation_bar_items:
                 self.removeAction(action)
+            if action.text() in ('Home', 'Back', 'Forward'):
+                action.triggered.connect(lambda: self.view_restored.emit())

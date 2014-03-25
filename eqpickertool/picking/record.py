@@ -210,12 +210,12 @@ class Event(object):
         # Draw signal
         fig.axes[0].set_title('Signal Amplitude')
         fig.axes[0].set_ylabel('Amplitude')
-        fig.axes[0].plot(t, self.record.signal[i_from:i_to], color='b',
+        fig.axes[0].plot(t, self.record.signal[i_from:i_to], color='black',
                          label='Signal')
         # Draw envelope
         if show_envelope:
             fig.axes[0].plot(t, env.envelope(self.record.signal[i_from:i_to]),
-                         color='g', label='Envelope')
+                         color='r', label='Envelope')
             fig.axes[0].legend(loc=0, fontsize='small')
         # Draw AIC
         fig.axes[1].set_title('AIC')
@@ -485,12 +485,12 @@ class Record(object):
         if show_x:
             fig.axes[ax_idx].set_title("Signal Amplitude (%gHz)" % self.fs)
             fig.axes[ax_idx].set_ylabel('Amplitude')
-            fig.axes[ax_idx].plot(t, self.signal[i_from:i_to], color='b',
+            fig.axes[ax_idx].plot(t, self.signal[i_from:i_to], color='black',
                                   label='Signal')
             # Draw signal envelope
             if show_envelope:
                 fig.axes[ax_idx].plot(t, env.envelope(self.signal[i_from:i_to]),
-                                  color='g', label='Envelope')
+                                  color='r', label='Envelope')
                 fig.axes[ax_idx].legend(loc=0, fontsize='small')
             ax_idx += 1
         # Draw Characteristic function
