@@ -58,7 +58,7 @@ class DeleteEvents(QtGui.QUndoCommand):
     def __init__(self, model, row_list):
         super(DeleteEvents, self).__init__('Delete events')
         self.model = model
-        self.row_list = row_list
+        self.row_list = sorted(row_list)
         self.events = [self.model.record.events[i] for i in self.row_list]
 
     def undo(self):
@@ -69,9 +69,9 @@ class DeleteEvents(QtGui.QUndoCommand):
             self.model.endInsertRows()
 
     def redo(self):
-        for row, event in zip(self.row_list, self.events):
+        for row, event in zip(sorted(self.row_list, reverse=True), sorted(self.events, reverse=True)):
             self.model.beginRemoveRows(QtCore.QModelIndex(), row, row)
-            self.model.record.events.pop(row)
+            self.model.record.events.remove(event)
             self.model.eventDeleted.emit(event)
             self.model.endRemoveRows()
 

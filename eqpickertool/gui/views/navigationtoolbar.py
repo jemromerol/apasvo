@@ -45,4 +45,4 @@ class NavigationToolBar(NavigationToolbar2QTAgg):
             if action.text() not in navigation_bar_items:
                 self.removeAction(action)
             if action.text() in ('Home', 'Back', 'Forward'):
-                action.triggered.connect(lambda: self.view_restored.emit())
+                action.triggered.connect(self.view_restored.emit)

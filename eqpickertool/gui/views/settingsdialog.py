@@ -95,13 +95,12 @@ class SettingsDialog(QtGui.QDialog):
 
         # Set the settings tree widget
         self.treeWidget = QtGui.QTreeWidget(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum,
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,
                                        QtGui.QSizePolicy.Expanding)
         sizePolicy.setHeightForWidth(self.treeWidget.sizePolicy().
                                      hasHeightForWidth())
         self.treeWidget.setSizePolicy(sizePolicy)
-        self.treeWidget.setMinimumSize(QtCore.QSize(120, 0))
-        self.treeWidget.setBaseSize(QtCore.QSize(120, 0))
+        self.treeWidget.setMaximumWidth(180)
         self.treeWidget.setAnimated(False)
         self.treeWidget.setHeaderHidden(True)
 

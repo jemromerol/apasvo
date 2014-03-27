@@ -144,7 +144,6 @@ class SpanSelector(QtCore.QObject):
             self.press_selector = None
             # End animation
             self._set_animated(False)
-            self.draw()
             self.canvas.widgetlock.release(self)
 
     def onmove(self, event):
@@ -300,15 +299,14 @@ class EventMarker(QtCore.QObject):
                 if pick_event.mouseevent.button == 1:  # left button clicked
                     self.canvas.widgetlock(self)
                     self.pick_event = pick_event
-                    # Start animation
-                    self._set_animated(True)
-                    self.draw()
-
                     xfig, yfig = self._event_to_fig_coords(pick_event.mouseevent)
                     self.position_label.set_position((xfig, yfig))
                     self.event_selected.emit(self.event)
+                    self.draw()
+
                 elif pick_event.mouseevent.button == 3:  # Right button clicked
                     self.event_selected.emit(self.event)
+                    self.draw()
                     self.right_clicked.emit(self.event)
 
     def onrelease(self, mouse_event):
@@ -317,7 +315,6 @@ class EventMarker(QtCore.QObject):
             self.pick_event = None
             # End animation
             self._set_animated(False)
-            self.draw()
 
             self.canvas.widgetlock.release(self)
             if self.position != self.event.time:
@@ -332,6 +329,7 @@ class EventMarker(QtCore.QObject):
             xfig, yfig = self._event_to_fig_coords(mouse_event)
             self.position_label.set_position((xfig, yfig))
             self.position_label.set_visible(True)
+            self._set_animated(True)
             self.draw()
 
     def get_xdata(self, event):
@@ -359,14 +357,6 @@ class EventMarker(QtCore.QObject):
                                              (clt.float_secs_2_string_date(time_in_seconds), cf_value))
                 self.minimap.set_marker_position(self.event, time_in_seconds)
 
-    def redraw(self):
-        self.position = self.event.time
-        time_in_seconds = self.position / float(self.event.record.fs)
-        for marker in self.markers:
-            marker.set_xdata(time_in_seconds)
-        self.minimap.set_marker_position(self.event, time_in_seconds)
-        self.draw()
-
     def remove(self):
         for ax, marker in zip(self.fig.axes, self.markers):
             ax.lines.remove(marker)
@@ -380,7 +370,6 @@ class EventMarker(QtCore.QObject):
             for marker in self.markers:
                 marker.set(color=color)
             self.minimap.set_marker(self.event, color=color)
-            self.redraw()
 
     def draw(self):
         if self.animated:
@@ -461,8 +450,6 @@ class ThresholdMarker(QtCore.QObject):
                         # Draw legend
                         self.figThresholdLabel.set_position((xdata, ydata))
                         self.figThresholdLabel.set_visible(True)
-                        # Start animation
-                        self._set_animated(True)
                         self.draw()
 
     def onrelease(self, event):
@@ -481,6 +468,7 @@ class ThresholdMarker(QtCore.QObject):
             self.set_threshold(round(ydata, 2))
             # Draw legend
             self.figThresholdLabel.set_position((xdata, ydata))
+            self._set_animated(True)
             self.draw()
 
     def get_data(self, event):
@@ -657,6 +645,7 @@ class MiniMap(QtGui.QWidget):
         self.xrange = np.arange(len(self.record.signal)) / self.record.fs
         self.xmin = self.xrange[0]
         self.xmax = self.xrange[-1]
+        self.markers = {}
 
         ax = self.minimapFig.axes[0]
         ax.lines = []
@@ -967,7 +956,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.eventMarkers.pop(event)
 
     def update_event(self, event):
-        self.eventMarkers[event].redraw()
+        self.eventMarkers[event].draw()
 
     def set_xlim(self, l, r):
         xmin = max(0, l)
@@ -1032,9 +1021,9 @@ class SignalViewerWidget(QtGui.QWidget):
 
     def set_event_selection(self, events):
         for event in self.eventMarkers:
-            self.eventMarkers[event].set_selected(False)
-        for event in events:
-            self.eventMarkers[event].set_selected(True)
+            self.eventMarkers[event].set_selected(event in events)
+        self.draw()
+        self.minimap.draw()
 
     def set_position(self, pos):
         """"""
