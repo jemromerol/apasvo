@@ -314,6 +314,7 @@ class EventMarker(QtCore.QObject):
             self.position_label.set_visible(False)
             self.pick_event = None
             # End animation
+            self.draw()
             self._set_animated(False)
 
             self.canvas.widgetlock.release(self)
@@ -370,6 +371,11 @@ class EventMarker(QtCore.QObject):
             for marker in self.markers:
                 marker.set(color=color)
             self.minimap.set_marker(self.event, color=color)
+
+    def update(self):
+        if self.event.time != self.position:
+            self.set_position(self.event.time / float(self.event.record.fs))
+            self.draw()
 
     def draw(self):
         if self.animated:
@@ -956,7 +962,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.eventMarkers.pop(event)
 
     def update_event(self, event):
-        self.eventMarkers[event].draw()
+        self.eventMarkers[event].update()
 
     def set_xlim(self, l, r):
         xmin = max(0, l)

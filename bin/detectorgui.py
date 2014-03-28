@@ -618,7 +618,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         if self.document is not None:
             self.EventsTableView.selectionModel().clear()
             self.EventsTableView.selectionModel().select(self.document.index(self.document.indexOf(event), 0),
-                                                         QtGui.QItemSelectionModel.Select |
+                                                         QtGui.QItemSelectionModel.ClearAndSelect |
                                                          QtGui.QItemSelectionModel.Rows)
 
     def on_selection_toggled(self, value):
