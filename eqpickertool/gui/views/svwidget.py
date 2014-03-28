@@ -877,7 +877,7 @@ class SignalViewerWidget(QtGui.QWidget):
     def data_loaded(self):
         return self.document is not None
 
-    def set_record(self, document, step=60.0):
+    def set_record(self, document, step=120.0):
         self.document = document
         self.fs = self.document.record.fs
         self.signal = self.document.record.signal

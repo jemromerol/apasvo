@@ -28,6 +28,8 @@ from PySide import QtCore
 from PySide import QtGui
 from eqpickertool.gui.models import eventcommands as commands
 from eqpickertool.gui.views.settingsdialog import COLOR_KEYS
+from eqpickertool.gui.views.settingsdialog import DEFAULT_COLOR_KEY
+from eqpickertool.gui.views.settingsdialog import DEFAULT_COLOR_SCHEME
 from eqpickertool.picking import record as rc
 
 from eqpickertool._version import _application_name
@@ -90,13 +92,20 @@ class EventListModel(QtCore.QAbstractTableModel):
     def loadColorMap(self):
         settings = QtCore.QSettings(_organization, _application_name)
         self.color_map = {}
-        settings.beginGroup("color_settings")
-        for key in settings.childKeys():
-            if key == 'color_key':
-                self.color_key = COLOR_KEYS[int(settings.value(key))]
-            else:
-                self.color_map[key] = QtGui.QColor(settings.value(key))
-        settings.endGroup()
+        # load color settings
+        if "color_settings" in settings.childGroups():
+            settings.beginGroup("color_settings")
+            for key in settings.childKeys():
+                if key == 'color_key':
+                    self.color_key = COLOR_KEYS[int(settings.value(key))]
+                else:
+                    self.color_map[key] = QtGui.QColor(settings.value(key))
+            settings.endGroup()
+        # load default color scheme otherwise
+        else:
+            self.color_key = DEFAULT_COLOR_KEY
+            for key, color in DEFAULT_COLOR_SCHEME:
+                self.color_map[key] = QtGui.QColor(color)
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:

@@ -53,6 +53,13 @@ DEFAULT_REJECTED_COLOR = "#f08080"
 DEFAULT_UNDEFINED_COLOR = "#d3d3d3"
 SPECGRAM_WINDOW_LENGTHS = (16, 32, 64, 128, 256, 512, 1024, 2048)
 
+DEFAULT_COLOR_SCHEME = ((rc.method_stalta, DEFAULT_STALTA_COLOR),
+                        (rc.method_stalta_takanami, DEFAULT_STALTA_TAKANAMI_COLOR),
+                        (rc.method_ampa, DEFAULT_AMPA_COLOR),
+                        (rc.method_ampa_takanami, DEFAULT_AMPA_TAKANAMI_COLOR),
+                        (rc.method_takanami, DEFAULT_TAKANAMI_COLOR),
+                        (rc.method_other, DEFAULT_OTHER_COLOR))
+
 
 class SettingsDialog(QtGui.QDialog):
     """A dialog window to edit application settings.
