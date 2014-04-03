@@ -837,12 +837,15 @@ class SignalViewerWidget(QtGui.QWidget):
         # Create context menus
         self.event_context_menu = QtGui.QMenu(self)
         self.takanami_on_event_action = QtGui.QAction("Apply Takanami to Event", self)
+        self.takanami_on_event_action.setStatusTip("Refine event position by using Takanami algorithm")
         self.event_context_menu.addAction(self.takanami_on_event_action)
         self.takanami_on_event_action.triggered.connect(self.apply_takanami_to_selected_event)
 
         self.selection_context_menu = QtGui.QMenu(self)
         self.create_event_action = QtGui.QAction("Create New Event on Selection", self)
+        self.create_event_action.setStatusTip("Create a new event on selection")
         self.takanami_on_selection_action = QtGui.QAction("Apply Takanami to Selection", self)
+        self.takanami_on_selection_action.setStatusTip("Apply Takanami algorithm to selection")
         self.selection_context_menu.addAction(self.create_event_action)
         self.selection_context_menu.addAction(self.takanami_on_selection_action)
         self.create_event_action.triggered.connect(self.create_event_on_selection)

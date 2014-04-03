@@ -244,6 +244,7 @@ class AmpaDialog(QtGui.QDialog):
         self.ampawindowSpinBox.setValue(float(settings.value('window_len', 100.0)))
         self.ampawindowstepSpinBox.setValue(float(settings.value('overlap', 50.0)))
         self.ampanoisethresholdSpinBox.setValue(int(settings.value('noise_threshold', 90)))
+        self._filters.clearFilters()
         for value in self._load_filters():
             self.addFilter(float(value))
         settings.beginGroup("filter_bank_settings")

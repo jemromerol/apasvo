@@ -303,7 +303,6 @@ class PlayerToolBar(QtGui.QToolBar):
         if self.data_loaded and self.buffer_loaded:
             value_in_samples = (value / 1000.0) * self._real_freq
             offset = ((self._start + value_in_samples) * self.samps_2_secs_ratio)
-            print offset
             self.tsbPosition.setTime(QtCore.QTime().addMSecs(int(offset * 1000)))
 
     def on_start_time_changed(self, value):

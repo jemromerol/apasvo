@@ -92,6 +92,10 @@ class FilterListModel(QtCore.QAbstractTableModel):
         self.sizeChanged.emit(len(self._list))
         self.endInsertRows()
 
+    def clearFilters(self):
+        if self.rowCount() > 0:
+            self.removeRows(0, self.rowCount())
+
     def list(self):
         return self._list
 
