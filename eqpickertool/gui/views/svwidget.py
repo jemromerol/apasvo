@@ -607,7 +607,7 @@ class MiniMap(QtGui.QWidget):
         self.minimapFig.set_figheight(0.75)
         self.minimapFig.add_axes((0, 0, 1, 1))
         self.minimapCanvas = FigureCanvas(self.minimapFig)
-        self.minimapCanvas.setMinimumSize(self.minimapCanvas.size())
+        self.minimapCanvas.setFixedHeight(64)
         self.minimapSelector = self.minimapFig.axes[0].axvspan(0, self.step,
                                                                color='gray',
                                                                alpha=0.5,
@@ -815,10 +815,10 @@ class SignalViewerWidget(QtGui.QWidget):
         self.specgram_ax = self.fig.axes[2]
 
         self.canvas = FigureCanvas(self.fig)
-        self.canvas.setMinimumSize(self.canvas.size())
-        self.graphArea = QtGui.QScrollArea(self)
-        self.graphArea.setWidgetResizable(True)
-        self.graphArea.setWidget(self.canvas)
+        self.canvas.setMinimumHeight(320)
+        self.graphArea = QtGui.QFrame(self)
+        self.graphLayout = QtGui.QVBoxLayout(self.graphArea)
+        self.graphLayout.addWidget(self.canvas)
 
         self.eventMarkers = {}
         self.last_right_clicked_event = None
@@ -860,8 +860,8 @@ class SignalViewerWidget(QtGui.QWidget):
             ax.grid(True, which='both')
         self.specgram_ax.callbacks.connect('ylim_changed', self.on_ylim_change)
         self.specgram_ax.set_xlabel('Time (seconds)')
-        self.signal_ax.set_ylabel('Signal Amplitude')
-        self.cf_ax.set_ylabel('CF Amplitude')
+        self.signal_ax.set_ylabel('Signal Amp.')
+        self.cf_ax.set_ylabel('CF Amp.')
         self.specgram_ax.set_ylabel('Frequency (Hz)')
 
         # Set the layout
@@ -1114,8 +1114,8 @@ class SignalViewerWidget(QtGui.QWidget):
             if correct_geometry != ax.get_geometry():
                 ax.change_geometry(len(visible_subplots), 1, i + 1)
         # Adjust space between subplots
-        self.fig.subplots_adjust(left=0.06, right=0.95, bottom=0.1,
-                                 top=0.95, hspace=0.2)
+        self.fig.subplots_adjust(left=0.06, right=0.95, bottom=0.14,
+                                 top=0.95, hspace=0.22)
 
     def get_selector_limits(self):
         return self.selector.get_selector_limits()
