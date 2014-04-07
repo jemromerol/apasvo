@@ -31,6 +31,7 @@ import matplotlib
 matplotlib.rcParams['backend'] = 'qt4agg'
 matplotlib.rcParams['backend.qt4'] = 'PySide'
 matplotlib.rcParams['patch.antialiased'] = False
+matplotlib.rcParams['figure.dpi'] = 65
 matplotlib.rcParams['agg.path.chunksize'] = 80000
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FuncFormatter
