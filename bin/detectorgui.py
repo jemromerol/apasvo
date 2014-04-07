@@ -30,8 +30,10 @@ import sys
 from PySide import QtGui, QtCore
 
 import matplotlib
-matplotlib.use('Qt4Agg')
+matplotlib.rcParams['backend'] = 'qt4agg'
 matplotlib.rcParams['backend.qt4'] = 'PySide'
+matplotlib.rcParams['patch.antialiased'] = False
+matplotlib.rcParams['agg.path.chunksize'] = 80000
 import numpy as np
 import traceback
 

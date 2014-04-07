@@ -28,7 +28,10 @@ from PySide import QtGui
 from PySide import QtCore
 
 import matplotlib
+matplotlib.rcParams['backend'] = 'qt4agg'
 matplotlib.rcParams['backend.qt4'] = 'PySide'
+matplotlib.rcParams['patch.antialiased'] = False
+matplotlib.rcParams['agg.path.chunksize'] = 80000
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.ticker import FuncFormatter
 import matplotlib.pyplot as plt
@@ -815,6 +818,8 @@ class SignalViewerWidget(QtGui.QWidget):
         self.specgram_ax = self.fig.axes[2]
 
         self.canvas = FigureCanvas(self.fig)
+        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
+                                                    QtGui.QSizePolicy.Policy.Expanding))
         self.canvas.setMinimumHeight(320)
         self.graphArea = QtGui.QFrame(self)
         self.graphLayout = QtGui.QVBoxLayout(self.graphArea)
