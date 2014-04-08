@@ -822,9 +822,9 @@ class SignalViewerWidget(QtGui.QWidget):
         self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
                                                     QtGui.QSizePolicy.Policy.Expanding))
         self.canvas.setMinimumHeight(320)
-        self.graphArea = QtGui.QFrame(self)
-        self.graphLayout = QtGui.QVBoxLayout(self.graphArea)
-        self.graphLayout.addWidget(self.canvas)
+        self.graphArea = QtGui.QScrollArea(self)
+        self.graphArea.setWidget(self.canvas)
+        self.graphArea.setWidgetResizable(True)
 
         self.eventMarkers = {}
         self.last_right_clicked_event = None
