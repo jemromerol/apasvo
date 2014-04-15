@@ -41,6 +41,10 @@ def get_version_number():
         raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
     return verstr
 
+
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 setup(name="EQ Picker Tool",
       version=get_version_number(),
       description="A set of tools to perform seismic event detection and picking",
@@ -49,7 +53,7 @@ setup(name="EQ Picker Tool",
       url="",
       license="LGPL",
       scripts=["bin/detector.py", "bin/generator.py", "bin/detectorgui.py"],
-      install_requires=['numpy >= 1.8', 'scipy >= 0.13', 'matplotlib >= 1.3', 'PySide >= 1.2.1'],
+      install_requires=requirements,
       packages=find_packages()
       )
 
