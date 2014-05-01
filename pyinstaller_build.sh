@@ -1,5 +1,5 @@
 dist_dir="dist"
-output="eqpickertool"
+output="apasvo"
 scripts=("detectorgui" "detector" "generator")
 
 output_dir="$dist_dir"/"$output"

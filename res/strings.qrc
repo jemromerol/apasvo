@@ -1,6 +1,6 @@
 <!DOCTYPE RCC><RCC version="1.0">
     <qresource>
-        <file alias="license.txt">strings/COPYING.LESSER.txt</file>
+        <file alias="license.txt">strings/COPYING.txt</file>
         <file alias="version.html">strings/version.html</file>
     </qresource>
 </RCC>

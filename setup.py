@@ -5,23 +5,23 @@
 
 @copyright:  2013 organization_name. All rights reserved.
 
-@license:    LGPL
+@license:    GPL
 
 @contact:    jemromerol@gmail.com
 
-  This file is part of AMPAPicker.
+  This file is part of APASVO.
 
   This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License as published by
+  it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
+  GNU General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
@@ -31,7 +31,7 @@ import re
 
 
 def get_version_number():
-    VERSIONFILE = "eqpickertool/_version.py"
+    VERSIONFILE = "apasvo/_version.py"
     verstrline = open(VERSIONFILE, "rt").read()
     VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
     mo = re.search(VSRE, verstrline, re.M)
@@ -45,13 +45,13 @@ def get_version_number():
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
-setup(name="EQ Picker Tool",
+setup(name="APASVO",
       version=get_version_number(),
       description="A set of tools to perform seismic event detection and picking",
       author="Jose Emilio Romero Lopez",
       author_email="jemromerol@gmail.com",
       url="",
-      license="LGPL",
+      license="GPL",
       scripts=["bin/detector.py", "bin/generator.py", "bin/detectorgui.py"],
       install_requires=requirements,
       packages=find_packages()

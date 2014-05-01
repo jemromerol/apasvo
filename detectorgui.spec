@@ -1,13 +1,12 @@
 # -*- mode: python -*-
 a = Analysis(['bin/detectorgui.py'],
-             pathex=['/eqpickertool'],
+             pathex=['/apasvo'],
              hiddenimports=['scipy.special._ufuncs_cxx', 'PySide.phonon'],
              hookspath=['hooks'])
 
 # Added data
 data = Tree('docs', prefix='docs')
-data += [('COPYING.LESSER.txt', 'COPYING.LESSER.txt', 'DATA'),
-                ('COPYING.txt', 'COPYING.txt', 'DATA'),
+data += [('COPYING.txt', 'COPYING.txt', 'DATA'),
                 ('README', 'README', 'DATA'),
                 ('README.md', 'README.md', 'DATA')]
 

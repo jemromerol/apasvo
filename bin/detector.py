@@ -7,23 +7,23 @@ A tool to detect/pick earthquakes on seismic signals.
 
 @copyright:  2013 organization_name. All rights reserved.
 
-@license:    LGPL
+@license:    GPL
 
 @contact:    jemromerol@gmail.com
 
-  This file is part of AMPAPicker.
+  This file is part of APASVO.
 
   This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License as published by
+  it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
+  GNU General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
@@ -34,13 +34,13 @@ import sys
 import os
 import datetime
 
-from eqpickertool._version import __version__
-from eqpickertool.utils import clt
-from eqpickertool.utils import parse
-from eqpickertool.utils import collections
-from eqpickertool.picking import stalta
-from eqpickertool.picking import ampa
-from eqpickertool.picking import record as rc
+from apasvo._version import __version__
+from apasvo.utils import clt
+from apasvo.utils import parse
+from apasvo.utils import collections
+from apasvo.picking import stalta
+from apasvo.picking import ampa
+from apasvo.picking import record as rc
 
 
 def draw_events_table(record, method):
@@ -424,16 +424,16 @@ def main(argv=None):
     Copyright 2013. All rights reserved.
 
     This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
+    it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+    GNU General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public License
+    You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
     ''' % (program_name, program_version)

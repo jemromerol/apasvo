@@ -1,5 +1,5 @@
 
-# EQ Picker Tool v.0.0.1
+# APASVO v.0.0.1
 
 A graphical tool to perform event detection/picking over a seismic trace.
 

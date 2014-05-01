@@ -1,6 +1,6 @@
 # -*- mode: python -*-
 a = Analysis(['pyinstaller_build.sh'],
-             pathex=['/home/alcapaya/workspace/eqpickertool'],
+             pathex=['/home/alcapaya/workspace/apasvo'],
              hiddenimports=[],
              hookspath=None,
              runtime_hooks=None)

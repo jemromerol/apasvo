@@ -6,23 +6,23 @@
 
 @copyright:  2013 organization_name. All rights reserved.
 
-@license:    LGPL
+@license:    GPL
 
 @contact:    jemromerol@gmail.com
 
-  This file is part of AMPAPicker.
+  This file is part of APASVO.
 
   This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License as published by
+  it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
+  GNU General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
@@ -37,31 +37,31 @@ matplotlib.rcParams['agg.path.chunksize'] = 80000
 import numpy as np
 import traceback
 
-from eqpickertool.gui.views.generated import ui_mainwindow
-from eqpickertool.gui.views.generated import qrc_icons
-from eqpickertool.gui.delegates import cbdelegate
-from eqpickertool.gui.models import eventlistmodel
-from eqpickertool.gui.models import pickingtask
-from eqpickertool.gui.views import aboutdialog
-from eqpickertool.gui.views import svwidget
-from eqpickertool.gui.views import navigationtoolbar
-from eqpickertool.gui.views import loaddialog
-from eqpickertool.gui.views import savedialog
-from eqpickertool.gui.views import settingsdialog
-from eqpickertool.gui.views import takanamidialog
-from eqpickertool.gui.views import staltadialog
-from eqpickertool.gui.views import ampadialog
-from eqpickertool.gui.views import playertoolbar
-from eqpickertool.gui.views import error
+from apasvo.gui.views.generated import ui_mainwindow
+from apasvo.gui.views.generated import qrc_icons
+from apasvo.gui.delegates import cbdelegate
+from apasvo.gui.models import eventlistmodel
+from apasvo.gui.models import pickingtask
+from apasvo.gui.views import aboutdialog
+from apasvo.gui.views import svwidget
+from apasvo.gui.views import navigationtoolbar
+from apasvo.gui.views import loaddialog
+from apasvo.gui.views import savedialog
+from apasvo.gui.views import settingsdialog
+from apasvo.gui.views import takanamidialog
+from apasvo.gui.views import staltadialog
+from apasvo.gui.views import ampadialog
+from apasvo.gui.views import playertoolbar
+from apasvo.gui.views import error
 
-from eqpickertool.picking import stalta
-from eqpickertool.picking import ampa
-from eqpickertool.picking import record as rc
-from eqpickertool.utils.formats import rawfile
+from apasvo.picking import stalta
+from apasvo.picking import ampa
+from apasvo.picking import record as rc
+from apasvo.utils.formats import rawfile
 
-from eqpickertool._version import __version__
-from eqpickertool._version import _application_name
-from eqpickertool._version import _organization
+from apasvo._version import __version__
+from apasvo._version import _application_name
+from apasvo._version import _organization
 
 
 format_csv = 'csv'

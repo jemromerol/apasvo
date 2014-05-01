@@ -1,12 +1,11 @@
 # -*- mode: python -*-
 a = Analysis(['bin/detector.py'],
-             pathex=['/eqpickertool'],
+             pathex=['/apasvo'],
              hiddenimports=['scipy.special._ufuncs_cxx'])
 
 # Added data
 data = Tree('./docs', prefix='docs')
-data += [('COPYING.LESSER.txt', 'COPYING.LESSER.txt', 'DATA'),
-                ('COPYING.txt', 'COPYING.txt', 'DATA'),
+data += [('COPYING.txt', 'COPYING.txt', 'DATA'),
                 ('README', 'README', 'DATA'),
                 ('README.md', 'README.md', 'DATA'),
                 ('options.cfg', 'options.cfg', 'DATA')]

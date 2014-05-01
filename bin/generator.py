@@ -7,23 +7,23 @@ A tool that generates synthetic seismic signals.
 
 @copyright:  2013 organization_name. All rights reserved.
 
-@license:    LGPL
+@license:    GPL
 
 @contact:    jemromerol@gmail.com
 
-  This file is part of AMPAPicker.
+  This file is part of APASVO.
 
   This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License as published by
+  it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
+  GNU General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
@@ -31,10 +31,10 @@ import argparse
 import os
 import sys
 
-from eqpickertool._version import __version__
-from eqpickertool.utils import clt, parse, futils
-from eqpickertool.utils.formats import rawfile
-from eqpickertool.picking import eqgenerator
+from apasvo._version import __version__
+from apasvo.utils import clt, parse, futils
+from apasvo.utils.formats import rawfile
+from apasvo.picking import eqgenerator
 
 
 def print_settings(args):
@@ -232,16 +232,16 @@ def main(argv=None):
     Copyright 2013. All rights reserved.
 
     This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
+    it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+    GNU General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public License
+    You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
     ''' % (program_name, program_version)
@@ -361,12 +361,12 @@ def main(argv=None):
         ''')
         parser.add_argument("-t", "--t-event",
                             type=parse.positive_float,
-                            default=0.0,
+                            default=50.0,
                             metavar='<arg>',
                             help='''
     Arrival time in seconds from the beginning of rendered signal.
     If input signal is provided, this parameter has no effect.
-    Default: 0.0 seconds.
+    Default: 50.0 seconds.
         ''')
         parser.add_argument("-ep", "--earthquake-power",
                             type=float,
