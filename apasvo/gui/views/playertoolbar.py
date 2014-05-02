@@ -3,7 +3,7 @@
 '''
 @author:     Jose Emilio Romero Lopez
 
-@copyright:  2013 organization_name. All rights reserved.
+@copyright:  Copyright 2013-2014, Jose Emilio Romero Lopez.
 
 @license:    GPL
 

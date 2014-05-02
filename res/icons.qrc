@@ -22,6 +22,7 @@
         <file alias="takanami.png">images/takanami.png</file>
         <file alias="threshold.png">images/threshold.png</file>
         <file alias="app.png">images/app.png</file>
+        <file alias="splash.png">images/splash.png</file>
         <file alias="marker.png">images/marker.png</file>
     </qresource>
 </RCC>

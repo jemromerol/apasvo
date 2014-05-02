@@ -2,7 +2,7 @@
 '''
 @author:     Jose Emilio Romero Lopez
 
-@copyright:  2013 organization_name. All rights reserved.
+@copyright:  Copyright 2013-2014, Jose Emilio Romero Lopez.
 
 @license:    GPL
 
@@ -27,8 +27,6 @@
 import numpy as np
 import csv
 import os
-import matplotlib.pyplot as pl
-from matplotlib import ticker
 import datetime
 
 from apasvo.picking import takanami
@@ -188,6 +186,10 @@ class Event(object):
         """
         if self.aic is None or self.n0_aic is None:
             raise ValueError("Event doesn't have AIC data to plot")
+
+        # Lazy matplotlib import
+        import matplotlib.pyplot as pl
+        from matplotlib import ticker
 
         # Set limits
         i_from = int(max(0, self.n0_aic))
@@ -457,6 +459,10 @@ class Record(object):
         Returns:
             fig: A MatplotLib Figure instance.
         """
+        # Lazy matplotlib import
+        import matplotlib.pyplot as pl
+        from matplotlib import ticker
+
         # Set limits
         i_from = int(max(0.0, t_start * self.fs))
         if show_cf:

@@ -4,7 +4,7 @@
 '''
 @author:     Jose Emilio Romero Lopez
 
-@copyright:  2013 organization_name. All rights reserved.
+@copyright:  Copyright 2013-2014, Jose Emilio Romero Lopez.
 
 @license:    GPL
 
@@ -29,40 +29,11 @@
 import sys
 from PySide import QtGui, QtCore
 
-import matplotlib
-matplotlib.rcParams['backend'] = 'qt4agg'
-matplotlib.rcParams['backend.qt4'] = 'PySide'
-matplotlib.rcParams['patch.antialiased'] = False
-matplotlib.rcParams['agg.path.chunksize'] = 80000
-import numpy as np
-import traceback
-
-from apasvo.gui.views.generated import ui_mainwindow
-from apasvo.gui.views.generated import qrc_icons
-from apasvo.gui.delegates import cbdelegate
-from apasvo.gui.models import eventlistmodel
-from apasvo.gui.models import pickingtask
-from apasvo.gui.views import aboutdialog
-from apasvo.gui.views import svwidget
-from apasvo.gui.views import navigationtoolbar
-from apasvo.gui.views import loaddialog
-from apasvo.gui.views import savedialog
-from apasvo.gui.views import settingsdialog
-from apasvo.gui.views import takanamidialog
-from apasvo.gui.views import staltadialog
-from apasvo.gui.views import ampadialog
-from apasvo.gui.views import playertoolbar
-from apasvo.gui.views import error
-
-from apasvo.picking import stalta
-from apasvo.picking import ampa
-from apasvo.picking import record as rc
-from apasvo.utils.formats import rawfile
-
 from apasvo._version import __version__
 from apasvo._version import _application_name
 from apasvo._version import _organization
-
+from apasvo.gui.views.generated import ui_mainwindow
+from apasvo.utils.formats import rawfile
 
 format_csv = 'csv'
 format_other = 'other'
@@ -640,8 +611,48 @@ if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName(_application_name)
     app.setWindowIcon(QtGui.QIcon(":/app.png"))
+
+    # Create and display the splash screen
+    splash = QtGui.QSplashScreen(QtGui.QPixmap(":splash.png"), QtCore.Qt.WindowStaysOnTopHint)
+    splash.show()
+
+    # Load libraries
+    splash.showMessage("Loading libraries...")
+    import matplotlib
+    matplotlib.rcParams['backend'] = 'qt4agg'
+    matplotlib.rcParams['backend.qt4'] = 'PySide'
+    matplotlib.rcParams['patch.antialiased'] = False
+    matplotlib.rcParams['agg.path.chunksize'] = 80000
+
+    import numpy as np
+    import traceback
+    from apasvo.gui.views.generated import qrc_icons
+    from apasvo.gui.delegates import cbdelegate
+    from apasvo.gui.models import eventlistmodel
+    from apasvo.gui.models import pickingtask
+    from apasvo.gui.views import aboutdialog
+    from apasvo.gui.views import svwidget
+    from apasvo.gui.views import navigationtoolbar
+    from apasvo.gui.views import loaddialog
+    from apasvo.gui.views import savedialog
+    from apasvo.gui.views import settingsdialog
+    from apasvo.gui.views import takanamidialog
+    from apasvo.gui.views import staltadialog
+    from apasvo.gui.views import ampadialog
+    from apasvo.gui.views import playertoolbar
+    from apasvo.gui.views import error
+
+    from apasvo.picking import stalta
+    from apasvo.picking import ampa
+    from apasvo.picking import record as rc
+
+    app.processEvents()
+
+    # Create and display the main window
     main = MainWindow()
     main.show()
+    splash.finish(main)
+
     try:
         app.exec_()
     except Exception, e:

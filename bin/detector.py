@@ -5,7 +5,7 @@ A tool to detect/pick earthquakes on seismic signals.
 
 @author:     Jose Emilio Romero Lopez
 
-@copyright:  2013 organization_name. All rights reserved.
+@copyright:  Copyright 2013-2014, Jose Emilio Romero Lopez.
 
 @license:    GPL
 
@@ -28,7 +28,6 @@ A tool to detect/pick earthquakes on seismic signals.
 
 '''
 
-import matplotlib.pyplot as pl
 import argparse
 import sys
 import os
@@ -192,10 +191,7 @@ class Analysis(object):
             alg = ampa.Ampa(**kwargs)
         self.on_notify("Done\n")
         # Run analysis
-        pl.ion()
         self._do_analysis(records, alg, **kwargs)
-        pl.ioff()
-        pl.close('all')
 
         # Show results
         draw_results(records, method=method)
@@ -247,6 +243,9 @@ class Detector(Analysis):
     def _do_analysis(self, records, alg, supervised=False, sort=None, **kwargs):
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
+        if supervised:
+            import matplotlib.pyplot as pl
+            pl.ion()
         for record in records:
             self.on_notify("Processing %s... " % record.filename)
             record.detect(alg, **kwargs)
@@ -263,6 +262,9 @@ class Detector(Analysis):
                 elif last_response == "continue & don't ask again":
                     supervised = False
                     pl.close('all')
+        if supervised:
+            pl.ioff()
+            pl.close('all')
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
                           show_cf=False, show_specgram=False,
@@ -321,6 +323,9 @@ class Picker(Analysis):
     def _do_analysis(self, records, alg, supervised=False, **kwargs):
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
+        if supervised:
+            import matplotlib.pyplot as pl
+            pl.ion()
         for record in records:
             self.on_notify("Processing %s... " % record.filename)
             if supervised:
@@ -340,6 +345,9 @@ class Picker(Analysis):
                 record.detect(alg, **kwargs)
                 self.on_notify("Done\n")
                 draw_events_table(record, method)
+        if supervised:
+            pl.ioff()
+            pl.close('all')
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
                           show_cf=False, show_specgram=False,
