@@ -208,12 +208,12 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                                                             ";;".join(self._file_filters))
         if filename != '':
             if self.document is None:
-                dialog = loaddialog.LoadDialog(self, filename)
-                return_code = dialog.exec_()
-                if return_code == QtGui.QDialog.Accepted:
-                    values = dialog.get_values()
-                    # Load and visualize the opened record
-                    try:
+                try:
+                    dialog = loaddialog.LoadDialog(self, filename)
+                    return_code = dialog.exec_()
+                    if return_code == QtGui.QDialog.Accepted:
+                        values = dialog.get_values()
+                        # Load and visualize the opened record
                         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                         record = rc.Record(filename, **values)
                         self.document = eventlistmodel.EventListModel(record, ['name', 'time',
@@ -259,11 +259,11 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         self.toolBarAnalysis.setEnabled(True)
                         self.toolBarMedia.set_enabled(True)
                         self.set_title()
-                    except Exception, e:
-                        error.display_error_dlg(str(e), traceback.format_exc())
-                        self.close()
-                    finally:
-                        QtGui.QApplication.restoreOverrideCursor()
+                except Exception, e:
+                    error.display_error_dlg(str(e), traceback.format_exc())
+                    self.close()
+                finally:
+                    QtGui.QApplication.restoreOverrideCursor()
             else:
                 other = MainWindow(filename=filename)
                 MainWindow.windowList.append(other)
