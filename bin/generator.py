@@ -486,7 +486,7 @@ def main(argv=None):
     Output file format. Default value is 'binary'.
         ''')
         parser.add_argument("--datatype",
-                            choices=['float16', 'float32', 'float64'],
+                            choices=['int16', 'int32', 'int64', 'float16', 'float32', 'float64'],
                             default='float64',
                             help='''
     Data-type of generated data. If input files are specified, this parameter

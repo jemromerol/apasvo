@@ -30,6 +30,23 @@ from apasvo.utils import futils
 from apasvo.utils.formats import rawfile
 
 
+FORMATS = (rawfile.format_binary, rawfile.format_text)
+DTYPES = (rawfile.datatype_int16,
+          rawfile.datatype_int32,
+          rawfile.datatype_int64,
+          rawfile.datatype_float16,
+          rawfile.datatype_float32,
+          rawfile.datatype_float64, )
+DTYPES_LABELS = ('16 bits, PCM',
+                 '32 bits, PCM',
+                 '64 bits, PCM',
+                 '16 bits, float',
+                 '32 bits, float',
+                 '64 bits, float', )
+BYTEORDERS = (rawfile.byteorder_little_endian,
+              rawfile.byteorder_big_endian)
+
+
 class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
     """A dialog window to load seismic data stored in a binary or text file.
 
@@ -46,15 +63,14 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
     Attributes:
         filename: Name of the opened file.
     """
-    _formats = (rawfile.format_binary, rawfile.format_text)
-    _dtypes = (rawfile.datatype_float16, rawfile.datatype_float32,
-               rawfile.datatype_float64)
-    _byteorders = (rawfile.byteorder_little_endian,
-                   rawfile.byteorder_big_endian)
 
     def __init__(self, parent, filename):
         super(LoadDialog, self).__init__(parent)
         self.setupUi(self)
+        # init datatype combobox
+        self.DataTypeComboBox.addItems(DTYPES_LABELS)
+        self.DataTypeComboBox.setCurrentIndex(DTYPES.index(rawfile.datatype_float64))
+
         self.filename = filename
 
         self.FileFormatComboBox.currentIndexChanged.connect(self.on_format_change)
@@ -79,7 +95,7 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
 
     def on_format_change(self, idx):
         """Updates UI after toggling the format value."""
-        fmt = self._formats[self.FileFormatComboBox.currentIndex()]
+        fmt = FORMATS[self.FileFormatComboBox.currentIndex()]
         if fmt == rawfile.format_binary:
             self.DataTypeComboBox.setVisible(True)
             self.DataTypeLabel.setVisible(True)
@@ -95,19 +111,25 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
         """Shows a preview of loaded data using the selected parameters."""
         # Load parameters
         values = self.get_values()
-        # Set up a file handler according to the type of raw data (binary or text)
-        fhandler = rawfile.get_file_handler(self.filename, **values)
-        # Print data preview
-        array = fhandler.read_in_blocks().next()
-        data = ''
-        for x in array:
-            data += ("%s\n" % x)
+        try:
+            # Set up a file handler according to the type of raw data (binary or text)
+            fhandler = rawfile.get_file_handler(self.filename, **values)
+            # Print data preview
+            array = fhandler.read_in_blocks().next()
+            data = ''
+            for x in array:
+                data += ("%g\n" % x)
+        except:
+            data = '*** There was a problem reading the file content ***'
+            self.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+        else:
+            self.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
         self.PreviewTextEdit.clear()
         self.PreviewTextEdit.setText(data)
 
     def get_values(self):
         """Gets selected parameters."""
-        return {'fmt': self._formats[self.FileFormatComboBox.currentIndex()],
-                'dtype': self._dtypes[self.DataTypeComboBox.currentIndex()],
-                'byteorder': self._byteorders[self.ByteOrderComboBox.currentIndex()],
+        return {'fmt': FORMATS[self.FileFormatComboBox.currentIndex()],
+                'dtype': DTYPES[self.DataTypeComboBox.currentIndex()],
+                'byteorder': BYTEORDERS[self.ByteOrderComboBox.currentIndex()],
                 'fs': float(self.SampleFrequencySpinBox.value())}

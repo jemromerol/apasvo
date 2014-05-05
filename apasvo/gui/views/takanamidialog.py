@@ -124,20 +124,20 @@ class TakanamiDialog(QtGui.QDialog):
         if self.seismic_event is not None:
             self.event_time = self.seismic_event.time
             if self._start is None:
-                self._start = self.event_time - self.default_margin
+                self._start = max(0, self.event_time - self.default_margin)
             if self._end is None:
-                self._end = self.event_time + self.default_margin
+                self._end = min(len(self.record.signal), self.event_time + self.default_margin)
         else:
             if self._start is None or self._end is None:
                 raise ValueError("t_start and t_end values not specified")
             else:
-                self._start = int(t_start * self.record.fs)
-                self._end = int(t_end * self.record.fs)
+                self._start = max(0, int(t_start * self.record.fs))
+                self._end = min(len(self.record.signal), int(t_end * self.record.fs))
                 self.event_time = self._start + int((self._end - self._start) / 2)
 
-        if not 0 <= self._start < len(self.record.signal):
+        if not 0 <= self._start < self._end:
             raise ValueError("Invalid t_start value")
-        if not 0 <= self._end < len(self.record.signal):
+        if not self._start < self._end <= len(self.record.signal):
             raise ValueError("Invalid t_end value")
         if (self._end - self._start) < (MINIMUM_MARGIN_IN_SECS * self.record.fs):
             raise ValueError("Distance between t_start and t_end must be"

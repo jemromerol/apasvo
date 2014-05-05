@@ -576,8 +576,9 @@ def main(argv=None):
     Default value is 'vd', meaning value descending.
         ''')
         parser.add_argument("--datatype",
-                            choices=['float16', 'float32', 'float64'],
+                            choices=['int16', 'int32', 'int64', 'float16', 'float32', 'float64'],
                             default='float64',
+                            dest='dtype',
                             help='''
     Data-type of input data. Default value is float64, meaning double-precision
     floating point format.
@@ -605,7 +606,7 @@ def main(argv=None):
     Characteristic function output file format.
     Default value is 'binary'.
         ''')
-        cf_options.add_argument("--cfd", choices=['float16', 'float32', 'float64'],
+        cf_options.add_argument("--cfd", choices=['int16', 'int32', 'int64', 'float16', 'float32', 'float64'],
                             default='float64',
                             help='''
     Data-type of characteristic function saved data.

@@ -30,6 +30,9 @@ from apasvo.utils import futils
 
 format_binary = 'binary'
 format_text = 'text'
+datatype_int16 = 'int16'
+datatype_int32 = 'int32'
+datatype_int64 = 'int64'
 datatype_float16 = 'float16'
 datatype_float32 = 'float32'
 datatype_float64 = 'float64'
@@ -43,10 +46,13 @@ class RawFile(object):
 
     _datatypes = {datatype_float16: 'f2',
                   datatype_float32: 'f4',
-                  datatype_float64: 'f8'}
+                  datatype_float64: 'f8',
+                  datatype_int16: 'i2',
+                  datatype_int32: 'i4',
+                  datatype_int64: 'i8', }
     _byteorders = {byteorder_little_endian: '<',
                    byteorder_big_endian: '>',
-                   byteorder_native: '='}
+                   byteorder_native: '=', }
 
     def __init__(self):
         super(RawFile, self).__init__()
@@ -195,8 +201,8 @@ def get_file_handler(filename, fmt='', dtype='float64', byteorder='native', **kw
             If '' is selected, the function will detect whether the file
             is a binary or a text file.
         dtype: Data-type of the numeric data stored in the file.
-            Possible values are 'float16', 'float32' and 'float64'.
-            Default value is 'float64'.
+            Possible values are 'int16', 'int32', 'int64', 'float16', 'float32'
+            and 'float64'. Default value is 'float64'.
         byteorder: Byte-order of the numeric data stored in the file.
             Possible values are 'little-endian', 'big-endian' and 'native'.
             Default value is 'native'.
