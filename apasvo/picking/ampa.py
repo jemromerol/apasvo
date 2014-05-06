@@ -174,7 +174,8 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
                              "of the values of L")
     fs = float(fs)
     peak_window = round(peak_window * fs / 2.)
-    t = np.arange(0, len(x) / fs, 1. / fs)
+    t = np.linspace(0, len(x) / fs, num=len(x), endpoint=False)
+    print len(t)
     x = x - np.mean(x)  # We remove the mean
     # The first configurable parameter is the bank of bandpass filters
     # Several options can be chosen
@@ -312,6 +313,7 @@ class Ampa(object):
         overlapped = max(0, int((self.window - self.step) * fs) - tail)
         for i in xrange(0, len(out), step):
             size = min(self.window * fs, len(x) - i)
+            print len(x), i, i+size
             _, cf = ampa(x[i:i + size], fs, L=self.L,
                          L_coef=self.L_coef, noise_thr=self.noise_thr,
                          bandwidth=self.bandwidth, overlap=self.overlap,
