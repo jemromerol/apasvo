@@ -155,7 +155,8 @@ def generate_seismic_earthquake(tmax, t0, fs, P_signal_db, low_period,
     """
     if fs <= 0:
         raise ValueError("fs must be a positive value")
-    L = int(tmax * fs)
+    # Signal length in the range 0:1/fs:tmax
+    L = int(tmax * fs) + 1
     # First earthquake sample
     n0 = int(t0 * fs)
     if n0 >= L:
@@ -226,7 +227,8 @@ def generate_seismic_noise(tmax, fs, P_noise_db, bfirls=None):
         raise ValueError("fs must be a positive value")
     if bfirls is None:
         bfirls = np.array([1])
-    L = tmax * fs
+    # Signal length in the range 0:1/fs:tmax
+    L = int(tmax * fs) + 1
     # White noise generation for polluting the earthquake
     # We add noise according to Peterson's Model
     x = np.random.randn(L)

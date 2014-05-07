@@ -42,7 +42,7 @@ class AmpaDialog(QtGui.QDialog):
         self.document = document
 
         self.step = 1.0 / self.document.record.fs
-        self.max_value = (len(self.document.record.signal) /
+        self.max_value = ((len(self.document.record.signal) - 1) /  # Signal starts at t0 = 0
                           self.document.record.fs)
         self.nyquist_freq = self.document.record.fs / 2.0
         self.setup_ui()
@@ -53,7 +53,7 @@ class AmpaDialog(QtGui.QDialog):
         self._filters.dataChanged.connect(self._on_data_changed)
         filterDelegate = dsbdelegate.DoubleSpinBoxDelegate(self.filtersTable,
                                                            minimum=self.step,
-                                                           maximum=self.max_value,
+                                                           maximum=self.max_value - self.step,
                                                            step=self.step)
         self.filtersTable.setItemDelegateForColumn(0, filterDelegate)
 
@@ -292,8 +292,7 @@ class AmpaDialog(QtGui.QDialog):
             self.actionRemoveFilter.setEnabled(False)
 
     def _on_data_changed(self, top_left, bottom_right):
-        self.ampawindowSpinBox.setMinimum(max(self._filters.list()) +
-                                          self.step)
+        self.ampawindowSpinBox.setMinimum(max(self._filters.list()))
 
     def _load_filters(self, default=None):
         if default is None:

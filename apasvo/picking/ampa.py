@@ -174,7 +174,6 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
                              "of the values of L")
     fs = float(fs)
     peak_window = round(peak_window * fs / 2.)
-    t = np.linspace(0, len(x) / fs, num=len(x), endpoint=False)
     x = x - np.mean(x)  # We remove the mean
     # The first configurable parameter is the bank of bandpass filters
     # Several options can be chosen
@@ -214,7 +213,7 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
     lztot = np.log10(ztot) - np.min(np.log10(ztot)) + 1e-2
     # This total signal is passed through a non-linear filtering based
     # on a set of filters of different length. This is completely configurable
-    Ztot = np.zeros((len(L), len(t)))
+    Ztot = np.zeros((len(L), len(x)))
     for i in xrange(len(L)):
         l = int(L[i] * fs)
         B = np.zeros(2 * l)

@@ -652,7 +652,8 @@ class MiniMap(QtGui.QWidget):
     def set_record(self, record, step):
         self.record = record
         self.step = step
-        self.xrange = np.arange(len(self.record.signal)) / self.record.fs
+        self.xrange = np.linspace(0, len(self.record.signal) / self.record.fs,
+                                  num=len(self.record.signal), endpoint=False)
         self.xmin = self.xrange[0]
         self.xmax = self.xrange[-1]
         self.markers = {}
@@ -892,7 +893,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.signal = self.document.record.signal
         self.envelope = env.envelope(self.signal)
         self.cf = self.document.record.cf
-        self.time = np.arange(len(self.signal)) / self.fs
+        self.time = np.linspace(0, len(self.signal) / self.fs, num=len(self.signal), endpoint=False)
         self.xmax = self.time[-1]
         # Draw minimap
         self.minimap.set_record(self.document.record, step)

@@ -40,7 +40,7 @@ class StaLtaDialog(QtGui.QDialog):
         self.document = document
 
         self.step = 1.0 / self.document.record.fs
-        self.max_value = (len(self.document.record.signal) /
+        self.max_value = ((len(self.document.record.signal) - 1) /  # Signal starts at t0 = 0
                           self.document.record.fs)
 
         self.setup_ui()

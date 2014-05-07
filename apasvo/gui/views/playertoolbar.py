@@ -239,7 +239,7 @@ class PlayerToolBar(QtGui.QToolBar):
         # update ui
         self.tsbStart.setMinimumTime(QtCore.QTime().addMSecs(0))
         self.tsbEnd.setMaximumTime(QtCore.QTime().addMSecs(int(1000 *
-                                                               len(self._raw_data) /
+                                                               (len(self._raw_data) - 1) /
                                                                self._data_fs)))
         self._update_qtimeedit_range()
         self.toggle_interval_selected(False)
