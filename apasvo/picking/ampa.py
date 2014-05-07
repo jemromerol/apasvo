@@ -313,7 +313,6 @@ class Ampa(object):
         overlapped = max(0, int((self.window - self.step) * fs) - tail)
         for i in xrange(0, len(out), step):
             size = min(self.window * fs, len(x) - i)
-            print len(x), i, i+size
             _, cf = ampa(x[i:i + size], fs, L=self.L,
                          L_coef=self.L_coef, noise_thr=self.noise_thr,
                          bandwidth=self.bandwidth, overlap=self.overlap,

@@ -115,7 +115,7 @@ def print_settings(args):
         sys.stdout.write("%30s: %s\n" % ("Window length(s)",
                                        args.window))
         sys.stdout.write("%30s: %s\n" % ("Window overlap",
-                                       args.window_overlap))
+                                       args.step))
         sys.stdout.write("%30s: %s\n" % ("Noise threshold",
                                        args.noise_thr))
         sys.stdout.write("%30s: %s\n" % ("Length of the filters used(s)",
@@ -653,7 +653,7 @@ def main(argv=None):
         ''')
         ampa_options.add_argument("--ampa-step",
                                   type=parse.positive_float,
-                                  dest='window_overlap',
+                                  dest='step',
                                   default=50.0,
                                   metavar='<arg>',
                                   help='''
