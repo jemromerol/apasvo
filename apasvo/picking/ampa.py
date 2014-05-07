@@ -175,7 +175,6 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
     fs = float(fs)
     peak_window = round(peak_window * fs / 2.)
     t = np.linspace(0, len(x) / fs, num=len(x), endpoint=False)
-    print len(t)
     x = x - np.mean(x)  # We remove the mean
     # The first configurable parameter is the bank of bandpass filters
     # Several options can be chosen
