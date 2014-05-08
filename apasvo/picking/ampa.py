@@ -193,8 +193,8 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
                                   np.arange(32) / fs)
         h0o = np.imag(signal.hilbert(h0))
         # Filtering the signal
-        xa = np.convolve(x, h0)[:len(x)]  # Same as signal.lfilter(h0, 1, x)
-        xao = np.convolve(x, h0o)[:len(x)]  # Same as signal.lfilter(h0o, 1, x)
+        xa = signal.fftconvolve(x, h0)[:len(x)]  # Same as signal.lfilter(h0, 1, x)
+        xao = signal.fftconvolve(x, h0o)[:len(x)]  # Same as signal.lfilter(h0o, 1, x)
         # Analytic signal
         y0 = np.sqrt((xa ** 2) + (xao ** 2))
         # Fix a threshold to modify the energies in the channels
@@ -220,7 +220,7 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
         B[0:l] = range(1, l + 1)
         B[l:2 * l] = L_coef * (np.arange(1, l + 1) - (l + 1))
         B = B / np.sum(np.abs(B))
-        Zt = np.convolve(lztot, B)[:len(x)]  # Same as signal.lfilter(B, 1, lztot)
+        Zt = signal.fftconvolve(lztot, B)[:len(x)]  # Same as signal.lfilter(B, 1, lztot)
         Zt = Zt * (Zt > 0)
         Ztot[i, :-l] = np.roll(Zt, -l)[:-l]
     ZTOT = np.prod(Ztot, 0)[:-(np.max(L) * fs)]

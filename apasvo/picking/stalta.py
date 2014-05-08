@@ -29,6 +29,7 @@ import numpy as np
 
 from apasvo.picking import findpeaks
 from numpy.lib import stride_tricks
+from scipy import signal
 
 
 def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
@@ -89,31 +90,36 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
     if method not in ('convolution', 'strides', 'iterative'):
         raise ValueError("method not supported")
 
-    sta = sta_length * fs
-    lta = lta_length * fs
+    sta = min(len(x), sta_length * fs + 1)
+    lta = min(len(x), lta_length * fs + 1)
     peak_window = int(peak_window * fs / 2.)
     x_norm = np.abs(x - np.mean(x))
     cf = np.zeros(len(x))
-    results_len = int(len(x_norm) - lta + 1)
 
     if len(cf) > 0:
         if method == 'strides':
-            sta_win = stride_tricks.as_strided(x_norm, shape=(results_len, sta),
+            sta_win = stride_tricks.as_strided(np.concatenate((x_norm, np.zeros(sta))),
+                                               shape=(len(x), sta),
                                                strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
-            lta_win = stride_tricks.as_strided(x_norm, shape=(results_len, lta),
+            lta_win = stride_tricks.as_strided(np.concatenate((x_norm, np.zeros(lta))),
+                                               shape=(len(x), lta),
                                                strides=(1 * x_norm.dtype.itemsize, 1 * x_norm.dtype.itemsize))
-            cf[:results_len] = sta_win.mean(axis=1) / lta_win.mean(axis=1)
+            sta_win_len = np.concatenate((np.ones(len(x) - sta) * sta,
+                                          np.arange(sta, 0, -1)))
+            lta_win_len = np.concatenate((np.ones(len(x) - lta) * lta,
+                                          np.arange(lta, 0, -1)))
+            cf = (sta_win.sum(axis=1) / sta_win_len) / (lta_win.sum(axis=1) / lta_win_len)
         elif method == 'convolution':
-            sta_filt = np.ones(sta) / sta
-            lta_filt = np.ones(lta) / lta
-            sta_win = np.convolve(x_norm, sta_filt, mode='valid')[:results_len]
-            lta_win = np.convolve(x_norm, lta_filt, mode='valid')
-            cf[:results_len] = sta_win / lta_win
+            sta_win = signal.fftconvolve(np.ones(sta), x_norm)[sta - 1:]
+            lta_win = signal.fftconvolve(np.ones(lta), x_norm)[lta - 1:]
+            sta_win_len = np.concatenate((np.ones(len(x) - sta) * sta,
+                                          np.arange(sta, 0, -1)))
+            lta_win_len = np.concatenate((np.ones(len(x) - lta) * lta,
+                                          np.arange(lta, 0, -1)))
+            cf = (sta_win / sta_win_len) / (lta_win / lta_win_len)
         elif method == 'iterative':
-            for i in xrange(results_len):
-                sta_to = int(min(len(x_norm), i + sta))
-                lta_to = int(min(len(x_norm), i + lta))
-                cf[i] = np.mean(x_norm[i:sta_to]) / np.mean(x_norm[i:lta_to])
+            for i in xrange(len(x)):
+                cf[i] = np.mean(x_norm[i:i + sta]) / np.mean(x_norm[i:i + lta])
 
     event_t = findpeaks.find_peaks(cf, threshold, order=peak_window * fs)
     return event_t, cf

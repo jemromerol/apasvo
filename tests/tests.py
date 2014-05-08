@@ -92,19 +92,19 @@ class Check_find_peaks(unittest.TestCase):
 
 class Check_sta_lta(unittest.TestCase):
 
-    x = np.array([1,2,3,4,5,6,5,4,3,2,1])
-    cf = np.array([1.4130434782608696, 0.57432432432432456,
-                   0.34810126582278483, 0.8035714285714286,
-                   1.5506329113924051, 1.655405405405405,
-                   0.97826086956521718, 0.0, 0.0, 0.0, 0.0])
-    et = np.array([5])
+    data = sio.loadmat('tests/signal_fs_50_t0_100.mat')
+    x = data['X'][:, 0]
+    results = sio.loadmat('tests/results_sta_5_lta_100.mat')
+    cf = results['C'][0, :]
+    et = results['T_EVENTO'][0, :]
 
     def test_signal_returns_correct_results(self):
-        et, cf = stalta.sta_lta(self.x, 1.0, sta_length=2.0, lta_length=5.0)
-        print self.cf
+        et, cf = stalta.sta_lta(self.x, 50.0, sta_length=5.0, lta_length=100.)
+        print et / 50.0, self.et
         print cf
+        print self.cf
         self.assertTrue(np.allclose(cf, self.cf))
-        self.assertTrue(np.all(et == self.et))
+        self.assertTrue(np.all((et / 50.0) == self.et))
 
     def test_empty_signal_returns_empty(self):
         x = np.array([])
