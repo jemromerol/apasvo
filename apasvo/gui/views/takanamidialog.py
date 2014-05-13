@@ -126,18 +126,18 @@ class TakanamiDialog(QtGui.QDialog):
             if self._start is None:
                 self._start = max(0, self.event_time - self.default_margin)
             if self._end is None:
-                self._end = min(len(self.record.signal), self.event_time + self.default_margin)
+                self._end = min(len(self.record.signal) - 1, self.event_time + self.default_margin)
         else:
             if self._start is None or self._end is None:
                 raise ValueError("t_start and t_end values not specified")
             else:
                 self._start = max(0, int(t_start * self.record.fs))
-                self._end = min(len(self.record.signal), int(t_end * self.record.fs))
+                self._end = min(len(self.record.signal) - 1, int(t_end * self.record.fs))
                 self.event_time = self._start + int((self._end - self._start) / 2)
 
         if not 0 <= self._start < self._end:
             raise ValueError("Invalid t_start value")
-        if not self._start < self._end <= len(self.record.signal):
+        if not self._start < self._end < len(self.record.signal):
             raise ValueError("Invalid t_end value")
         if (self._end - self._start) < (MINIMUM_MARGIN_IN_SECS * self.record.fs):
             raise ValueError("Distance between t_start and t_end must be"
@@ -196,7 +196,7 @@ class TakanamiDialog(QtGui.QDialog):
         self.layout.addWidget(self.button_box)
 
         # set spinboxes's initial values and limits
-        max_time_in_msecs = int((len(self.record.signal) * 1000) / self.record.fs)
+        max_time_in_msecs = int(((len(self.record.signal) - 1) * 1000) / self.record.fs)
         start_time_in_msecs = int((self._start * 1000.0) / self.record.fs)
         end_time_in_msecs = int((self._end * 1000.0) / self.record.fs)
         self.start_point_spinbox.setTime(QtCore.QTime().addMSecs(start_time_in_msecs))

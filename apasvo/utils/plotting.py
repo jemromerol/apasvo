@@ -71,6 +71,7 @@ def plot_specgram(ax, data, fs, nfft=256, noverlap=128, window='hann',
     ax.imshow(specgram, cmap=cmap, interpolation=interpolation,
                             extent=extent, rasterized=rasterized)
     ax.axis('tight')
+    
 
 
 def reduce_data(x, y, width, xmin, xmax):
@@ -81,7 +82,7 @@ def reduce_data(x, y, width, xmin, xmax):
     data_size = xmax - xmin
 
     if data_size <= n_points:
-        return x[xmin:xmax], y[xmin:xmax]
+        return x[xmin:xmax + 1], y[xmin:xmax + 1]
 
     indexes = np.empty(n_points + 2, dtype=int)
     indexes[0], indexes[-1] = xmin, xmax

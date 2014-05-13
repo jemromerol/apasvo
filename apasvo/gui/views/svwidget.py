@@ -878,7 +878,7 @@ class SignalViewerWidget(QtGui.QWidget):
 
         self.selector.toggled.connect(self.minimap.set_selection_visible)
         self.selector.valueChanged.connect(self.minimap.set_selection_limits)
-        self.selector.right_clicked.connect(lambda: self.selection_context_menu.exec_(QtGui.QCursor.pos()))
+        self.selector.right_clicked.connect(self.on_selector_right_clicked)
 
         if self.document is not None:
             self.set_record(document)
@@ -1226,14 +1226,23 @@ class SignalViewerWidget(QtGui.QWidget):
         if self.data_loaded:
             # Plot espectrogram
             self.specgram_ax.images = []
+            # Save x-axis limits
+            limits = self.signal_ax.get_xlim()
+            # Draw spectrogram
             plotting.plot_specgram(self.specgram_ax, self.signal, self.fs,
                                    nfft=self.specgram_windowlen,
                                    noverlap=self.specgram_noverlap,
                                    window=self.specgram_window)
+            # Restore x-axis limits
+            self.signal_ax.set_xlim(*limits)
 
     def paintEvent(self, paintEvent):
         super(SignalViewerWidget, self).paintEvent(paintEvent)
 
-
+    def on_selector_right_clicked(self):
+        xleft, xright = self.get_selector_limits()
+        self.takanami_on_selection_action.setEnabled((xright - xleft) >=
+                                                     (takanamidialog.MINIMUM_MARGIN_IN_SECS * 2))
+        self.selection_context_menu.exec_(QtGui.QCursor.pos())
 
 

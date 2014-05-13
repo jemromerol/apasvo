@@ -110,20 +110,6 @@ class PlayerToolBar(QtGui.QToolBar):
             self.data_loaded = False
         self._init_ui()
 
-    @property
-    def secs_2_samps_ratio(self):
-        if self.data_loaded:
-            return self._real_freq * self._data_fs / self.sample_freq
-        else:
-            return None
-
-    @property
-    def samps_2_secs_ratio(self):
-        if self.data_loaded:
-            return 1.0 / self.secs_2_samps_ratio
-        else:
-            return None
-
     def _init_ui(self):
         self.setEnabled(False)
         self.actionPlay = QtGui.QAction(self)
@@ -170,6 +156,18 @@ class PlayerToolBar(QtGui.QToolBar):
         self.tsbStart.timeChanged.connect(self.on_start_time_changed)
         self.tsbEnd.timeChanged.connect(self.on_end_time_changed)
 
+    @property
+    def t_end(self):
+        if self.data_loaded:
+            return self._end / self._data_fs
+        return None
+
+    @property
+    def t_start(self):
+        if self.data_loaded:
+            return self._start / self._data_fs
+        return None
+
     def current_source_changed(self, source):
         pass
 
@@ -192,7 +190,7 @@ class PlayerToolBar(QtGui.QToolBar):
                 self._load_buffer()
             self._mediaObject.setCurrentSource(self._buffer)
         if self._mediaObject.state() != Phonon.PausedState:
-            self.tick.emit(self._start * self.samps_2_secs_ratio)
+            self.tick.emit(self.t_start)
         self.playingStateChanged.emit(True)
         self._mediaObject.play()
 
@@ -207,6 +205,8 @@ class PlayerToolBar(QtGui.QToolBar):
             data: Seismic data, numpy array type.
             data_fs: Sample rate of loaded data.
         """
+        if len(data) == 0:
+            return
         self._raw_data = data
         self._data_fs = data_fs
         self._interpolator = interpolate.InterpolatedUnivariateSpline(np.arange(len(self._raw_data)),
@@ -217,7 +217,7 @@ class PlayerToolBar(QtGui.QToolBar):
             self.sample_freq = self._data_fs
         if self.sample_freq < MINIMUM_REAL_FREQ:
             self._real_freq = MINIMUM_REAL_FREQ
-            n_samples = int(len(self._raw_data) * self._real_freq / self.sample_freq)
+            n_samples = int((len(self._raw_data) - 1) * self._real_freq / self.sample_freq) + 1
             self.data = self._interpolator(np.linspace(0, len(self._raw_data) - 1, n_samples))
         else:
             self._real_freq = self.sample_freq
@@ -234,13 +234,11 @@ class PlayerToolBar(QtGui.QToolBar):
             raise TypeError("Datatype not supported")
 
         self._start = 0
-        self._end = len(self.data)
+        self._end = len(self._raw_data) - 1
         self.data_loaded = True
         # update ui
         self.tsbStart.setMinimumTime(QtCore.QTime().addMSecs(0))
-        self.tsbEnd.setMaximumTime(QtCore.QTime().addMSecs(int(1000 *
-                                                               (len(self._raw_data) - 1) /
-                                                               self._data_fs)))
+        self.tsbEnd.setMaximumTime(QtCore.QTime().addMSecs(int(1000 * self.t_end)))
         self._update_qtimeedit_range()
         self.toggle_interval_selected(False)
         self.buffer_loaded = False
@@ -250,7 +248,9 @@ class PlayerToolBar(QtGui.QToolBar):
         if not self.data_loaded:
             raise UnboundLocalError("Data not initialized.")
         stream = cStringIO.StringIO()
-        wavfile.write(stream, self._real_freq, self.data[self._start:self._end])
+        start = int(self._start * self._real_freq / self.sample_freq)
+        end = min(len(self.data) - 1, int(self._end * self._real_freq / self.sample_freq))
+        wavfile.write(stream, self._real_freq, self.data[start:end + 1])
         if self._buffer.isOpen():
             self._buffer.close()
         self._buffer.setData(stream.read())
@@ -268,9 +268,9 @@ class PlayerToolBar(QtGui.QToolBar):
         """
         if not self.data_loaded:
             raise UnboundLocalError("Data not initialized.")
-        t_from_in_samples = int(max(0, t_from) * self.secs_2_samps_ratio)
-        t_to_in_samples = int(min(len(self.data), t_to) * self.secs_2_samps_ratio)
-        if not 0 <= t_from_in_samples <= t_to_in_samples <= len(self.data):
+        t_from_in_samples = int(max(0, t_from) * self._data_fs)
+        t_to_in_samples = int(min(len(self._raw_data), t_to) * self._data_fs)
+        if not 0 <= t_from_in_samples <= t_to_in_samples <= len(self._raw_data):
             raise ValueError("t_to must be greater or equal than t_from")
         if t_from_in_samples != t_to_in_samples:
             if (t_from_in_samples, t_to_in_samples) != (self._start, self._end):
@@ -283,10 +283,8 @@ class PlayerToolBar(QtGui.QToolBar):
                 self._update_qtimeedit_range()
 
     def _update_qtimeedit_range(self):
-        t_start = QtCore.QTime().addMSecs(int((self._start *
-                                               self.samps_2_secs_ratio) * 1000))
-        t_end = QtCore.QTime().addMSecs(int((self._end *
-                                             self.samps_2_secs_ratio) * 1000))
+        t_start = QtCore.QTime().addMSecs(int(self.t_start * 1000))
+        t_end = QtCore.QTime().addMSecs(int(self.t_end * 1000))
         # block valuechanged signals in order to avoid their propagation
         self.tsbStart.blockSignals(True)
         self.tsbEnd.blockSignals(True)
@@ -302,31 +300,29 @@ class PlayerToolBar(QtGui.QToolBar):
     def on_tick(self, value):
         if self.data_loaded and self.buffer_loaded:
             value_in_samples = (value / 1000.0) * self._real_freq
-            offset = ((self._start + value_in_samples) * self.samps_2_secs_ratio)
+            offset = self.t_start + int(value_in_samples * self.sample_freq / self._real_freq) / self._data_fs
             self.tsbPosition.setTime(QtCore.QTime().addMSecs(int(offset * 1000)))
             self.tick.emit(offset)
 
     def on_start_time_changed(self, value):
         t_from = max(0, QtCore.QTime().msecsTo(value) / 1000.0)
-        t_from_in_samples = int(t_from * self.secs_2_samps_ratio)
+        t_from_in_samples = int(t_from * self._data_fs)
         if t_from_in_samples != self._start:
             self._start = t_from_in_samples
             self.tsbEnd.setMinimumTime(value)
             self.buffer_loaded = False
             self.toggle_interval_selected(True)
-            self.intervalChanged.emit(t_from,
-                                      self._end * self.samps_2_secs_ratio)
+            self.intervalChanged.emit(t_from, self.t_end)
 
     def on_end_time_changed(self, value):
-        t_to = min(len(self.data), QtCore.QTime().msecsTo(value) / 1000.0)
-        t_to_in_samples = int(t_to * self.secs_2_samps_ratio)
+        t_to = min(len(self._raw_data), QtCore.QTime().msecsTo(value) / 1000.0)
+        t_to_in_samples = int(t_to * self._data_fs)
         if t_to_in_samples != self._end:
             self._end = t_to_in_samples
             self.tsbStart.setMaximumTime(value)
             self.buffer_loaded = False
             self.toggle_interval_selected(True)
-            self.intervalChanged.emit(self._start * self.samps_2_secs_ratio,
-                                      t_to)
+            self.intervalChanged.emit(self.t_start, t_to)
 
     def state_changed(self, state):
         if state == Phonon.BufferingState:
@@ -377,7 +373,7 @@ class PlayerToolBar(QtGui.QToolBar):
             self.intervalSelected.emit(self._interval_selected)
             if not self._interval_selected:
                 self._start = 0
-                self._end = len(self.data)
+                self._end = len(self._raw_data)
             self._update_qtimeedit_range()
 
     def set_audio_format(self, sample_freq=500.0, bd='float32'):

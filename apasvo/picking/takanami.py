@@ -181,7 +181,7 @@ class Takanami(object):
                 The value is given in samples from the beginning of 'x'.
         """
         i_from = int(max(0, t_start * fs))
-        i_to = int(min(len(x), t_end * fs))
+        i_to = int(min(len(x), (t_end * fs) + 1))
         n0 = (self.k + 1) * 2
         n1 = (i_to - i_from) - n0
         pt, aic = takanami(x[i_from:i_to], n0, n1, p=self.p, k=self.k)

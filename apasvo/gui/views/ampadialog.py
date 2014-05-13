@@ -264,6 +264,7 @@ class AmpaDialog(QtGui.QDialog):
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("ampa_settings")
         settings.setValue('window_len', self.ampawindowSpinBox.value())
+        settings.setValue('overlap', self.ampawindowstepSpinBox.value())
         settings.setValue('step', self.ampawindowstepSpinBox.value())
         settings.setValue('noise_threshold', self.ampanoisethresholdSpinBox.value())
         settings.setValue('filters', self._filters.list())
