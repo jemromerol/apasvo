@@ -1,5 +1,6 @@
 .project
 .pydevproject
+.coverage
 *.csv
 *.out
 *.pyc
@@ -10,5 +11,6 @@ examples/*
 cf_data/*
 build/*
 dist/*
+cover/*
 *.egg-info/*
 *~

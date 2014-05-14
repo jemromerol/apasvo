@@ -46,4 +46,4 @@ Three different picking algorithms are available: STA-LTA, AMPA and Takanami
 
 
 Created by Jose Emilio Romero Lopez.
-Copyright 2013-2014. All rights reserved.
+Copyright 2013-2014.
