@@ -6,6 +6,7 @@
 *.pyc
 *.pyo
 *.bin
+*~
 .settings/*
 examples/*
 cf_data/*
@@ -13,4 +14,4 @@ build/*
 dist/*
 cover/*
 *.egg-info/*
-*~
+
