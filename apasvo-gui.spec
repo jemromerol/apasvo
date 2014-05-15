@@ -1,5 +1,5 @@
 # -*- mode: python -*-
-a = Analysis(['bin/detectorgui.py'],
+a = Analysis(['bin/apasvo-gui.py'],
              pathex=['/apasvo'],
              hiddenimports=['scipy.special._ufuncs_cxx', 'PySide.phonon'],
              hookspath=['hooks'])
@@ -21,7 +21,7 @@ a_pyz = PYZ(a.pure)
 a_exe = EXE(a_pyz,
             a.scripts + [('O','','OPTION')],
             exclude_binaries=True,
-            name='detectorgui.exe',
+            name='apasvo-gui.exe',
             debug=False,
             strip=None,
             upx=True,
@@ -35,5 +35,5 @@ coll = COLLECT(a_exe,
                data,
                strip=None,
                upx=True,
-               name='detectorgui')
+               name='apasvo-gui')
 

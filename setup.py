@@ -52,7 +52,7 @@ setup(name="APASVO",
       author_email="jemromerol@gmail.com",
       url="",
       license="GPL",
-      scripts=["bin/detector.py", "bin/generator.py", "bin/detectorgui.py"],
+      scripts=["bin/apasvo-detector.py", "bin/apasvo-generator.py", "bin/apasvo-gui.py"],
       install_requires=requirements,
       packages=find_packages()
       )

@@ -1,6 +1,6 @@
 dist_dir="dist"
 output="apasvo"
-scripts=("detectorgui" "detector" "generator")
+scripts=("apasvo-gui" "apasvo-detector" "apasvo-generator")
 
 output_dir="$dist_dir"/"$output"
 rm -rf "$output_dir"
