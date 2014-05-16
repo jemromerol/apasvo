@@ -47,10 +47,10 @@ with open('requirements.txt') as f:
 
 setup(name="APASVO",
       version=get_version_number(),
-      description="A set of tools to perform seismic event detection and picking",
+      description="A graphical tool to perform event detection/picking in seismic traces.",
       author="Jose Emilio Romero Lopez",
       author_email="jemromerol@gmail.com",
-      url="",
+      url="https://github.com/jemromerol/apasvo",
       license="GPL",
       scripts=["bin/apasvo-detector.py", "bin/apasvo-generator.py", "bin/apasvo-gui.py"],
       install_requires=requirements,
