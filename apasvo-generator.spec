@@ -1,14 +1,14 @@
 # -*- mode: python -*-
-a = Analysis(['bin/detector.py'],
+a = Analysis(['bin/apasvo-generator.py'],
              pathex=['/apasvo'],
              hiddenimports=['scipy.special._ufuncs_cxx'])
 
 # Added data
-data = Tree('./docs', prefix='docs')
+data = Tree('./bfirls', prefix='bfirls')
+data += Tree('./docs', prefix='docs')
 data += [('COPYING.txt', 'COPYING.txt', 'DATA'),
                 ('README', 'README', 'DATA'),
-                ('README.md', 'README.md', 'DATA'),
-                ('options.cfg', 'options.cfg', 'DATA')]
+                ('README.md', 'README.md', 'DATA')]
 
 # Removed data 
 a.datas = [x for x in a.datas if not
@@ -22,7 +22,7 @@ pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='detector.exe',
+          name='apasvo-generator.exe',
           debug=False,
           strip=None,
           upx=True,
@@ -36,5 +36,5 @@ coll = COLLECT(exe,
                data,
                strip=None,
                upx=True,
-               name='detector')
+               name='apasvo-generator')
 

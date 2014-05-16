@@ -248,7 +248,7 @@ def main(argv=None):
     program_examples = '''
     Examples of use:
 
-    \033[1m>> python generator.py -o example.out -f 100 -l 600 -t 200 -ep 5 -np 0\033[0m
+    \033[1m>> python apasvo-generator.py -o example.out -f 100 -l 600 -t 200 -ep 5 -np 0\033[0m
 
     Generates a synthetic earthquake of the following characteristics:
 
@@ -261,7 +261,7 @@ def main(argv=None):
     Saves result to a file named 'example.out'
 
 
-    \033[1m>> python generator.py meq.bin meq2.txt -f 50 -np 2 -fir coeffs.txt\033[0m
+    \033[1m>> python apasvo-generator.py meq.bin meq2.txt -f 50 -np 2 -fir coeffs.txt\033[0m
 
     Given two seismic signals, 'meq.bin' and 'meq2.txt', sample rate 50 Hz, adds
     background noise of 2.0 dB. Noise is modeled by a FIR filter whose
@@ -270,7 +270,7 @@ def main(argv=None):
     Results will be saved to 'eq00.out' and 'eq01.out'.
 
 
-    \033[1m>> python generator.py -o eq.bin -n 500 -l 3600 -t 100 -ep 2 -np 2 --f-low 4.0 --f-high 25.0\033[0m
+    \033[1m>> python apasvo-generator.py -o eq.bin -n 500 -l 3600 -t 100 -ep 2 -np 2 --f-low 4.0 --f-high 25.0\033[0m
 
     Generates a list of 500 synthetic earthquakes of the following
     characteristics:
@@ -286,7 +286,7 @@ def main(argv=None):
     'eq499.bin'.
 
 
-    \033[1m>> python generator.py -o eq.txt -n 30 --output-format text @settings.txt\033[0m
+    \033[1m>> python apasvo-generator.py -o eq.txt -n 30 --output-format text @settings.txt\033[0m
 
     Generates a list of 30 synthetic earthquakes and takes some settings from a
     text file named 'settings.txt'

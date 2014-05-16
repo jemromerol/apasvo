@@ -448,7 +448,7 @@ def main(argv=None):
     program_examples = '''
     Examples of use:
 
-    \033[1m>> python detector.py meq01.bin meq02.bin -f 100 --takanami\033[0m
+    \033[1m>> python apasvo-apasvo-detector.py meq01.bin meq02.bin -f 100 --takanami\033[0m
 
     Given two seismic signals, 'meq01.bin' and 'meq02.bin', sample rate 100 Hz,
     performs event picking by using AMPA method (default settings) together with
@@ -456,7 +456,7 @@ def main(argv=None):
 
     Saves results summary to 'output.csv'.
 
-    \033[1m>> python detector.py meq01.txt --csv example.out -m stalta --lta 60 --takanami -s --show-all\033[0m
+    \033[1m>> python apasvo-detector.py meq01.txt --csv example.out -m stalta --lta 60 --takanami -s --show-all\033[0m
 
     Let 'meq01.txt' a text file containing seismic data, performs event picking
     with the following settings:
@@ -471,7 +471,7 @@ def main(argv=None):
     function and espectrogram for each possible event.
     Saves results summary to 'example.out'
 
-    \033[1m>> python detector.py meq01.bin --cf -t 1.5 --ampa-filters 50.0 25.0 12.5 6.25  --ampa-noise-threshold 75 -s --show-cf\033[0m
+    \033[1m>> python apasvo-detector.py meq01.bin --cf -t 1.5 --ampa-filters 50.0 25.0 12.5 6.25  --ampa-noise-threshold 75 -s --show-cf\033[0m
 
     Let 'meq01.bin' a binary file containing seismic data, detects seismic
     events whose characteristic function value is over 1.5.
@@ -486,7 +486,7 @@ def main(argv=None):
     Saves results summary to 'output.csv'.
     Saves characteristic function to './cf_data/meq01.cf.bin'.
 
-    \033[1m>> python detector.py meq*.bin --csv example.out --cf --cff text @settings.txt\033[0m
+    \033[1m>> python apasvo-detector.py meq*.bin --csv example.out --cf --cff text @settings.txt\033[0m
 
     Performs event picking on all files matching 'meq*.bin' and takes some
     settings from a text file named 'settings.txt'.
