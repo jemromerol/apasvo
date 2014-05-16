@@ -1,22 +1,39 @@
+<!DOCTYPE html>
 
-# APASVO v.0.0.1
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Application Info</title>
+	<style type="text/css">
+	body {
+	    text-align:center}
+	.reference {
+	    font-style: italic}
+	</style>
+</head>
 
-A graphical tool to perform event detection/picking over a seismic trace.
+<body>
+<h1>APASVO v.0.0.1</h1>
 
-Three different picking algorithms are available: STA-LTA, AMPA and Takanami
+<p>A graphical tool to perform event detection/picking over a seismic trace.</p>
 
+<p>Three different picking algorithms are available: STA-LTA, AMPA and Takanami</p>
 
+<p>
     STA-LTA algorithm processes seismic signals by using two moving time
     windows, a short time average window (STA), which measures the instant
     amplitude of the signal and watches for earthquakes, and a long time
     average windows, which takes care of the current average of the signal
     amplitude.
 
+    <div class=reference>
     See:
     Trnkoczy, A. (2002). Understanding and parameter setting of STA/LTA trigger
     algorithm. IASPEI New Manual of Seismological Observatory Practice, 2, 1-19.
+    </div>
+</p>
 
-
+<p>
     Adaptive Multi-Band Picking Algorithm (AMPA) method consists on an
     adaptive multi-band analysis that includes envelope detection, noise
     reduction for each band, and finally a filter stage that enhances the
@@ -24,14 +41,17 @@ Three different picking algorithms are available: STA-LTA, AMPA and Takanami
     estimation of phase arrivals in seismic signals strongly affected by
     background and non-stationary noises.
     
+   <div class=reference>
     See:
-    Álvarez, I., García, L., Mota, S., Cortés, G., Benítez, C.,
+    &Aacute;lvarez, I., Garc&iacute;a, L., Mota, S., Cort&eacute;s, G., Ben&iacute;tez, C.,
     & De la Torre, A. (2013).
     An Automatic P-Phase Picking Algorithm Based on Adaptive Multiband Processing.
     Geoscience and Remote Sensing Letters, IEEE,
     Volume: 10, Issue: 6, pp. 1488 - 1492
+    </div>
+</p>
 
-
+<p>
     Takanami algorithm estimates the arrival time of a seismic signal
     by using two autoregressive models: a model that fits the earthquake and
     a noise model. Assuming that the characteristics before and after the
@@ -39,11 +59,17 @@ Three different picking algorithms are available: STA-LTA, AMPA and Takanami
     estimated by searching the time point where the minimum value of the
     Akaike's Information Criterion is reached.
 
+   <div class=reference>
     See:
     Takanami, T., & Kitagawa, G. (1988).
     A new efficient procedure for the estimation of onset times of seismic
     waves. Journal of Physics of the Earth, 36(6), 267-290.
+    </div>
+</p>
 
 
-Created by Jose Emilio Romero Lopez.
-Copyright 2013-2014.
+<p>Created by Jose Emilio Romero Lopez.</p>
+<p>Copyright 2013-2014, Jose Emilio Romero Lopez.</p>
+</body>
+
+</html>

@@ -4,25 +4,25 @@
 '''
 @author:     Jose Emilio Romero Lopez
 
-@copyright:  2013 organization_name. All rights reserved.
+@copyright:  Copyright 2013-2014, Jose Emilio Romero Lopez.
 
-@license:    LGPL
+@license:    GPL
 
 @contact:    jemromerol@gmail.com
 
-  This file is part of AMPAPicker.
+  This file is part of APASVO.
 
   This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU Lesser General Public License as published by
+  it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
+  GNU General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
@@ -30,7 +30,7 @@ import unittest
 import numpy as np
 import scipy.io as sio
 
-from eqpickertool.picking import stalta, ampa, takanami, findpeaks
+from apasvo.picking import stalta, ampa, takanami, findpeaks
 
 
 class Check_prctile(unittest.TestCase):
@@ -92,19 +92,19 @@ class Check_find_peaks(unittest.TestCase):
 
 class Check_sta_lta(unittest.TestCase):
 
-    x = np.array([1,2,3,4,5,6,5,4,3,2,1])
-    cf = np.array([1.4130434782608696, 0.57432432432432456,
-                   0.34810126582278483, 0.8035714285714286,
-                   1.5506329113924051, 1.655405405405405,
-                   0.97826086956521718, 0.0, 0.0, 0.0, 0.0])
-    et = np.array([5])
+    data = sio.loadmat('tests/signal_fs_50_t0_100.mat')
+    x = data['X'][:, 0]
+    results = sio.loadmat('tests/results_sta_5_lta_100.mat')
+    cf = results['C'][0, :]
+    et = results['T_EVENTO'][0, :]
 
     def test_signal_returns_correct_results(self):
-        et, cf = stalta.sta_lta(self.x, 1.0, sta_length=2.0, lta_length=5.0)
-        print self.cf
+        et, cf = stalta.sta_lta(self.x, 50.0, sta_length=5.0, lta_length=100.)
+        print et / 50.0, self.et
         print cf
+        print self.cf
         self.assertTrue(np.allclose(cf, self.cf))
-        self.assertTrue(np.all(et == self.et))
+        self.assertTrue(np.all((et / 50.0) == self.et))
 
     def test_empty_signal_returns_empty(self):
         x = np.array([])
@@ -134,6 +134,16 @@ class Check_sta_lta(unittest.TestCase):
         fet, fcf = stalta.sta_lta(x.astype(np.float64), 1.0, sta_length=2.0, lta_length=5.0)
         self.assertTrue(np.all(et == fet))
         self.assertTrue(np.all(cf == fcf))
+
+    def test_different_methods_return_same_results(self):
+        x = np.random.randn(10000)
+        et1, cf1 = stalta.sta_lta(x, 50.0, method='convolution')
+        et2, cf2 = stalta.sta_lta(x, 50.0, method='strides')
+        et3, cf3 = stalta.sta_lta(x, 50.0, method='iterative')
+        self.assertTrue(np.all(et1 == et2 == et3))
+        self.assertTrue(np.allclose(cf1, cf2))
+        self.assertTrue(np.allclose(cf1, cf3))
+        self.assertTrue(np.allclose(cf2, cf3))
 
 
 class Check_ampa(unittest.TestCase):
