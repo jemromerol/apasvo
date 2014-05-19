@@ -7,8 +7,7 @@ a = Analysis(['bin/apasvo-detector.py'],
 data = Tree('./docs', prefix='docs')
 data += [('COPYING.txt', 'COPYING.txt', 'DATA'),
                 ('README', 'README', 'DATA'),
-                ('README.md', 'README.md', 'DATA'),
-                ('options.cfg', 'options.cfg', 'DATA')]
+                ('README.md', 'README.md', 'DATA')]
 
 # Removed data 
 a.datas = [x for x in a.datas if not

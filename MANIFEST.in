@@ -1,4 +1,4 @@
-include requirements.txt COPYING.txt README README.md options.cfg
+include requirements.txt COPYING.txt README README.md
 recursive-include bfirls *
 recursive-include docs *
 
