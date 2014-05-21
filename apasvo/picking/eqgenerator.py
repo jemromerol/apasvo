@@ -175,7 +175,7 @@ def generate_seismic_earthquake(tmax, t0, fs, P_signal_db, low_period,
     for i in xrange(N_filt):
         b, a = signal.butter(2,
                              [f_filt_low[i] / (fs / 2.),
-                              f_filt_high[i] / (fs / 2.)])
+                              f_filt_high[i] / (fs / 2.)], btype='bandpass')
         noise_band[i, :] = signal.lfilter(b, a, w_noise)
     # Length of noise envelope for the different bands
     filt_len = np.linspace(low_period, high_period, N_filt)
