@@ -1,4 +1,5 @@
 # -*- mode: python -*-
+
 a = Analysis(['bin/apasvo-detector.py'],
              pathex=['/apasvo'],
              hiddenimports=['scipy.special._ufuncs_cxx'])
@@ -6,14 +7,26 @@ a = Analysis(['bin/apasvo-detector.py'],
 # Added data
 data = Tree('./docs', prefix='docs')
 data += [('COPYING.txt', 'COPYING.txt', 'DATA'),
-                ('README', 'README', 'DATA'),
-                ('README.md', 'README.md', 'DATA')]
+                ('README.rst', 'README.rst', 'DATA')]
 
 # Removed data 
 a.datas = [x for x in a.datas if not
-           os.path.dirname(x[1]).startswith("C:\\Python27\\lib\site-packages\\matplotlib\\mpl-data\\sample_data")]
+       x[0].startswith("mpl-data/fonts")]
 a.datas = [x for x in a.datas if not
-           os.path.dirname(x[1]).startswith("C:\\Python27\\lib\\site-packages\\matplotlib\\mpl-data\\fonts")]
+       x[0].startswith("mpl-data/sample_data")]
+a.datas = [x for x in a.datas if not
+       x[0].startswith("pytz")]
+
+a.binaries = [x for x in a.binaries if not
+              x[0].startswith("libnvidia")]
+a.binaries = [x for x in a.binaries if not
+       x[0].startswith("libQtDeclarative")]
+a.binaries = [x for x in a.binaries if not
+       x[0].startswith("libQtOpenGL")]
+a.binaries = [x for x in a.binaries if not
+       x[0].startswith("libQtSQL")]
+a.binaries = [x for x in a.binaries if not
+       x[0].startswith("wx")]
 
 
 pyz = PYZ(a.pure)
