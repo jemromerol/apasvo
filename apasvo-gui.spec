@@ -1,4 +1,5 @@
 # -*- mode: python -*-
+import sys
 
 a = Analysis(['bin/apasvo-gui.py'],
              pathex=['/apasvo'],
@@ -25,7 +26,7 @@ a.binaries = [x for x in a.binaries if not
 a.binaries = [x for x in a.binaries if not
        x[0].startswith("libQtOpenGL")]
 a.binaries = [x for x in a.binaries if not
-       x[0].startswith("libQtSQL")]
+       x[0].startswith("libQtSql")]
 a.binaries = [x for x in a.binaries if not
        x[0].startswith("wx")]
 
@@ -34,7 +35,7 @@ a_pyz = PYZ(a.pure)
 a_exe = EXE(a_pyz,
             a.scripts + [('O','','OPTION')],
             exclude_binaries=True,
-            name='apasvo-gui.exe',
+            name='apasvo-gui%s' % ('.exe' if sys.platform == 'win32' else ''),
             debug=False,
             strip=None,
             upx=True,

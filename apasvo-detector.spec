@@ -1,4 +1,5 @@
 # -*- mode: python -*-
+import sys
 
 a = Analysis(['bin/apasvo-detector.py'],
              pathex=['/apasvo'],
@@ -34,7 +35,7 @@ pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='apasvo-detector.exe',
+          name='apasvo-detector%s' % ('.exe' if sys.platform == 'win32' else ''),
           debug=False,
           strip=None,
           upx=True,

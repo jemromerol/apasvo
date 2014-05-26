@@ -1,4 +1,5 @@
 # -*- mode: python -*-
+import sys
 
 a = Analysis(['bin/apasvo-generator.py'],
              pathex=['/apasvo'],
@@ -35,7 +36,7 @@ pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='apasvo-generator.exe',
+          name='apasvo-generator%s' % ('.exe' if sys.platform == 'win32' else ''),
           debug=False,
           strip=None,
           upx=True,
