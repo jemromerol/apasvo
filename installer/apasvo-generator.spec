@@ -43,7 +43,7 @@ a_exe = EXE(a_pyz,
             debug=False,
             strip=None,
             upx=True,
-            console=False,
+            console=True,
             icon=os.path.join('res', 'images', 'app.ico'))
 
 coll = COLLECT(a_exe,
