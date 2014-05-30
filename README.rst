@@ -105,7 +105,7 @@ Then, download the latest version from `GitHub`_. If you have ``git`` installed,
 
 ::
 
-$ git clone https://jemromerol/apasvo.git
+$ git clone https://github.com/jemromerol/apasvo.git
 
 Finally, enter the newly created directory containing the source code and run:
 
