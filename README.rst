@@ -17,7 +17,7 @@ APASVO
 * Save picked events to CSV format, and characteristic function to text/binary file format.
 * Two additional command line tools: An event picking/detection tool and a synthetic earthquake generator [4]_.
 
-.. contents:: Table of Contents
+.. contents:: **Table of Contents**
     :local:
     :backlinks: none
 
@@ -122,7 +122,7 @@ $ python setup.py install
 OS X
 ----
 
-Sorry, but a precompiled version for OS X is not available yet. You can try to install it from Python repositories or from source by following a similar procedure to that described for `Linux`_.
+Sorry, but no precompiled version for OS X is available yet. You can try to install it from Python repositories or from source by following a similar procedure to that described for `Linux`_.
 
 ===========
 Screenshots
@@ -167,8 +167,10 @@ References
 Changelog
 =========
 
-* `0.0.2`_ (2014-05-)
-    * Fixed many bugs.
+* `0.0.2`_ (2014-06-01)
+    * Fixed several bugs.
+    * Update README.
+    * Improve installation files.
 * 0.0.1 (2014-05-16)
 
 
