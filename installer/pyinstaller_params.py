@@ -45,11 +45,6 @@ EXCLUDED_BIN_PREFIXES = ['libnvidia',
                           'libQtSvg',
                           'libQtXml',
                           'libQtScript',
-                          'libwx',
-                          'libgtk',
-                          'libvorbis',
-                          'libpulse',
-                          'libcrypto',
                           'wx']
 
 EXCLUDED_DATA_PREFIXES = [os.path.join('mpl-data', 'fonts'),
