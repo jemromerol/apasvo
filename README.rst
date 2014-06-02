@@ -169,7 +169,6 @@ Changelog
 
 * `0.0.2`_ (2014-06-01)
     * Fixed several bugs.
-    * Update README.
     * Improve installation files.
 * 0.0.1 (2014-05-16)
 
