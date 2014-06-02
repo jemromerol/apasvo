@@ -100,9 +100,12 @@ class Check_sta_lta(unittest.TestCase):
 
     def test_signal_returns_correct_results(self):
         et, cf = stalta.sta_lta(self.x, 50.0, sta_length=5.0, lta_length=100.)
-        print et / 50.0, self.et
-        print cf
-        print self.cf
+        self.assertTrue(np.allclose(cf, self.cf))
+        self.assertTrue(np.all((et / 50.0) == self.et))
+
+    def test_class_returns_correct_results(self):
+        alg = stalta.StaLta(sta_length=5.0, lta_length=100.0)
+        et, cf = alg.run(self.x, 50.0)
         self.assertTrue(np.allclose(cf, self.cf))
         self.assertTrue(np.all((et / 50.0) == self.et))
 
@@ -157,6 +160,12 @@ class Check_ampa(unittest.TestCase):
     def test_signal_returns_correct_results(self):
         et, cf = ampa.ampa(self.x, 50.0)
         self.assertTrue(np.allclose(cf,self.cf))
+        self.assertTrue(np.all((et / 50.0) == self.et))
+
+    def test_class_returns_correct_results(self):
+        alg = ampa.Ampa(window=1000.0, step=1000.0)
+        et, cf = alg.run(self.x, 50.0)
+        self.assertTrue(np.allclose(cf, self.cf))
         self.assertTrue(np.all((et / 50.0) == self.et))
 
     def test_fs_not_positive_returns_error(self):
@@ -261,3 +270,4 @@ class Check_takanami(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

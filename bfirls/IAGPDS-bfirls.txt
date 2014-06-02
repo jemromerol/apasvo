@@ -1,3 +1,6 @@
+# An estimation of the noise power spectral density from a set of 400
+# natural earthquakes recorded at the seismic network of the Andalusian
+# Institute of Geophysics and Prevention of Seismic Disasters (IAGPDS)
 4.090407036568713406e-02
 3.479993966931145266e-01
 4.078111312611622519e-01

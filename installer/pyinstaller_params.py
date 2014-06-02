@@ -1,4 +1,5 @@
 # encoding: utf-8
+
 '''
 @author:     Jose Emilio Romero Lopez
 
@@ -23,7 +24,29 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
+import os
 
-__version__ = '0.0.2'
-_organization = 'UGR'
-_application_name = 'APASVO'
+
+PATHEX = [os.path.join('.', 'apasvo')]
+
+HIDDEN_IMPORTS = ['scipy.special._ufuncs_cxx', 'PySide.phonon']
+
+HOOKS_PATH = ['hooks']
+
+INCLUDED_DIRS = ['bfirls', 'docs']
+
+INCLUDED_DATA = ['COPYING.txt', 'README.rst']
+
+EXCLUDED_BIN_PREFIXES = ['libnvidia',
+                          'libQtDeclarative',
+                          'libQtOpenGL',
+                          'libQtSql',
+                          'libQtNetwork',
+                          'libQtSvg',
+                          'libQtXml',
+                          'libQtScript',
+                          'wx']
+
+EXCLUDED_DATA_PREFIXES = [os.path.join('mpl-data', 'fonts'),
+                          os.path.join('mpl-data', 'sample_data'),
+                          'pytz']

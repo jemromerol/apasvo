@@ -27,7 +27,6 @@
 from matplotlib import mlab
 from scipy import signal
 import numpy as np
-import scipy
 
 
 SPECGRAM_WINDOWS = ("boxcar", "hamming", "hann", "bartlett",
@@ -71,20 +70,47 @@ def plot_specgram(ax, data, fs, nfft=256, noverlap=128, window='hann',
     ax.imshow(specgram, cmap=cmap, interpolation=interpolation,
                             extent=extent, rasterized=rasterized)
     ax.axis('tight')
-    
 
 
-def reduce_data(x, y, width, xmin, xmax):
+def reduce_data(x, y, width, xmin=0, xmax=None):
+    """Given x-axis data and y-axis data returns a smaller representation
+    of both datasets with a desired length for faster plotting.
+
+    Given a width value, which usually corresponds with the desired pixel width
+    of the plot, splits represented x-data range into 'width' partitions and
+    returns the (x,y) minimum and maximum data pairs for each partition.
+
+    Args:
+        x: x-axis data. Numpy array type.
+        y: y-axis data. Numpy array type.
+        width: Desired plot width, usually related to plot's pixel width.
+        xmin: Position of the first (x,y) data pair to be represented
+        xmax: Position of the last (x,y) data pair to be represented
+    Returns:
+        x_reduced: Reduced x-axis dataset.
+        y_reduced: Reduced y-axis dataset.
+    """
     if len(x) != len(y):
         raise ValueError("x and y must have the same length.")
-    xmax = min(len(x) - 1, xmax + 2)
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+    if not isinstance(y, np.ndarray):
+        y = np.array(y)
+    # Init xmax and xmin values
+    xmax = len(x) - 1 if xmax is None else min(len(x) - 1, xmax)
+    xmin = max(0, xmin)
+    if not xmin < xmax:
+        raise ValueError("xmax must be greater than xmin")
     n_points = 2 * width
     data_size = xmax - xmin
 
+    # If the length of the datasets is too small returns the datasets
     if data_size <= n_points:
         return x[xmin:xmax + 1], y[xmin:xmax + 1]
 
     indexes = np.empty(n_points + 2, dtype=int)
+    # Initial and final (x,y) pairs of the reduced data corresponds
+    # with the initial and final (x,y) values of the represented data
     indexes[0], indexes[-1] = xmin, xmax
     i = 1
 
@@ -92,9 +118,9 @@ def reduce_data(x, y, width, xmin, xmax):
     for j in xrange(int(width)):
         left = limits[j]
         right = limits[j + 1]
-        indexes[i] = left + y[left:right].argmax(axis=0)
+        indexes[i] = left + y[left:right + 1].argmax(axis=0)
         i += 1
-        indexes[i] = left + y[left:right].argmin(axis=0)
+        indexes[i] = left + y[left:right + 1].argmin(axis=0)
         i += 1
     indexes.sort()
 
