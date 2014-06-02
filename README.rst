@@ -167,12 +167,9 @@ References
 Changelog
 =========
 
-* `0.0.2`_ (2014-06-02)
+* 0.0.2 (2014-06-02)
     * Fixed several bugs.
     * Improve installation files.
 * 0.0.1 (2014-05-16)
-
-
-.. _0.0.2: https:://github.com/jemromerol/apasvo/compare/0.0.1...0.0.2
 
 
