@@ -206,6 +206,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         self.document.eventDeleted.connect(self.signalViewer.delete_event)
                         self.document.eventModified.connect(self.signalViewer.update_event)
                         self.document.detectionPerformed.connect(self.signalViewer.update_cf)
+                        self.document.detectionPerformed.connect(self.toolBarNavigation.update)
                         # load document data into signal viewer
                         self.signalViewer.set_record(self.document)
                         self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
@@ -215,6 +216,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
                         self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
                         self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
+                        self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
                         self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
                         self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
                         self.toolBarMedia.connect_path()
