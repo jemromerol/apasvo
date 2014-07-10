@@ -62,7 +62,7 @@ Installation from Pypi
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-   Installing from PyPI is a long and delicate process that involves installing several large libraries and their dependencies, so it is discouraged unless you are confident about installing python with multiple dependencies from source. In any case, PREBUILT PACKAGES ARE THE RECOMMENDED WAY OF INSTALLING APASVO.
+   Installing from PyPI is a long and delicate process that involves installing several large libraries and their dependencies, so it is discouraged unless you are confident about installing python applications with multiple dependencies from source. In any case, PREBUILT PACKAGES ARE THE RECOMMENDED WAY OF INSTALLING APASVO.
 
 *************
 Prerequisites
