@@ -302,10 +302,13 @@ class AmpaDialog(QtGui.QDialog):
         filters = settings.value('ampa_settings/filters', default)
         if filters:
             if isinstance(filters, list):
-                return list(filters)
+                filter_list = list(filters)
             else:
-                return [filters]
-        return default
+                filter_list = [filters]
+        else:
+            filter_list = default
+        # Drop filter lengths larger than max_value
+        return [float(f) for f in filter_list if 0 < float(f) < self.max_value]
 
     def _on_filter_selected(self, s, d):
         self.actionRemoveFilter.setEnabled(len(self.filtersTable.selectionModel()
