@@ -6,6 +6,7 @@
 *.pyc
 *.pyo
 *.bin
+*.bak
 *~
 res/templates/*
 .settings/*
