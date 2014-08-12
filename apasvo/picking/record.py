@@ -332,7 +332,7 @@ class Record(object):
                                      mode=mode_automatic, status=status_reported))
         # Refine arrival times
         if takanami:
-            events = self.refine_events(events, takanami_margin)
+            events = self.refine_events(events, takanami_margin=takanami_margin)
         # Update event list
         if action == 'append':
             self.events.extend(events)
