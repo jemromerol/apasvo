@@ -278,6 +278,7 @@ class Ui_MainWindow(object):
         self.thresholdSpinBox.setMinimum(0.0)
         self.thresholdSpinBox.setMaximum(20.0)
         self.thresholdSpinBox.setSingleStep(0.01)
+        self.thresholdSpinBox.setValue(1.0)
         self.thresholdSpinBox.setAccelerated(True)
         self.thresholdSpinBox.setEnabled(False)
         self.toolBarAnalysis.addWidget(self.thresholdSpinBox)
