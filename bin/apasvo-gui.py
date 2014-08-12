@@ -43,6 +43,8 @@ text_files_filter = 'Text Files (*.txt)'
 all_files_filter = 'All Files (*.*)'
 csv_files_filter = 'CSV Files (*.csv)'
 
+APASVO_URL = 'https://github.com/jemromerol/apasvo/wiki'
+
 
 class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     """Application Main Window class. SDI GUI style.
@@ -108,6 +110,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionClear_Event_List.triggered.connect(self.clear_events)
         self.actionDelete_Selected.triggered.connect(self.delete_selected_events)
         self.actionAbout.triggered.connect(self.show_about)
+        self.actionOnlineHelp.triggered.connect(lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl(APASVO_URL)))
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
         self.splitter.addWidget(self.signalViewer)

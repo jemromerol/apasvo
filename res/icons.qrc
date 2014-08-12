@@ -10,6 +10,7 @@
         <file alias="clear-list.png">images/edit-clear-list.png</file>
         <file alias="exit.png">images/application-exit.png</file>
         <file alias="about.png">images/help-about.png</file>
+        <file alias="online-help.png">images/help-browser.png</file>
         <file alias="settings.png">images/preferences-other.png</file>
         <file alias="play.png">images/media-playback-start.png</file>
         <file alias="stop.png">images/media-playback-stop.png</file>
