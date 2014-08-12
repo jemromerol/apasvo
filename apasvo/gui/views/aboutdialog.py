@@ -44,6 +44,7 @@ class AboutDialog(QtGui.QDialog):
         self.mbutton_box.rejected.connect(self.reject)
 
     def setup_ui(self):
+        self.setWindowTitle("About APASVO...")
         self.main_layout = QtGui.QVBoxLayout(self)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         self.setSizePolicy(sizePolicy)
