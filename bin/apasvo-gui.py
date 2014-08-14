@@ -613,7 +613,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
 
 if __name__ == '__main__':
-    QtGui.QApplication.setLibraryPaths([])
+#    QtGui.QApplication.setLibraryPaths([])  # Disable looking for plugins
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName(_application_name)
     app.setWindowIcon(QtGui.QIcon(":/app.png"))
