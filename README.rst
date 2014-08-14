@@ -170,6 +170,8 @@ References
 Changelog
 =========
 
+* 0.0.3 (2014-08-16)
+    * Fixed several bugs.
 * 0.0.2 (2014-06-02)
     * Fixed several bugs.
     * Improve installation files.
