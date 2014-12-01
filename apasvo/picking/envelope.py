@@ -24,6 +24,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+import numpy as np
 from scipy import fftpack
 
 
@@ -42,4 +43,6 @@ def envelope(x):
     Returns:
         out: Envelope of x, numpy array type.
     """
-    return (x ** 2 + fftpack.hilbert(x) ** 2) ** 0.5
+    x_mean = x.mean()
+    x_norm = x - x_mean
+    return ((x_norm ** 2 + fftpack.hilbert(x_norm) ** 2) ** 0.5) + x_mean
