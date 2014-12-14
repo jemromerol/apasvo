@@ -245,9 +245,13 @@ class Detector(Analysis):
         method = kwargs.get('method', 'ampa')
         if supervised:
             import matplotlib
-            matplotlib.use('TkAgg')
+            if sys.platform == "win32":
+                matplotlib.use('Qt4Agg')
+                matplotlib.rcParams['backend.qt4'] = 'PySide'
+            elif sys.platform == "linux2":
+                matplotlib.use('TkAgg')
+            matplotlib.rcParams['interactive'] = True
             import matplotlib.pyplot as pl
-            pl.ion()
         for record in records:
             self.on_notify("Processing %s... " % record.filename)
             record.detect(alg, **kwargs)
@@ -265,7 +269,6 @@ class Detector(Analysis):
                     supervised = False
                     pl.close('all')
         if supervised:
-            pl.ioff()
             pl.close('all')
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
@@ -327,9 +330,13 @@ class Picker(Analysis):
         method = kwargs.get('method', 'ampa')
         if supervised:
             import matplotlib
-            matplotlib.use('TkAgg')
+            if sys.platform == "win32":
+                matplotlib.use('Qt4Agg')
+                matplotlib.rcParams['backend.qt4'] = 'PySide'
+            elif sys.platform == "linux2":
+                matplotlib.use('TkAgg')
+            matplotlib.rcParams['interactive'] = True
             import matplotlib.pyplot as pl
-            pl.ion()
         for record in records:
             self.on_notify("Processing %s... " % record.filename)
             if supervised:
@@ -350,7 +357,6 @@ class Picker(Analysis):
                 self.on_notify("Done\n")
                 draw_events_table(record, method)
         if supervised:
-            pl.ioff()
             pl.close('all')
 
     def _supervise_events(self, record, takanami=True, show_len=5.0,
