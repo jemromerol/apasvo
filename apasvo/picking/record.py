@@ -462,7 +462,6 @@ class Record(object):
         # Lazy matplotlib import
         import matplotlib.pyplot as pl
         from matplotlib import ticker
-
         # Set limits
         i_from = int(max(0.0, t_start * self.fs))
         if show_cf:

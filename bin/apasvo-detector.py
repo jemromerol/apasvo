@@ -329,7 +329,7 @@ class Picker(Analysis):
         for record in records:
             self.on_notify("Processing %s... " % record.filename)
             if supervised:
-                record.detect(alg, threshold=0.0, **kwargs)
+                record.detect(alg, **kwargs)
                 self.on_notify("Done\n")
                 # Sort events
                 key, reverse = self._sort_keys.get('vd', ('cf_value', True))
@@ -369,8 +369,8 @@ class Picker(Analysis):
             event = record.events[i]
             self.on_notify("Showing event no. %i of %i\n" %
                              (i + 1, len(record.events)))
-            record.plot_signal(t_start=event.time - show_len,
-                               t_end=event.time + show_len,
+            record.plot_signal(t_start=(event.time / record.fs) - show_len,
+                               t_end=(event.time / record.fs) + show_len,
                                num=1,
                                show_cf=show_cf,
                                show_specgram=show_specgram,
@@ -397,7 +397,8 @@ def analysis(**kwargs):
     Performs event detection if parameter 'threshold' is not None, otherwise
     performs event picking.
     """
-    if 'threshold' in kwargs:
+    threshold = kwargs.get('threshold', None)
+    if threshold is not None:
         task = Detector()
     else:
         task = Picker()
