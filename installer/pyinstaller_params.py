@@ -35,7 +35,7 @@ HOOKS_PATH = ['hooks']
 
 INCLUDED_DIRS = ['bfirls', 'docs']
 
-INCLUDED_DATA = ['COPYING.txt', 'README.rst']
+INCLUDED_DATA = ['COPYING.txt', 'README.rst', 'qt.conf']
 
 EXCLUDED_BIN_PREFIXES = ['libnvidia',
                           'libQtDeclarative',

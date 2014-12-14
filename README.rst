@@ -61,6 +61,9 @@ Prebuilt packages of APASVO for Linux are available for both 32-bit and 64-bit a
 Installation from Pypi
 ~~~~~~~~~~~~~~~~~~~~~~
 
+.. warning::
+   Installing from PyPI is a long and delicate process that involves installing several large libraries and their dependencies, so it is discouraged unless you are confident about installing python applications with multiple dependencies from source. In any case, PREBUILT PACKAGES ARE THE RECOMMENDED WAY OF INSTALLING APASVO.
+
 *************
 Prerequisites
 *************
@@ -167,12 +170,11 @@ References
 Changelog
 =========
 
-* `0.0.2`_ (2014-06-02)
+* 0.0.3 (2014-08-16)
+    * Fixed several bugs.
+* 0.0.2 (2014-06-02)
     * Fixed several bugs.
     * Improve installation files.
 * 0.0.1 (2014-05-16)
-
-
-.. _0.0.2: https:://github.com/jemromerol/apasvo/compare/0.0.1...0.0.2
 
 
