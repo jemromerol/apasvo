@@ -97,10 +97,12 @@ def reduce_data(x, y, width, xmin=0, xmax=None):
     if not isinstance(y, np.ndarray):
         y = np.array(y)
     # Init xmax and xmin values
-    xmax = len(x) - 1 if xmax is None else min(len(x) - 1, xmax)
-    xmin = max(0, xmin)
-    if not xmin < xmax:
-        raise ValueError("xmax must be greater than xmin")
+    length = len(x)
+    xmax = xmax if xmax is not None else length - 1
+    xmax = min(length - 1, xmax if xmax > 0 else 0)
+    xmin = max(0, xmin if xmin < length else length - 1)
+    if xmin > xmax:
+        raise ValueError("xmax must be greater or equal than xmin")
     n_points = 2 * width
     data_size = xmax - xmin
 
