@@ -244,6 +244,8 @@ class Detector(Analysis):
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         if supervised:
+            import matplotlib
+            matplotlib.use('TkAgg')
             import matplotlib.pyplot as pl
             pl.ion()
         for record in records:
@@ -324,6 +326,8 @@ class Picker(Analysis):
         # Extract method name from kwargs
         method = kwargs.get('method', 'ampa')
         if supervised:
+            import matplotlib
+            matplotlib.use('TkAgg')
             import matplotlib.pyplot as pl
             pl.ion()
         for record in records:
