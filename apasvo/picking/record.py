@@ -28,6 +28,7 @@ import numpy as np
 import csv
 import os
 import datetime
+import obspy
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -50,6 +51,9 @@ status_revised = 'revised'
 status_confirmed = 'confirmed'
 status_rejected = 'rejected'
 status_undefined = 'undefined'
+
+
+DEFAULT_SAMPLE_RATE = 50
 
 
 def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
@@ -81,7 +85,7 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
     """
     # Extract data from records
     rows = [{'file_name': record.filename,
-             'time': str(datetime.timedelta(seconds=event.time / record.fs)),
+             'time': record.starttime + (event.time / record.fs),
              'cf_value': event.cf_value,
              'name': event.name,
              'method': event.method,
@@ -195,7 +199,7 @@ class Event(object):
         i_from = int(max(0, self.n0_aic))
         i_to = int(min(len(self.record.signal), self.n0_aic + len(self.aic)))
         # Create time sequence
-        t = np.arange(i_from, i_to) / self.record.fs
+        t = np.arange(i_from, i_to) / float(self.record.fs)
         # Create figure
         fig, _ = pl.subplots(2, 1, sharex='all', num=num)
         fig.canvas.set_window_title(self.record.label)
@@ -204,9 +208,9 @@ class Event(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.record.starttime))
             ax.xaxis.set_major_formatter(formatter)
-            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=8))
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5, prune='lower'))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw signal
@@ -251,13 +255,14 @@ class Record(object):
         filename: Name of the file (absolute path) where data is stored.
     """
 
-    def __init__(self, fileobj, fs, label='', description='', fmt='',
+    def __init__(self, fileobj, fs=DEFAULT_SAMPLE_RATE, label='',
+                 description='', fmt=None,
                  dtype=rawfile.datatype_float64,
                  byteorder=rawfile.byteorder_native, **kwargs):
         """Initializes a Record instance.
 
         Args:
-            fileobj: A file (binary or plain text) storing seismic data.
+            fileobj: A file storing seismic data.
             fs: Sample rate in Hz.
             label: A string that identifies the seismic record. Default: ''.
             description: Additional comments.
@@ -266,7 +271,7 @@ class Record(object):
             dtype: Data-type of the data stored in fileobj. Default value
                 is 'float64'.
             byteorder: Byte-order of the data stored in fileobj.
-                Valid values are: 'little-endian', 'big-endian' and 'native'.
+                Valid values are: 'little-endian', 'big-endian' and 'native'
                 Default: 'native'.
         """
         super(Record, self).__init__()
@@ -274,17 +279,39 @@ class Record(object):
             self.filename = fileobj.name
         else:
             self.filename = fileobj
-        fhandler = rawfile.get_file_handler(fileobj, fmt=fmt, dtype=dtype,
-                                            byteorder=byteorder)
-        self.signal = fhandler.read().astype(rawfile.datatype_float64, casting='safe')
-        self.fs = fs
-        self.cf = np.array([], dtype=rawfile.datatype_float64)
-        self.events = []
+
         if label == '':
             _, rname = os.path.split(self.filename)
             label, _ = os.path.splitext(rname)
         self.label = label
         self.description = description
+        self.attribute_set = {}
+        # Try to read using obspy core functionality
+        try:
+            ostrace = obspy.read(self.filename, format=fmt).traces[0]
+            self.signal = ostrace.data.astype(rawfile.datatype_float64, casting='safe')
+            self.fs = 1.0 / ostrace.stats.delta
+            self.format = ostrace.stats._format
+            self.starttime = ostrace.stats.starttime
+            self.attribute_set['network'] = ostrace.stats.network
+            self.attribute_set['station'] = ostrace.stats.station
+            self.attribute_set['location'] = ostrace.stats.location
+            self.attribute_set['channel'] = ostrace.stats.channel
+            self.attribute_set['format'] = dict(ostrace.stats.__getattr__(self.format.lower()))
+        # Otherwise try to read as a binary or text file
+        except Exception as e:
+            print e
+            fhandler = rawfile.get_file_handler(fileobj,
+                                                fmt=fmt,
+                                                dtype=dtype,
+                                                byteorder=byteorder)
+            self.signal = fhandler.read().astype(rawfile.datatype_float64, casting='safe')
+            self.fs = fs
+            self.starttime = obspy.UTCDateTime(0)
+            self.format = 'text' if isinstance(fhandler, rawfile.TextFile) else 'binary'
+
+        self.cf = np.array([], dtype=rawfile.datatype_float64)
+        self.events = []
 
     def detect(self, alg, threshold=None, peak_window=1.0,
                takanami=False, takanami_margin=5.0, action='append', **kwargs):
@@ -469,7 +496,7 @@ class Record(object):
         else:
             i_to = int(min(len(self.signal), t_end * self.fs))
         # Create time sequence
-        t = np.arange(i_from, i_to) / self.fs
+        t = np.arange(i_from, i_to) / float(self.fs)
         # Create figure
         nplots = show_x + show_cf + show_specgram
         fig, _ = pl.subplots(nplots, 1, sharex='all', num=num)
@@ -479,9 +506,9 @@ class Record(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.starttime))
             ax.xaxis.set_major_formatter(formatter)
-            ax.xaxis.set_major_locator(ticker.MaxNLocator(prune='lower'))
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5, prune='lower'))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw axes
@@ -530,57 +557,3 @@ class Record(object):
             ax.set_xlim(t[0], t[-1])
         return fig
 
-
-class RecordFactory(object):
-    """Builder class to create Record objects.
-
-    Attributes:
-        fs: Sample rate in Hz.
-        dtype: Data-type of the data to read.
-        byteorder: Byte-order of the data to read.
-        max_record_length: Maximum signal length allowed, in seconds.
-            Currently this attribute has no effect.
-            Default value: 604800.0 seconds (1 week).
-    """
-
-    def __init__(self, max_segment_length=24 * 7 * 3600, fs=50.0,
-                 dtype='float64', byteorder='native', **kwargs):
-        self.fs = fs
-        self.dtype = dtype
-        self.byteorder = byteorder
-        self.max_record_length = (max_segment_length * fs)
-
-    def create_record(self, fileobj, **kwargs):
-        """Creates a Record object.
-
-        Args:
-            fileobj: A file (binary or plain text) storing seismic data.
-
-        Returns:
-            out: Created Record object.
-        """
-#         segment_n = np.ceil(utils.getSize(fileobj) / self.max_record_length)
-#         if segment_n > 1:
-#             fhandler = utils.get_file_handler(fileobj, dtype=self.dtype, byteorder=self.byteorder)
-#             self.on_notify("File %s is too long, it will be divided into %i parts up to %g seconds each\n"
-#                            % (fhandler.filename, segment_n, self.max_record_length / self.fs))
-#             basename, ext = os.path.splitext(fhandler.filename)
-#             fileno = 0
-#             records = []
-#             for segment in fhandler.read_in_blocks(self.max_record_length):
-#                 filename_out = "%s%02.0i%s" % (basename, fileno, ext)
-#                 fout_handler = utils.TextFile(filename_out, self.dtype, self.byteorder) if isinstance(fhandler, utils.TextFile) else utils.BinFile(filename_out, self.dtype, self.byteorder)
-#                 fileno += 1
-#                 fout_handler.write(segment)
-#                 self.on_notify("%s generated.\n" % fout_handler.filename)
-#                 records.append(fout_handler.filename, self.fs,
-#                                       dtype=self.dtype, byteorder=self.byteorder,
-#                                       **kwargs)
-#             return records
-#         else:
-        return Record(fileobj, self.fs, dtype=self.dtype, byteorder=self.byteorder,
-                      **kwargs)
-
-#     def on_notify(self, msg):
-#         """"""
-#         pass
