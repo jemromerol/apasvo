@@ -148,8 +148,6 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
     # Check arguments
     if fs <= 0:
         raise ValueError("fs must be a positive value")
-    if fs != int(fs):
-        raise ValueError("fs must be an integer value")
     if bandwidth <= 0:
         raise ValueError("bandwidth must be a positive value")
     if overlap < 0:

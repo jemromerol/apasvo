@@ -30,7 +30,10 @@ from apasvo.utils import futils
 from apasvo.utils.formats import rawfile
 
 
-FORMATS = (rawfile.format_binary, rawfile.format_text)
+FORMATS = {'Autodetect': None,
+           'Binary': rawfile.format_binary,
+           'Text': rawfile.format_text,
+           'SAC': 'SAC'}
 DTYPES = (rawfile.datatype_int16,
           rawfile.datatype_int32,
           rawfile.datatype_int64,
@@ -67,6 +70,9 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
     def __init__(self, parent, filename):
         super(LoadDialog, self).__init__(parent)
         self.setupUi(self)
+        # init file format combobox
+        self.FileFormatComboBox.addItems(FORMATS.keys())
+        self.FileFormatComboBox.setCurrentIndex(0)
         # init datatype combobox
         self.DataTypeComboBox.addItems(DTYPES_LABELS)
         self.DataTypeComboBox.setCurrentIndex(DTYPES.index(rawfile.datatype_float64))
@@ -78,19 +84,6 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
         self.DataTypeComboBox.currentIndexChanged.connect(self.load_preview)
         self.ByteOrderComboBox.currentIndexChanged.connect(self.load_preview)
 
-        # Detect settings
-        if futils.istextfile(self.filename):
-            self.FileFormatComboBox.setCurrentIndex(1)
-            # Detect sample rate
-            fs = futils.get_sample_rate(filename)
-            if fs:
-                self.SampleFrequencySpinBox.setValue(fs)
-        else:
-            self.FileFormatComboBox.setCurrentIndex(0)
-        if futils.is_little_endian():
-            self.ByteOrderComboBox.setCurrentIndex(0)
-        else:
-            self.ByteOrderComboBox.setCurrentIndex(1)
         self.load_preview()
 
     def on_format_change(self, idx):
@@ -129,7 +122,7 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
 
     def get_values(self):
         """Gets selected parameters."""
-        return {'fmt': FORMATS[self.FileFormatComboBox.currentIndex()],
+        return {'fmt': FORMATS[self.FileFormatComboBox.currentText()],
                 'dtype': DTYPES[self.DataTypeComboBox.currentIndex()],
                 'byteorder': BYTEORDERS[self.ByteOrderComboBox.currentIndex()],
                 'fs': float(self.SampleFrequencySpinBox.value())}

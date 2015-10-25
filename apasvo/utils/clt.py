@@ -28,15 +28,13 @@ import sys
 import datetime
 
 
-def float_secs_2_string_date(x):
+def float_secs_2_string_date(x, starttime=datetime.datetime.utcfromtimestamp(0)):
     """"""
-    times = str(datetime.timedelta(seconds=x)).split('.')
-    if len(times) == 1:
-        return times[0]
-    elif len(times) == 2:
-        return "%s.%s" % (times[0], times[1][:-3])
+    t = (starttime + datetime.timedelta(seconds=x))
+    if t.microsecond == 0:
+        return t.strftime('%X')
     else:
-        raise ValueError("input float value could not be formated")
+        return t.strftime('%H:%M:%S.%f')
 
 
 def print_msg(msg):

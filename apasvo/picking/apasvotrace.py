@@ -29,6 +29,7 @@ import obspy as op
 import csv
 import os
 import datetime
+import obspy
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -51,6 +52,9 @@ status_revised = 'revised'
 status_confirmed = 'confirmed'
 status_rejected = 'rejected'
 status_undefined = 'undefined'
+
+
+DEFAULT_SAMPLE_RATE = 50
 
 
 def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
@@ -82,7 +86,7 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
     """
     # Extract data from records
     rows = [{'file_name': record.filename,
-             'time': str(datetime.timedelta(seconds=event.time / record.fs)),
+             'time': record.starttime + (event.time / record.fs),
              'cf_value': event.cf_value,
              'name': event.name,
              'method': event.method,
@@ -196,7 +200,7 @@ class Event(object):
         i_from = int(max(0, self.n0_aic))
         i_to = int(min(len(self.record.signal), self.n0_aic + len(self.aic)))
         # Create time sequence
-        t = np.arange(i_from, i_to) / self.record.fs
+        t = np.arange(i_from, i_to) / float(self.record.fs)
         # Create figure
         fig, _ = pl.subplots(2, 1, sharex='all', num=num)
         fig.canvas.set_window_title(self.record.label)
@@ -205,9 +209,9 @@ class Event(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.record.starttime))
             ax.xaxis.set_major_formatter(formatter)
-            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=8))
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5, prune='lower'))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw signal
@@ -473,7 +477,7 @@ class ApasvoTrace(object):
         else:
             i_to = int(min(len(self.signal), t_end * self.fs))
         # Create time sequence
-        t = np.arange(i_from, i_to) / self.fs
+        t = np.arange(i_from, i_to) / float(self.fs)
         # Create figure
         nplots = show_x + show_cf + show_specgram
         fig, _ = pl.subplots(nplots, 1, sharex='all', num=num)
@@ -483,9 +487,9 @@ class ApasvoTrace(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.starttime))
             ax.xaxis.set_major_formatter(formatter)
-            ax.xaxis.set_major_locator(ticker.MaxNLocator(prune='lower'))
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5, prune='lower'))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw axes

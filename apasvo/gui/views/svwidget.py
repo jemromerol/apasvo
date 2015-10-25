@@ -859,7 +859,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.takanami_on_selection_action.triggered.connect(self.apply_takanami_to_selection)
 
         # format axes
-        formatter = FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
+        formatter = FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.document.record.starttime))
         for ax in self.fig.axes:
             ax.callbacks.connect('xlim_changed', self.on_xlim_change)
             ax.xaxis.set_major_formatter(formatter)
