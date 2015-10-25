@@ -26,6 +26,9 @@
 
 import numpy as np
 import obspy as op
+from obspy.core import event
+from obspy.core.utcdatetime import UTCDateTime
+from obspy.core.event import Pick
 import csv
 import copy
 
@@ -83,12 +86,12 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
     """
     # Extract data from records
     rows = [{'file_name': record.filename,
-             'time': record.starttime + (event.time / record.fs),
+             'time': record.starttime + event.time,
              'cf_value': event.cf_value,
              'name': event.name,
              'method': event.method,
-             'mode': event.mode,
-             'status': event.status,
+             'mode': event.evaluation_mode,
+             'status': event.evaluation_status,
              'comments': event.comments} for record in records
                                          for event in record.events]
     # Write data to csv
@@ -100,7 +103,7 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
         writer.writerow(row)
 
 
-class Event(object):
+class ApasvoEvent(Pick):
     """A seismic event found in a Record instance.
 
     This class stores several attributes used to describe a possible event
@@ -120,11 +123,6 @@ class Event(object):
             Possible values are: 'STALTA', 'STALTA+Takanami', 'AMPA',
             'AMPA+Takanami' and 'other'.
             Default: 'other'.
-        mode: Event picking mode. Possible values are: 'manual', 'automatic'
-            and 'undefined'.
-            Default: 'automatic'.
-        status: Revision status of the event. Possible values are: 'reported',
-            'revised', 'confirmed', 'rejected' and 'undefined'.
             Default: 'reported'.
         n0_aic: Start time point of computed AIC values. The value is given in
             samples from the beginning of record.signal.
@@ -133,30 +131,41 @@ class Event(object):
 
     methods = (method_other, method_takanami, method_stalta,
                method_stalta_takanami, method_ampa, method_ampa_takanami)
-    modes = (mode_manual, mode_automatic, mode_undefined)
-    statuses = (status_reported, status_revised, status_confirmed,
-                status_rejected, status_undefined)
 
-    def __init__(self, record, time, name='', comments='',
-                 method=method_other, mode=mode_automatic, status=status_reported,
-                 aic=None, n0_aic=None, **kwargs):
-        super(Event, self).__init__()
-        self.record = record
+    def __init__(self,
+                 trace,
+                 time,
+                 name='',
+                 comments='',
+                 method=method_other,
+                 aic=None,
+                 n0_aic=None,
+                 *args, **kwargs):
         if time < 0 or time >= len(self.record.signal):
             raise ValueError("Event position must be a value between 0 and %d"
                              % len(self.record.signal))
-        self.time = time
+        self.stime = time
+        self.trace = trace
         self.name = name
-        self.comments = comments
         self.method = method
-        if mode not in self.modes:
-            mode = mode_undefined
-        self.mode = mode
-        if status not in self.statuses:
-            status = status_undefined
-        self.status = status
         self.aic = aic
         self.n0_aic = n0_aic
+        super(ApasvoEvent, self).__init__(time=self.time,
+                                          method_id=event.ResourceIdentifier(method),
+                                          comments=event.Comment(text=comments),
+                                          creation_info=event.CreationInfo(
+                                              author=kwargs.get('author', ''),
+                                              agency_id=kwargs.get('agency', ''),
+                                              creation_time=UTCDateTime.now(),
+                                          ),
+                                          waveform_id=event.WaveformStreamID(
+                                              network_code=self.trace.stats.get('network', ''),
+                                              station_code=self.trace.stats.get('station', ''),
+                                              location_code=self.trace.stats.get('location', ''),
+                                              channel_code=self.trace.stats.get('channel', ''),
+                                          ),
+                                          *args,
+                                          **kwargs)
 
     @property
     def cf_value(self):
@@ -164,6 +173,23 @@ class Event(object):
             return self.record.cf[self.time]
         else:
             return np.nan
+
+    def _samples_to_seconds(self, value):
+        return self.trace.starttime + (self.trace.delta * value)
+
+    def _seconds_to_samples(self, value):
+        return int((value - self.trace.starttime) / self.trace.delta)
+
+    def __setattr__(self, key, value):
+        if key == 'stime':
+            self.__dict__[key] = value
+            self.__dict__['time'] = self._samples_to_seconds(value)
+        elif key == 'time':
+            self.__dict__[key] = value
+            self.__dict__['stime'] = self._seconds_to_samples(value)
+        else:
+            super(ApasvoEvent, self).__setattr__(key, value)
+
 
     def plot_aic(self, show_envelope=True, num=None, **kwargs):
         """Plots AIC values for a given event object.
@@ -226,7 +252,7 @@ class Event(object):
         fig.axes[1].plot(t, self.aic)
         # Draw event
         for ax in fig.axes:
-            vline = ax.axvline(self.time / self.record.fs, label="Event")
+            vline = ax.axvline(self.stime / self.record.fs, label="Event")
             vline.set(color='r', ls='--', lw=2)
         # Configure limits and draw legend
         for ax in fig.axes:
@@ -271,6 +297,10 @@ class ApasvoTrace(op.Trace):
     @property
     def fs(self):
         return 1. / self.stats.delta
+
+    @property
+    def delta(self):
+        return self.stats.delta
 
     @property
     def signal(self):
@@ -324,9 +354,9 @@ class ApasvoTrace(op.Trace):
         for t in et:
             # set method name
             method_name = alg.__class__.__name__.upper()
-            if method_name not in Event.methods:
+            if method_name not in ApasvoEvent.methods:
                 method_name = method_other
-            events.append(Event(self, t, method=method_name,
+            events.append(ApasvoEvent(self, t, method=method_name,
                                      mode=mode_automatic, status=status_reported))
         # Refine arrival times
         if takanami:
@@ -373,11 +403,11 @@ class ApasvoTrace(op.Trace):
         """
         taka = takanami.Takanami()
         for event in events:
-            t_start = (event.time / self.fs) - takanami_margin
-            t_end = (event.time / self.fs) + takanami_margin
+            t_start = (event.stime / self.fs) - takanami_margin
+            t_end = (event.stime / self.fs) + takanami_margin
             et, event.aic, event.n0_aic = taka.run(self.signal, self.fs,
                                                    t_start, t_end)
-            event.time = et
+            event.stime = et
             # set event method
             if event.method == method_ampa:
                 event.method = method_ampa_takanami
@@ -516,7 +546,7 @@ class ApasvoTrace(op.Trace):
         # Draw event markers
         if show_events:
             for event in self.events:
-                arrival_time = event.time / self.fs
+                arrival_time = event.stime / self.fs
                 for ax in fig.axes:
                     xmin, xmax = ax.get_xlim()
                     if arrival_time > xmin and arrival_time < xmax:
@@ -538,7 +568,9 @@ class ApasvoStream(op.Stream):
         super(ApasvoStream, self).__init__(traces)
         self.description = description
 
-
+    def detect(self, alg, start_trace=None, end_trace=None, **kwargs):
+        for trace in self.traces[start_trace:end_trace]:
+            trace.detect(alg, **kwargs)
 
 def read(filename,
          format=None,
