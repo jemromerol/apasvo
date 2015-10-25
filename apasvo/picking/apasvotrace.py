@@ -26,9 +26,15 @@
 
 import numpy as np
 import obspy as op
-from obspy.core import event
 from obspy.core.utcdatetime import UTCDateTime
 from obspy.core.event import Pick
+from obspy.core.event import ResourceIdentifier
+from obspy.core.event import CreationInfo
+from obspy.core.event import WaveformStreamID
+from obspy.core.event import Comment
+from obspy.core.event import Catalog
+from obspy.core.event import Event
+from collections import defaultdict
 import csv
 import copy
 
@@ -151,14 +157,14 @@ class ApasvoEvent(Pick):
         self.aic = aic
         self.n0_aic = n0_aic
         super(ApasvoEvent, self).__init__(time=self.time,
-                                          method_id=event.ResourceIdentifier(method),
-                                          comments=event.Comment(text=comments),
-                                          creation_info=event.CreationInfo(
+                                          method_id=ResourceIdentifier(method),
+                                          comments=Comment(text=comments),
+                                          creation_info=CreationInfo(
                                               author=kwargs.get('author', ''),
                                               agency_id=kwargs.get('agency', ''),
                                               creation_time=UTCDateTime.now(),
                                           ),
-                                          waveform_id=event.WaveformStreamID(
+                                          waveform_id=WaveformStreamID(
                                               network_code=self.trace.stats.get('network', ''),
                                               station_code=self.trace.stats.get('station', ''),
                                               location_code=self.trace.stats.get('location', ''),
@@ -571,6 +577,26 @@ class ApasvoStream(op.Stream):
     def detect(self, alg, start_trace=None, end_trace=None, **kwargs):
         for trace in self.traces[start_trace:end_trace]:
             trace.detect(alg, **kwargs)
+
+    def export_picks(self, filename, start_trace=None, end_trace=None, range_list=(), format="NLLOC_OBS", **kwargs):
+        """
+        """
+        ranged_event_set = defaultdict(list)
+        not_ranged_event_list = []
+        for trace in self.traces[start_trace:end_trace]:
+            for pick in trace.events:
+                not_in_range = True
+                for time_range in range_list:
+                    if time_range[0] <= pick.time <= time_range[1]:
+                        ranged_event_set[tuple(time_range)].append(pick)
+                        not_in_range = False
+                if not_in_range:
+                    not_ranged_event_list.append(pick)
+        # Export to desired format
+        event_list = [Event(picks) for picks in ranged_event_set.values()] + \
+                     [Event([pick]) for pick in not_ranged_event_list]
+        event_catalog = Catalog(event_list)
+        event_catalog.write(filename, format=format, **kwargs)
 
 def read(filename,
          format=None,
