@@ -27,9 +27,6 @@
 import numpy as np
 import obspy as op
 import csv
-import os
-import datetime
-import obspy
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -52,9 +49,6 @@ status_revised = 'revised'
 status_confirmed = 'confirmed'
 status_rejected = 'rejected'
 status_undefined = 'undefined'
-
-
-DEFAULT_SAMPLE_RATE = 50
 
 
 def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
@@ -397,7 +391,7 @@ class ApasvoTrace(object):
                 event.method = method_takanami
         return events
 
-    def save_cf(self, fname, fmt=rawfile.format_binary,
+    def save_cf(self, fname, fmt=rawfile.format_text,
                 dtype=rawfile.datatype_float64,
                 byteorder=rawfile.byteorder_native):
         """Saves characteristic function in a file.
@@ -413,12 +407,12 @@ class ApasvoTrace(object):
                 Valid values are: 'little-endian', 'big-endian' or 'native'.
                 Default: 'native'.
         """
-        if fmt == 'text':
-            fout_handler = rawfile.TextFile(fname, dtype=dtype,
-                                            byteorder=byteorder)
-        else:
+        if fmt == 'binary':
             fout_handler = rawfile.BinFile(fname, dtype=dtype,
                                            byteorder=byteorder)
+        else:
+            fout_handler = rawfile.TextFile(fname, dtype=dtype,
+                                            byteorder=byteorder)
         fout_handler.write(self.cf, header="Sample rate: %g Hz." % self.fs)
 
     def plot_signal(self, t_start=0.0, t_end=np.inf, show_events=True,
