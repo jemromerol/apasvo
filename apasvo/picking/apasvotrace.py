@@ -27,6 +27,7 @@
 import numpy as np
 import obspy as op
 import csv
+import copy
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -49,6 +50,8 @@ status_revised = 'revised'
 status_confirmed = 'confirmed'
 status_rejected = 'rejected'
 status_undefined = 'undefined'
+
+DEFAULT_DTYPE = '=f8'  # Set the default datatype as 8 bits floating point, native ordered
 
 
 def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
@@ -232,7 +235,7 @@ class Event(object):
         return fig
 
 
-class ApasvoTrace(object):
+class ApasvoTrace(op.Trace):
     """A seismic data trace.
 
     The class contains a seismic data trace.
@@ -248,7 +251,6 @@ class ApasvoTrace(object):
         description: Additional comments.
             Default: ''.
     """
-    DEFAULT_DTYPE = '=f8'  # Set the default datatype as 8 bits floating point, native ordered
 
     def __init__(self, data=None, header=None, label='', description='', **kwargs):
         """Initializes a Record instance.
@@ -257,36 +259,30 @@ class ApasvoTrace(object):
             label: A string that identifies the seismic record. Default: ''.
             description: Additional comments.
         """
-        super(ApasvoTrace, self).__init__()
         # Cast data to default datatype
         if data is None:
-            data = np.ndarray((0,), dtype=ApasvoTrace.DEFAULT_DTYPE)
-        # Initialize Obspy trace
-        self._trace = op.Trace(data.astype(ApasvoTrace.DEFAULT_DTYPE, casting='safe'), header)
-        self.cf = np.array([], dtype=ApasvoTrace.DEFAULT_DTYPE)
+            data = np.ndarray((0,), dtype=DEFAULT_DTYPE)
+        super(ApasvoTrace, self).__init__(data, header)
+        self.cf = np.array([], dtype=DEFAULT_DTYPE)
         self.events = []
         self.label = label
         self.description = description
 
     @property
     def fs(self):
-        return 1. / self._trace.stats.delta
+        return 1. / self.stats.delta
 
     @property
     def signal(self):
-        return self._trace.data
+        return self.data
 
     @property
     def starttime(self):
-        return self._trace.stats.starttime
+        return self.stats.starttime
 
     @property
     def endtime(self):
-        return self._trace.stats.endtime
-
-    @property
-    def stats(self):
-        return self._trace.stats
+        return self.stats.endtime
 
     def detect(self, alg, threshold=None, peak_window=1.0,
                takanami=False, takanami_margin=5.0, action='append', **kwargs):
@@ -532,3 +528,46 @@ class ApasvoTrace(object):
             ax.set_xlim(t[0], t[-1])
         return fig
 
+
+class ApasvoStream(op.Stream):
+    """
+    A list of multiple ApasvoTrace objects
+    """
+
+    def __init__(self, traces, description='', **kwargs):
+        super(ApasvoStream, self).__init__(traces)
+        self.description = description
+
+
+
+def read(filename,
+         format=None,
+         file_dtype='float64',
+         file_byteorder='native',
+         description='',
+         *args, **kwargs):
+    """
+    Read signal files into an ApasvoStream object
+    :param filename:
+    :param format:
+    :param file_dtype:
+    :param file_byteorder:
+    :param description:
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    # Try to read using obspy core functionality
+    try:
+        traces = op.read(filename, format=format, *args, **kwargs).traces
+    # Otherwise try to read as a binary or text file
+    except Exception as e:
+        fhandler = rawfile.get_file_handler(filename,
+                                            format=format,
+                                            dtype=file_dtype,
+                                            byteorder=file_byteorder)
+        traces = [fhandler.read().astype(DEFAULT_DTYPE, casting='safe')]
+    # Convert Obspy traces to apasvo traces
+    return ApasvoStream([ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats)) \
+                         for trace in traces],
+                        description=description)
