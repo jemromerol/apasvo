@@ -25,6 +25,7 @@
 '''
 
 import numpy as np
+import obspy as op
 import csv
 import os
 import datetime
@@ -233,10 +234,10 @@ class Event(object):
         return fig
 
 
-class Record(object):
-    """A seismic data record.
+class ApasvoTrace(object):
+    """A seismic data trace.
 
-    The class contains a seismic data trace. Provides methods that allows
+    The class contains a seismic data trace.
 
     Attributes:
         signal: Seismic data, numpy array type.
@@ -248,43 +249,46 @@ class Record(object):
             Default: ''.
         description: Additional comments.
             Default: ''.
-        filename: Name of the file (absolute path) where data is stored.
     """
+    DEFAULT_DTYPE = '=f8'  # Set the default datatype as 8 bits floating point, native ordered
 
-    def __init__(self, fileobj, fs, label='', description='', fmt='',
-                 dtype=rawfile.datatype_float64,
-                 byteorder=rawfile.byteorder_native, **kwargs):
+    def __init__(self, data=None, header=None, label='', description='', **kwargs):
         """Initializes a Record instance.
 
         Args:
-            fileobj: A file (binary or plain text) storing seismic data.
-            fs: Sample rate in Hz.
             label: A string that identifies the seismic record. Default: ''.
             description: Additional comments.
-            fmt: A string indicating fileobj's format. Possible values are
-                'binary', 'text' or ''. Default value is ''.
-            dtype: Data-type of the data stored in fileobj. Default value
-                is 'float64'.
-            byteorder: Byte-order of the data stored in fileobj.
-                Valid values are: 'little-endian', 'big-endian' and 'native'.
-                Default: 'native'.
         """
-        super(Record, self).__init__()
-        if isinstance(fileobj, file):
-            self.filename = fileobj.name
-        else:
-            self.filename = fileobj
-        fhandler = rawfile.get_file_handler(fileobj, fmt=fmt, dtype=dtype,
-                                            byteorder=byteorder)
-        self.signal = fhandler.read().astype(rawfile.datatype_float64, casting='safe')
-        self.fs = fs
-        self.cf = np.array([], dtype=rawfile.datatype_float64)
+        super(ApasvoTrace, self).__init__()
+        # Cast data to default datatype
+        if data is None:
+            data = np.ndarray((0,), dtype=ApasvoTrace.DEFAULT_DTYPE)
+        # Initialize Obspy trace
+        self._trace = op.Trace(data.astype(ApasvoTrace.DEFAULT_DTYPE, casting='safe'), header)
+        self.cf = np.array([], dtype=ApasvoTrace.DEFAULT_DTYPE)
         self.events = []
-        if label == '':
-            _, rname = os.path.split(self.filename)
-            label, _ = os.path.splitext(rname)
         self.label = label
         self.description = description
+
+    @property
+    def fs(self):
+        return 1. / self._trace.stats.delta
+
+    @property
+    def signal(self):
+        return self._trace.data
+
+    @property
+    def starttime(self):
+        return self._trace.stats.starttime
+
+    @property
+    def endtime(self):
+        return self._trace.stats.endtime
+
+    @property
+    def stats(self):
+        return self._trace.stats
 
     def detect(self, alg, threshold=None, peak_window=1.0,
                takanami=False, takanami_margin=5.0, action='append', **kwargs):
@@ -530,57 +534,3 @@ class Record(object):
             ax.set_xlim(t[0], t[-1])
         return fig
 
-
-class RecordFactory(object):
-    """Builder class to create Record objects.
-
-    Attributes:
-        fs: Sample rate in Hz.
-        dtype: Data-type of the data to read.
-        byteorder: Byte-order of the data to read.
-        max_record_length: Maximum signal length allowed, in seconds.
-            Currently this attribute has no effect.
-            Default value: 604800.0 seconds (1 week).
-    """
-
-    def __init__(self, max_segment_length=24 * 7 * 3600, fs=50.0,
-                 dtype='float64', byteorder='native', **kwargs):
-        self.fs = fs
-        self.dtype = dtype
-        self.byteorder = byteorder
-        self.max_record_length = (max_segment_length * fs)
-
-    def create_record(self, fileobj, **kwargs):
-        """Creates a Record object.
-
-        Args:
-            fileobj: A file (binary or plain text) storing seismic data.
-
-        Returns:
-            out: Created Record object.
-        """
-#         segment_n = np.ceil(utils.getSize(fileobj) / self.max_record_length)
-#         if segment_n > 1:
-#             fhandler = utils.get_file_handler(fileobj, dtype=self.dtype, byteorder=self.byteorder)
-#             self.on_notify("File %s is too long, it will be divided into %i parts up to %g seconds each\n"
-#                            % (fhandler.filename, segment_n, self.max_record_length / self.fs))
-#             basename, ext = os.path.splitext(fhandler.filename)
-#             fileno = 0
-#             records = []
-#             for segment in fhandler.read_in_blocks(self.max_record_length):
-#                 filename_out = "%s%02.0i%s" % (basename, fileno, ext)
-#                 fout_handler = utils.TextFile(filename_out, self.dtype, self.byteorder) if isinstance(fhandler, utils.TextFile) else utils.BinFile(filename_out, self.dtype, self.byteorder)
-#                 fileno += 1
-#                 fout_handler.write(segment)
-#                 self.on_notify("%s generated.\n" % fout_handler.filename)
-#                 records.append(fout_handler.filename, self.fs,
-#                                       dtype=self.dtype, byteorder=self.byteorder,
-#                                       **kwargs)
-#             return records
-#         else:
-        return Record(fileobj, self.fs, dtype=self.dtype, byteorder=self.byteorder,
-                      **kwargs)
-
-#     def on_notify(self, msg):
-#         """"""
-#         pass
