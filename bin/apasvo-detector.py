@@ -39,7 +39,7 @@ from apasvo.utils import parse
 from apasvo.utils import collections
 from apasvo.picking import stalta
 from apasvo.picking import ampa
-from apasvo.picking import record as rc
+from apasvo.picking import apasvotrace as rc
 
 
 def draw_events_table(record, method):

@@ -189,7 +189,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         values = dialog.get_values()
                         # Load and visualize the opened record
                         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                        record = rc.Record(filename, **values)
+                        record = rc.read(filename, **values)[0]
                         self.document = eventlistmodel.EventListModel(record, ['name', 'time',
                                                                       'cf_value',
                                                                       'mode',
@@ -650,7 +650,7 @@ if __name__ == '__main__':
 
     from apasvo.picking import stalta
     from apasvo.picking import ampa
-    from apasvo.picking import record as rc
+    from apasvo.picking import apasvotrace as rc
 
     app.processEvents()
 

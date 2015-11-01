@@ -42,7 +42,7 @@ import datetime
 from apasvo.gui.views import takanamidialog
 from apasvo.gui.views import settingsdialog
 from apasvo.picking import envelope as env
-from apasvo.picking import record as rc
+from apasvo.picking import apasvotrace as rc
 from apasvo.utils import plotting
 from apasvo.utils import clt
 
@@ -254,8 +254,8 @@ class EventMarker(QtCore.QObject):
         valueChanged: 'event' arrival time changed.
     """
 
-    event_selected = QtCore.Signal(rc.Event)
-    right_clicked = QtCore.Signal(rc.Event)
+    event_selected = QtCore.Signal(rc.ApasvoEvent)
+    right_clicked = QtCore.Signal(rc.ApasvoEvent)
 
     def __init__(self, fig, minimap, document, event, color='b', selected_color='r'):
         super(EventMarker, self).__init__()
@@ -792,7 +792,7 @@ class SignalViewerWidget(QtGui.QWidget):
     """
 
     CF_loaded = QtCore.Signal(bool)
-    event_selected = QtCore.Signal(rc.Event)
+    event_selected = QtCore.Signal(rc.ApasvoEvent)
 
     def __init__(self, parent, document=None):
         super(SignalViewerWidget, self).__init__(parent)

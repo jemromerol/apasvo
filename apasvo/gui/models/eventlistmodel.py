@@ -30,7 +30,7 @@ from apasvo.gui.models import eventcommands as commands
 from apasvo.gui.views.settingsdialog import COLOR_KEYS
 from apasvo.gui.views.settingsdialog import DEFAULT_COLOR_KEY
 from apasvo.gui.views.settingsdialog import DEFAULT_COLOR_SCHEME
-from apasvo.picking import record as rc
+from apasvo.picking import apasvotrace as rc
 
 from apasvo._version import _application_name
 from apasvo._version import _organization
@@ -41,9 +41,9 @@ class EventListModel(QtCore.QAbstractTableModel):
     """
 
     emptyList = QtCore.Signal(bool)
-    eventCreated = QtCore.Signal(rc.Event)
-    eventDeleted = QtCore.Signal(rc.Event)
-    eventModified = QtCore.Signal(rc.Event)
+    eventCreated = QtCore.Signal(rc.ApasvoEvent)
+    eventDeleted = QtCore.Signal(rc.ApasvoEvent)
+    eventModified = QtCore.Signal(rc.ApasvoEvent)
     detectionPerformed = QtCore.Signal()
 
     def __init__(self, record, header, command_stack):
@@ -143,7 +143,7 @@ class EventListModel(QtCore.QAbstractTableModel):
 
     def createEvent(self, time, name='', comments='', method=rc.method_other,
                     mode=rc.mode_manual, status=rc.status_reported):
-        event = rc.Event(self.record, time, name=name, comments=comments,
+        event = rc.ApasvoEvent(self.record, time, name=name, comments=comments,
                          method=method, mode=mode, status=status)
         self.addEvent(event)
         self.emptyList.emit(self.empty)

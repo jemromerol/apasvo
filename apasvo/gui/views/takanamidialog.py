@@ -39,7 +39,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import traceback
-from apasvo.picking import record as rc
+from apasvo.picking import apasvotrace as rc
 from apasvo.picking import takanami
 from apasvo._version import _application_name
 from apasvo._version import _organization
@@ -237,7 +237,7 @@ class TakanamiDialog(QtGui.QDialog):
                                                 self.record.fs)
         self.position_label.setText("Estimated Arrival Time: %s" % time_in_msecs.toString("hh 'h' mm 'm' ss.zzz 's'"))
         # Plot estimated arrival time
-        m_event = rc.Event(self.record, time, aic=aic, n0_aic=n0_aic)
+        m_event = rc.ApasvoEvent(self.record, time, aic=aic, n0_aic=n0_aic)
         m_event.plot_aic(show_envelope=True, num=self.fig.number)
         self.fig.canvas.draw_idle()
 

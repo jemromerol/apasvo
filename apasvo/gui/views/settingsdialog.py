@@ -28,7 +28,7 @@ from PySide import QtGui
 from PySide import QtCore
 
 from apasvo.gui.views import playertoolbar
-from apasvo.picking import record as rc
+from apasvo.picking import apasvotrace as rc
 from apasvo.utils import plotting
 
 from apasvo._version import _application_name

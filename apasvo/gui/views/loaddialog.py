@@ -26,14 +26,13 @@
 
 from PySide import QtGui
 from apasvo.gui.views.generated import ui_loaddialog
-from apasvo.utils import futils
 from apasvo.utils.formats import rawfile
 
 
 FORMATS = {'Autodetect': None,
            'Binary': rawfile.format_binary,
            'Text': rawfile.format_text,
-           'SAC': 'SAC'}
+           }
 DTYPES = (rawfile.datatype_int16,
           rawfile.datatype_int32,
           rawfile.datatype_int64,
@@ -94,11 +93,19 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
             self.DataTypeLabel.setVisible(True)
             self.ByteOrderComboBox.setVisible(True)
             self.ByteOrderLabel.setVisible(True)
+            self.PreviewTextEdit.setVisible(True)
         elif fmt == rawfile.format_text:
             self.DataTypeComboBox.setVisible(False)
             self.DataTypeLabel.setVisible(False)
             self.ByteOrderComboBox.setVisible(False)
             self.ByteOrderLabel.setVisible(False)
+            self.PreviewTextEdit.setVisible(True)
+        else:
+            self.DataTypeComboBox.setVisible(False)
+            self.DataTypeLabel.setVisible(False)
+            self.ByteOrderComboBox.setVisible(False)
+            self.ByteOrderLabel.setVisible(False)
+            self.PreviewTextEdit.setVisible(False)
 
     def load_preview(self):
         """Shows a preview of loaded data using the selected parameters."""

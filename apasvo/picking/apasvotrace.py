@@ -600,8 +600,8 @@ class ApasvoStream(op.Stream):
 
 def read(filename,
          format=None,
-         file_dtype='float64',
-         file_byteorder='native',
+         dtype='float64',
+         byteorder='native',
          description='',
          *args, **kwargs):
     """
@@ -622,8 +622,8 @@ def read(filename,
     except Exception as e:
         fhandler = rawfile.get_file_handler(filename,
                                             format=format,
-                                            dtype=file_dtype,
-                                            byteorder=file_byteorder)
+                                            dtype=dtype,
+                                            byteorder=byteorder)
         traces = [fhandler.read().astype(DEFAULT_DTYPE, casting='safe')]
     # Convert Obspy traces to apasvo traces
     return ApasvoStream([ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats)) \
