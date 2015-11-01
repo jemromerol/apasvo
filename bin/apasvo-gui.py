@@ -477,7 +477,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
     def set_title(self):
         """Sets current window's title."""
-        prefix = '' if self.document is None else "%s - " % self.document.record.filename
+        prefix = '' if self.document is None else "%s - " % str(self.document.record)
         self.setWindowTitle('%s%s v.%s' % (prefix, _application_name, __version__))
 
     def strippedName(self, fullFileName):

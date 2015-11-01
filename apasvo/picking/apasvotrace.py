@@ -61,6 +61,7 @@ status_rejected = 'rejected'
 status_undefined = 'undefined'
 
 DEFAULT_DTYPE = '=f8'  # Set the default datatype as 8 bits floating point, native ordered
+DEFAULT_DELTA = 0.02
 
 
 def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
@@ -147,11 +148,11 @@ class ApasvoEvent(Pick):
                  aic=None,
                  n0_aic=None,
                  *args, **kwargs):
-        if time < 0 or time >= len(self.record.signal):
-            raise ValueError("Event position must be a value between 0 and %d"
-                             % len(self.record.signal))
-        self.stime = time
         self.trace = trace
+        if time < 0 or time >= len(self.trace.signal):
+            raise ValueError("Event position must be a value between 0 and %d"
+                             % len(self.trace.signal))
+        self.stime = time
         self.name = name
         self.method = method
         self.aic = aic
@@ -175,8 +176,8 @@ class ApasvoEvent(Pick):
 
     @property
     def cf_value(self):
-        if 0 <= self.time < len(self.record.cf):
-            return self.record.cf[self.time]
+        if 0 <= self.time < len(self.trace.cf):
+            return self.trace.cf[self.stime]
         else:
             return np.nan
 
@@ -227,18 +228,18 @@ class ApasvoEvent(Pick):
 
         # Set limits
         i_from = int(max(0, self.n0_aic))
-        i_to = int(min(len(self.record.signal), self.n0_aic + len(self.aic)))
+        i_to = int(min(len(self.trace.signal), self.n0_aic + len(self.aic)))
         # Create time sequence
-        t = np.arange(i_from, i_to) / float(self.record.fs)
+        t = np.arange(i_from, i_to) / float(self.trace.fs)
         # Create figure
         fig, _ = pl.subplots(2, 1, sharex='all', num=num)
-        fig.canvas.set_window_title(self.record.label)
+        fig.canvas.set_window_title(self.trace.label)
         fig.set_tight_layout(True)
         # Configure axes
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.record.starttime))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.trace.starttime))
             ax.xaxis.set_major_formatter(formatter)
             ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5, prune='lower'))
             ax.set_xlabel('Time (seconds)')
@@ -246,11 +247,11 @@ class ApasvoEvent(Pick):
         # Draw signal
         fig.axes[0].set_title('Signal Amplitude')
         fig.axes[0].set_ylabel('Amplitude')
-        fig.axes[0].plot(t, self.record.signal[i_from:i_to], color='black',
+        fig.axes[0].plot(t, self.trace.signal[i_from:i_to], color='black',
                          label='Signal')
         # Draw envelope
         if show_envelope:
-            fig.axes[0].plot(t, env.envelope(self.record.signal[i_from:i_to]),
+            fig.axes[0].plot(t, env.envelope(self.trace.signal[i_from:i_to]),
                          color='r', label='Envelope')
             fig.axes[0].legend(loc=0, fontsize='small')
         # Draw AIC
@@ -258,7 +259,7 @@ class ApasvoEvent(Pick):
         fig.axes[1].plot(t, self.aic)
         # Draw event
         for ax in fig.axes:
-            vline = ax.axvline(self.stime / self.record.fs, label="Event")
+            vline = ax.axvline(self.stime / self.trace.fs, label="Event")
             vline.set(color='r', ls='--', lw=2)
         # Configure limits and draw legend
         for ax in fig.axes:
@@ -617,15 +618,17 @@ def read(filename,
     """
     # Try to read using obspy core functionality
     try:
-        traces = op.read(filename, format=format, *args, **kwargs).traces
+        traces = [ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats)) \
+                  for trace in op.read(filename, format=format, *args, **kwargs).traces]
     # Otherwise try to read as a binary or text file
     except Exception as e:
         fhandler = rawfile.get_file_handler(filename,
                                             format=format,
                                             dtype=dtype,
                                             byteorder=byteorder)
-        traces = [fhandler.read().astype(DEFAULT_DTYPE, casting='safe')]
+        trace = ApasvoTrace(fhandler.read().astype(DEFAULT_DTYPE, casting='safe'))
+        sample_fs = kwargs.get('fs')
+        trace.stats.delta = DEFAULT_DELTA if sample_fs is None else 1. / sample_fs
+        traces = [trace]
     # Convert Obspy traces to apasvo traces
-    return ApasvoStream([ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats)) \
-                         for trace in traces],
-                        description=description)
+    return ApasvoStream(traces, description=description)

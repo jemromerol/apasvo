@@ -87,25 +87,28 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
 
     def on_format_change(self, idx):
         """Updates UI after toggling the format value."""
-        fmt = FORMATS[self.FileFormatComboBox.currentIndex()]
+        fmt = FORMATS[self.FileFormatComboBox.currentText()]
         if fmt == rawfile.format_binary:
             self.DataTypeComboBox.setVisible(True)
             self.DataTypeLabel.setVisible(True)
             self.ByteOrderComboBox.setVisible(True)
             self.ByteOrderLabel.setVisible(True)
-            self.PreviewTextEdit.setVisible(True)
+            self.groupBox_2.setVisible(True)
+            self.SampleFrequencySpinBox.setVisible(True)
         elif fmt == rawfile.format_text:
             self.DataTypeComboBox.setVisible(False)
             self.DataTypeLabel.setVisible(False)
             self.ByteOrderComboBox.setVisible(False)
             self.ByteOrderLabel.setVisible(False)
-            self.PreviewTextEdit.setVisible(True)
+            self.groupBox_2.setVisible(True)
+            self.SampleFrequencySpinBox.setVisible(True)
         else:
             self.DataTypeComboBox.setVisible(False)
             self.DataTypeLabel.setVisible(False)
             self.ByteOrderComboBox.setVisible(False)
             self.ByteOrderLabel.setVisible(False)
-            self.PreviewTextEdit.setVisible(False)
+            self.groupBox_2.setVisible(False)
+            self.SampleFrequencySpinBox.setVisible(False)
 
     def load_preview(self):
         """Shows a preview of loaded data using the selected parameters."""

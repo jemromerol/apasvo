@@ -72,7 +72,7 @@ class EventListModel(QtCore.QAbstractTableModel):
             attr_name = self._header[index.column()]
             data = self.record.events[index.row()].__getattribute__(attr_name)
             if attr_name == 'time':
-                time = QtCore.QTime().addMSecs(1000 * data / self.record.fs)
+                time = QtCore.QTime(data.hour, data.minute, data.second, data.microsecond)
                 return time.toString("hh 'h' mm 'm' ss.zzz 's'")
             if attr_name == 'cf_value':
                 return "%.6g" % data
