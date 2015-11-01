@@ -34,6 +34,7 @@ from apasvo._version import _application_name
 from apasvo._version import _organization
 from apasvo.gui.views.generated import ui_mainwindow
 from apasvo.utils.formats import rawfile
+import obspy as op
 
 format_csv = 'csv'
 format_other = 'other'
@@ -82,7 +83,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.saved_cf_dtype = None
         self.saved_cf_byteorder = None
 
-        stateDelegate = cbdelegate.ComboBoxDelegate(self.EventsTableView, rc.Event.statuses)
+        stateDelegate = cbdelegate.ComboBoxDelegate(self.EventsTableView, op.core.event_header.EvaluationStatus.keys())
         self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
         self.EventsTableView.clicked.connect(self.goto_event_position)
 
