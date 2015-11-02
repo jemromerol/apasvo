@@ -257,12 +257,12 @@ class TakanamiDialog(QtGui.QDialog):
                                         time=self.event_time,
                                         method=rc.method_takanami,
                                         mode=rc.mode_automatic,
-                                        status=rc.status_reported)
+                                        status=rc.status_preliminary)
         else:
             self.document.createEvent(self.event_time,
                                       method=rc.method_takanami,
                                       mode=rc.mode_automatic,
-                                      status=rc.status_reported)
+                                      status=rc.status_preliminary)
 
     def do_takanami(self):
         self._task = TakanamiTask(self.record, self._start, self._end)

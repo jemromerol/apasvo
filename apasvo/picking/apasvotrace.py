@@ -52,13 +52,12 @@ method_ampa_takanami = 'AMPA+Takanami'
 
 mode_manual = 'manual'
 mode_automatic = 'automatic'
-mode_undefined = 'undefined'
 
-status_reported = 'reported'
-status_revised = 'revised'
+status_preliminary = 'preliminary'
+status_reviewed = 'reviewed'
 status_confirmed = 'confirmed'
 status_rejected = 'rejected'
-status_undefined = 'undefined'
+status_final = 'final'
 
 DEFAULT_DTYPE = '=f8'  # Set the default datatype as 8 bits floating point, native ordered
 DEFAULT_DELTA = 0.02
@@ -80,7 +79,7 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
             'AMPA+Takanami' and 'other'.
         mode: Event picking mode. Possible values are: 'manual', 'automatic'
             and 'undefined'.
-        status: Revision status of the event. Possible values are: 'reported',
+        status: Revision status of the event. Possible values are: 'preliminary',
             'revised', 'confirmed', 'rejected' and 'undefined'.
         comments: Additional comments.
 
@@ -130,7 +129,7 @@ class ApasvoEvent(Pick):
             Possible values are: 'STALTA', 'STALTA+Takanami', 'AMPA',
             'AMPA+Takanami' and 'other'.
             Default: 'other'.
-            Default: 'reported'.
+            Default: 'preliminary'.
         n0_aic: Start time point of computed AIC values. The value is given in
             samples from the beginning of record.signal.
         aic: List of AIC values from n0_aic.
@@ -176,7 +175,7 @@ class ApasvoEvent(Pick):
 
     @property
     def cf_value(self):
-        if 0 <= self.time < len(self.trace.cf):
+        if 0 <= self.stime < len(self.trace.cf):
             return self.trace.cf[self.stime]
         else:
             return np.nan
@@ -364,7 +363,7 @@ class ApasvoTrace(op.Trace):
             if method_name not in ApasvoEvent.methods:
                 method_name = method_other
             events.append(ApasvoEvent(self, t, method=method_name,
-                                     mode=mode_automatic, status=status_reported))
+                                     mode=mode_automatic, status=status_preliminary))
         # Refine arrival times
         if takanami:
             events = self.refine_events(events, takanami_margin=takanami_margin)

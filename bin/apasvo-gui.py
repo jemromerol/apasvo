@@ -191,13 +191,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         # Load and visualize the opened record
                         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                         record = rc.read(filename, **values)[0]
-                        self.document = eventlistmodel.EventListModel(record, ['name', 'time',
-                                                                      'cf_value',
-                                                                      'mode',
-                                                                      'method',
-                                                                      'status',
-                                                                      'comments'],
-                                                                      self.command_stack)
+                        self.document = eventlistmodel.EventListModel(record, self.command_stack)
                         self.document.emptyList.connect(self.set_modified)
                         self.actionUndo = self.document.command_stack.createUndoAction(self)
                         self.actionRedo = self.document.command_stack.createRedoAction(self)

@@ -46,10 +46,23 @@ class EventListModel(QtCore.QAbstractTableModel):
     eventModified = QtCore.Signal(rc.ApasvoEvent)
     detectionPerformed = QtCore.Signal()
 
-    def __init__(self, record, header, command_stack):
+    HEADER_ATTRIBUTES = [
+        {'name': 'Label', 'type': 'event', 'attribute_name': 'name', 'editable': True},
+        {'name': 'Time', 'type': 'event', 'attribute_name': 'time', 'editable': False,
+         'attribute_type': 'date'},
+        {'name': 'Sample', 'type': 'event', 'attribute_name': 'stime', 'editable': False},
+        {'name': 'CF Value', 'type': 'event', 'attribute_name': 'cf_value', 'editable': False,
+         'format': "{:.6g}"},
+        {'name': 'Mode', 'type': 'event', 'attribute_name': 'evaluation_mode', 'editable': True},
+        {'name': 'Method', 'type': 'event', 'attribute_name': 'method', 'editable': True},
+        {'name': 'Status', 'type': 'event', 'attribute_name': 'evaluation_status', 'editable': True},
+        {'name': 'Comments', 'type': 'event', 'attribute_name': 'comments', 'editable': True},
+    ]
+
+    def __init__(self, record, command_stack, header=None):
         QtCore.QAbstractTableModel.__init__(self)
         self.record = record
-        self._header = header
+        self._header = header if header is not None else self.HEADER_ATTRIBUTES
         self.command_stack = command_stack
         self.color_key = None
         self.color_map = {}
@@ -69,14 +82,16 @@ class EventListModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return None
         elif role == QtCore.Qt.DisplayRole:
-            attr_name = self._header[index.column()]
-            data = self.record.events[index.row()].__getattribute__(attr_name)
-            if attr_name == 'time':
-                time = QtCore.QTime(data.hour, data.minute, data.second, data.microsecond)
-                return time.toString("hh 'h' mm 'm' ss.zzz 's'")
-            if attr_name == 'cf_value':
-                return "%.6g" % data
-            return "%s" % data
+            attribute = self._header[index.column()]
+            data = None
+            if attribute['type'] == 'event':
+                data = self.record.events[index.row()].__getattribute__(attribute['attribute_name'])
+            if attribute.get('attribute_type') == 'date':
+                dateformat = attribute.get('dateformat')
+                if dateformat is not None:
+                    data = data.strftime(dateformat)
+            rep_format = attribute.get('format', '{}')
+            return rep_format.format(data)
         elif role == QtCore.Qt.BackgroundRole:
             return self.calculateEventColor(index)
         else:
@@ -109,17 +124,17 @@ class EventListModel(QtCore.QAbstractTableModel):
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
-            return self._header[section].replace('_', ' ').title()
+            return self._header[section].get('name')
         return None
 
     def sort(self, column, order=QtCore.Qt.AscendingOrder):
         self.command_stack.push(commands.SortEventList(self,
-                                                       self._header[column],
+                                                       self._header[column]['attribute_name'],
                                                        order))
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if role == QtCore.Qt.EditRole:
-            key = self._header[index.column()]
+            key = self._header[index.column()]['attribute_name']
             event = self.record.events[index.row()]
             if event.__getattribute__(key) != value:
                 self.command_stack.push(commands.EditEvent(self, event,
@@ -131,8 +146,8 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.command_stack.push(commands.EditEvent(self, event, **kwargs))
 
     def flags(self, index):
-        attr_name = self._header[index.column()]
-        if attr_name in ['time', 'cf_value', 'mode', 'method']:
+        attribute = self._header[index.column()]
+        if attribute.get('editable'):
             return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
         return (QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable |
                 QtCore.Qt.ItemIsEnabled)
@@ -142,9 +157,9 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.emptyList.emit(self.empty)
 
     def createEvent(self, time, name='', comments='', method=rc.method_other,
-                    mode=rc.mode_manual, status=rc.status_reported):
+                    mode=rc.mode_manual, status=rc.status_preliminary):
         event = rc.ApasvoEvent(self.record, time, name=name, comments=comments,
-                         method=method, mode=mode, status=status)
+                         method=method, evaluation_mode=mode, evaluation_status=status)
         self.addEvent(event)
         self.emptyList.emit(self.empty)
         return event
