@@ -37,6 +37,7 @@ from obspy.core.event import Event
 from collections import defaultdict
 import csv
 import copy
+import os
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -595,25 +596,22 @@ class ApasvoStream(op.Stream):
         for trace in self.traces[start_trace:end_trace]:
             trace.detect(alg, **kwargs)
 
-    def export_picks(self, filename, start_trace=None, end_trace=None, range_list=(), format="NLLOC_OBS", **kwargs):
+    def export_picks(self, filename, start_trace=None, end_trace=None, format="NLLOC_OBS", **kwargs):
         """
         """
-        ranged_event_set = defaultdict(list)
-        not_ranged_event_list = []
+        event_list = []
         for trace in self.traces[start_trace:end_trace]:
-            for pick in trace.events:
-                not_in_range = True
-                for time_range in range_list:
-                    if time_range[0] <= pick.time <= time_range[1]:
-                        ranged_event_set[tuple(time_range)].append(pick)
-                        not_in_range = False
-                if not_in_range:
-                    not_ranged_event_list.append(pick)
+            event_list.extend([Event(picks=[pick]) for pick in trace.events])
         # Export to desired format
-        event_list = [Event(picks=picks) for picks in ranged_event_set.values()] + \
-                     [Event(picks=[pick]) for pick in not_ranged_event_list]
-        event_catalog = Catalog(event_list)
-        event_catalog.write(filename, format=format, **kwargs)
+        if format == 'NLLOC_OBS':
+            basename, ext = os.path.splitext(filename)
+            for event in event_list:
+                ts = event.picks[0].time.strftime("%Y%m%d%H%M%S%f")
+                event_filename = "%s_%s%s" % (basename, ts, ext)
+                event.write(event_filename, format=format)
+        else:
+            event_catalog = Catalog(event_list)
+            event_catalog.write(filename, format=format, **kwargs)
 
 def read(filename,
          format=None,
