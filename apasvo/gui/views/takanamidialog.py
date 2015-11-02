@@ -35,6 +35,7 @@ matplotlib.rcParams['agg.path.chunksize'] = 80000
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from apasvo.gui.views import navigationtoolbar
 from apasvo.gui.views import processingdialog
+from apasvo.utils import clt
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -122,7 +123,7 @@ class TakanamiDialog(QtGui.QDialog):
         self._end = t_end
 
         if self.seismic_event is not None:
-            self.event_time = self.seismic_event.time
+            self.event_time = self.seismic_event.stime
             if self._start is None:
                 self._start = max(0, self.event_time - self.default_margin)
             if self._end is None:
@@ -233,9 +234,9 @@ class TakanamiDialog(QtGui.QDialog):
 
     def on_position_estimated(self, time, aic, n0_aic):
         self.event_time = time
-        time_in_msecs = QtCore.QTime().addMSecs((self.event_time * 1000.0) /
-                                                self.record.fs)
-        self.position_label.setText("Estimated Arrival Time: %s" % time_in_msecs.toString("hh 'h' mm 'm' ss.zzz 's'"))
+        time_in_secs = self.event_time / self.record.fs
+        self.position_label.setText("Estimated Arrival Time: {}".format(
+            clt.float_secs_2_string_date(time_in_secs, starttime=self.record.starttime)))
         # Plot estimated arrival time
         m_event = rc.ApasvoEvent(self.record, time, aic=aic, n0_aic=n0_aic)
         m_event.plot_aic(show_envelope=True, num=self.fig.number)
@@ -252,9 +253,9 @@ class TakanamiDialog(QtGui.QDialog):
     def save_event(self):
         """"""
         if self.seismic_event is not None:
-            if self.seismic_event.time != self.event_time:
+            if self.seismic_event.stime != self.event_time:
                 self.document.editEvent(self.seismic_event,
-                                        time=self.event_time,
+                                        stime=self.event_time,
                                         method=rc.method_takanami,
                                         evaluation_mode=rc.mode_automatic,
                                         evaluation_status=rc.status_preliminary)

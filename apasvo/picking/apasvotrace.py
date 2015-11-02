@@ -167,7 +167,6 @@ class ApasvoEvent(Pick):
         self.n0_aic = n0_aic
         super(ApasvoEvent, self).__init__(time=self.time,
                                           method_id=ResourceIdentifier(method),
-                                          comments=Comment(text=comments),
                                           creation_info=CreationInfo(
                                               author=kwargs.get('author', ''),
                                               agency_id=kwargs.get('agency', ''),
@@ -181,6 +180,7 @@ class ApasvoEvent(Pick):
                                           ),
                                           *args,
                                           **kwargs)
+        self.comments = comments
 
     @property
     def cf_value(self):
@@ -202,9 +202,18 @@ class ApasvoEvent(Pick):
         elif key == 'time':
             self.__dict__[key] = value
             self.__dict__['stime'] = self._seconds_to_samples(value)
+        elif key == 'comments':
+            self.__dict__['comments'] = Comment(text=value)
+            print self.__dict__['comments']
         else:
             super(ApasvoEvent, self).__setattr__(key, value)
 
+    def __getattribute__(self, item):
+        if item == 'comments':
+            print self.__dict__['comments']
+            return self.__dict__['comments'].text
+        else:
+            return super(ApasvoEvent, self).__getattribute__(item)
 
     def plot_aic(self, show_envelope=True, num=None, **kwargs):
         """Plots AIC values for a given event object.
