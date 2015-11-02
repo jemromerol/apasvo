@@ -177,7 +177,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         """
         if filename is None:
             filename, _ = QtGui.QFileDialog.getOpenFileName(self, "Open Data File", ".",
-                                                            ";;".join(self._file_filters))
+                                                            ";;".join(self._file_filters), all_files_filter)
         if filename != '':
             if self.document is None:
                 try:
