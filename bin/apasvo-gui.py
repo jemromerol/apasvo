@@ -34,15 +34,17 @@ from apasvo._version import _application_name
 from apasvo._version import _organization
 from apasvo.gui.views.generated import ui_mainwindow
 from apasvo.utils.formats import rawfile
-import obspy as op
+
 
 format_csv = 'csv'
+format_xml = 'xml'
 format_other = 'other'
 
 binary_files_filter = 'Binary Files (*.bin)'
 text_files_filter = 'Text Files (*.txt)'
 all_files_filter = 'All Files (*.*)'
 csv_files_filter = 'CSV Files (*.csv)'
+xml_files_filter = 'XML Files (*.xml)'
 
 APASVO_URL = 'https://github.com/jemromerol/apasvo/wiki'
 
@@ -66,7 +68,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     _cf_file_filters = {binary_files_filter: rawfile.format_binary,
                         text_files_filter: rawfile.format_text,
                         all_files_filter: format_other}
-    _summary_file_filters = {csv_files_filter: format_csv,
+    _summary_file_filters = {xml_files_filter: format_xml,
                              text_files_filter: rawfile.format_text,
                              all_files_filter: format_other}
 
@@ -277,9 +279,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         Args:
             filename: Output file name.
         """
-        with open(filename, 'w') as f:
-            rc.generate_csv([self.document.record], f)
-            self.saved_filename = filename
+        rc.ApasvoStream([self.document.record]).export_picks(filename)
+        self.saved_filename = filename
 
     def save_cf(self):
         """Saves characteristic function to file.

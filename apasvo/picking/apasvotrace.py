@@ -610,8 +610,8 @@ class ApasvoStream(op.Stream):
                 if not_in_range:
                     not_ranged_event_list.append(pick)
         # Export to desired format
-        event_list = [Event(picks) for picks in ranged_event_set.values()] + \
-                     [Event([pick]) for pick in not_ranged_event_list]
+        event_list = [Event(picks=picks) for picks in ranged_event_set.values()] + \
+                     [Event(picks=[pick]) for pick in not_ranged_event_list]
         event_catalog = Catalog(event_list)
         event_catalog.write(filename, format=format, **kwargs)
 
