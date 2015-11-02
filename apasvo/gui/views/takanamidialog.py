@@ -256,13 +256,13 @@ class TakanamiDialog(QtGui.QDialog):
                 self.document.editEvent(self.seismic_event,
                                         time=self.event_time,
                                         method=rc.method_takanami,
-                                        mode=rc.mode_automatic,
-                                        status=rc.status_preliminary)
+                                        evaluation_mode=rc.mode_automatic,
+                                        evaluation_status=rc.status_preliminary)
         else:
             self.document.createEvent(self.event_time,
                                       method=rc.method_takanami,
-                                      mode=rc.mode_automatic,
-                                      status=rc.status_preliminary)
+                                      evaluation_mode=rc.mode_automatic,
+                                      evaluation_status=rc.status_preliminary)
 
     def do_takanami(self):
         self._task = TakanamiTask(self.record, self._start, self._end)

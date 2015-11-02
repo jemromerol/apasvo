@@ -50,6 +50,15 @@ method_stalta_takanami = 'STALTA+Takanami'
 method_ampa = 'AMPA'
 method_ampa_takanami = 'AMPA+Takanami'
 
+ALLOWED_METHODS = (
+    method_other,
+    method_takanami,
+    method_stalta,
+    method_stalta_takanami,
+    method_ampa,
+    method_ampa_takanami
+)
+
 mode_manual = 'manual'
 mode_automatic = 'automatic'
 
@@ -363,7 +372,8 @@ class ApasvoTrace(op.Trace):
             if method_name not in ApasvoEvent.methods:
                 method_name = method_other
             events.append(ApasvoEvent(self, t, method=method_name,
-                                     mode=mode_automatic, status=status_preliminary))
+                                      evaluation_mode=mode_automatic,
+                                      evaluation_status=status_preliminary))
         # Refine arrival times
         if takanami:
             events = self.refine_events(events, takanami_margin=takanami_margin)

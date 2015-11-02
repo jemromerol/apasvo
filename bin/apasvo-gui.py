@@ -83,14 +83,11 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.saved_cf_dtype = None
         self.saved_cf_byteorder = None
 
-        stateDelegate = cbdelegate.ComboBoxDelegate(self.EventsTableView, op.core.event_header.EvaluationStatus.keys())
-        self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
-        self.EventsTableView.clicked.connect(self.goto_event_position)
-
         # Create context menu for events table
         self.event_context_menu = QtGui.QMenu(self)
         self.event_context_menu.addAction(self.actionDelete_Selected)
         self.EventsTableView.customContextMenuRequested.connect(lambda: self.event_context_menu.exec_(QtGui.QCursor.pos()))
+        self.EventsTableView.clicked.connect(self.goto_event_position)
 
         self.actionOpen.triggered.connect(self.open)
         self.actionSave.triggered.connect(self.save_events)
@@ -199,6 +196,14 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         self.EventsTableView.setModel(self.document)
                         model = self.EventsTableView.selectionModel()
                         model.selectionChanged.connect(self.on_event_selection)
+                        # Connect Delegates
+                        for i, attribute in enumerate(self.document.attributes):
+                            if attribute.get('attribute_type') == 'enum' and attribute.get('editable', False):
+                                delegate = cbdelegate.ComboBoxDelegate(self.EventsTableView,
+                                                                       attribute.get('value_list', []))
+                                self.EventsTableView.setItemDelegateForColumn(i, delegate)
+                            else:
+                                self.EventsTableView.setItemDelegateForColumn(i, None)
                         # connect document model to signalViewer
                         self.document.eventCreated.connect(self.signalViewer.create_event)
                         self.document.eventDeleted.connect(self.signalViewer.delete_event)
