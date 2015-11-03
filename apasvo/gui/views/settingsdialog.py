@@ -28,14 +28,14 @@ from PySide import QtGui
 from PySide import QtCore
 
 from apasvo.gui.views import playertoolbar
-from apasvo.picking import record as rc
+from apasvo.picking import apasvotrace as rc
 from apasvo.utils import plotting
 
 from apasvo._version import _application_name
 from apasvo._version import _organization
 
 
-COLOR_KEYS = ("method", "mode", "status")
+COLOR_KEYS = ("method", "evaluation_mode", "evaluation_status")
 COLOR_KEYS_LABELS = ("Picking method", "Picking mode", "Status")
 DEFAULT_COLOR_KEY = "method"
 DEFAULT_STALTA_COLOR = "#ffa500"
@@ -46,11 +46,11 @@ DEFAULT_TAKANAMI_COLOR = "#dda0dd"
 DEFAULT_OTHER_COLOR = "#d3d3d3"
 DEFAULT_MANUAL_COLOR = "#f08080"
 DEFAULT_AUTOMATIC_COLOR = "#87ceeb"
-DEFAULT_REPORTED_COLOR = "#ffa500"
-DEFAULT_REVISED_COLOR = "#87ceeb"
+DEFAULT_PRELIMINARY_COLOR = "#ffa500"
+DEFAULT_REVIEWED_COLOR = "#87ceeb"
 DEFAULT_CONFIRMED_COLOR = "#adff2f"
 DEFAULT_REJECTED_COLOR = "#f08080"
-DEFAULT_UNDEFINED_COLOR = "#d3d3d3"
+DEFAULT_FINAL_COLOR = "#d3d3d3"
 SPECGRAM_WINDOW_LENGTHS = (16, 32, 64, 128, 256, 512, 1024, 2048)
 
 DEFAULT_COLOR_SCHEME = ((rc.method_stalta, DEFAULT_STALTA_COLOR),
@@ -80,11 +80,11 @@ class SettingsDialog(QtGui.QDialog):
         self.colorMethodAmpaTakanamiButton.clicked.connect(self._colorButtonClicked)
         self.colorModeManualButton.clicked.connect(self._colorButtonClicked)
         self.colorModeAutomaticButton.clicked.connect(self._colorButtonClicked)
-        self.colorStatusReportedButton.clicked.connect(self._colorButtonClicked)
-        self.colorStatusRevisedButton.clicked.connect(self._colorButtonClicked)
+        self.colorStatusPreliminaryButton.clicked.connect(self._colorButtonClicked)
+        self.colorStatusReviewedButton.clicked.connect(self._colorButtonClicked)
         self.colorStatusConfirmedButton.clicked.connect(self._colorButtonClicked)
         self.colorStatusRejectedButton.clicked.connect(self._colorButtonClicked)
-        self.colorStatusUndefinedButton.clicked.connect(self._colorButtonClicked)
+        self.colorStatusFinalButton.clicked.connect(self._colorButtonClicked)
 
         self.windowlenComboBox.currentIndexChanged.connect(lambda i: self.noverlapSpinBox.setMaximum(SPECGRAM_WINDOW_LENGTHS[i] - 1))
 
@@ -223,16 +223,16 @@ class SettingsDialog(QtGui.QDialog):
         self.colorStatusButtonsWidget.setSizePolicy(sizePolicy)
         self.colorStatusButtonsLayout = QtGui.QVBoxLayout(self.colorStatusButtonsWidget)
         self.colorStatusButtonsLayout.setAlignment(QtCore.Qt.AlignTop)
-        self.colorStatusReportedButton = QtGui.QPushButton("Reported", self.colorStatusButtonsWidget)
-        self.colorStatusRevisedButton = QtGui.QPushButton("Revised", self.colorStatusButtonsWidget)
+        self.colorStatusPreliminaryButton = QtGui.QPushButton("Preliminary", self.colorStatusButtonsWidget)
+        self.colorStatusReviewedButton = QtGui.QPushButton("Reviewed", self.colorStatusButtonsWidget)
         self.colorStatusConfirmedButton = QtGui.QPushButton("Confirmed", self.colorStatusButtonsWidget)
         self.colorStatusRejectedButton = QtGui.QPushButton("Rejected", self.colorStatusButtonsWidget)
-        self.colorStatusUndefinedButton = QtGui.QPushButton("Undefined", self.colorStatusButtonsWidget)
-        self.colorStatusButtonsLayout.addWidget(self.colorStatusReportedButton)
-        self.colorStatusButtonsLayout.addWidget(self.colorStatusRevisedButton)
+        self.colorStatusFinalButton = QtGui.QPushButton("Final", self.colorStatusButtonsWidget)
+        self.colorStatusButtonsLayout.addWidget(self.colorStatusPreliminaryButton)
+        self.colorStatusButtonsLayout.addWidget(self.colorStatusReviewedButton)
         self.colorStatusButtonsLayout.addWidget(self.colorStatusConfirmedButton)
         self.colorStatusButtonsLayout.addWidget(self.colorStatusRejectedButton)
-        self.colorStatusButtonsLayout.addWidget(self.colorStatusUndefinedButton)
+        self.colorStatusButtonsLayout.addWidget(self.colorStatusFinalButton)
         self.colorStatusButtonsWidget.setVisible(False)
 
         self.colorsLayout.addWidget(self.colorKeyWidget)
@@ -357,16 +357,16 @@ class SettingsDialog(QtGui.QDialog):
         self.colorModeManualButton.setStyleSheet("background-color: %s" % mColor.name())
         mColor = QtGui.QColor(settings.value(rc.mode_automatic, DEFAULT_AUTOMATIC_COLOR))
         self.colorModeAutomaticButton.setStyleSheet("background-color: %s" % mColor.name())
-        mColor = QtGui.QColor(settings.value(rc.status_reported, DEFAULT_REPORTED_COLOR))
-        self.colorStatusReportedButton.setStyleSheet("background-color: %s" % mColor.name())
-        mColor = QtGui.QColor(settings.value(rc.status_revised, DEFAULT_REVISED_COLOR))
-        self.colorStatusRevisedButton.setStyleSheet("background-color: %s" % mColor.name())
+        mColor = QtGui.QColor(settings.value(rc.status_preliminary, DEFAULT_PRELIMINARY_COLOR))
+        self.colorStatusPreliminaryButton.setStyleSheet("background-color: %s" % mColor.name())
+        mColor = QtGui.QColor(settings.value(rc.status_reviewed, DEFAULT_REVIEWED_COLOR))
+        self.colorStatusReviewedButton.setStyleSheet("background-color: %s" % mColor.name())
         mColor = QtGui.QColor(settings.value(rc.status_confirmed, DEFAULT_CONFIRMED_COLOR))
         self.colorStatusConfirmedButton.setStyleSheet("background-color: %s" % mColor.name())
         mColor = QtGui.QColor(settings.value(rc.status_rejected, DEFAULT_REJECTED_COLOR))
         self.colorStatusRejectedButton.setStyleSheet("background-color: %s" % mColor.name())
-        mColor = QtGui.QColor(settings.value(rc.status_undefined, DEFAULT_UNDEFINED_COLOR))
-        self.colorStatusUndefinedButton.setStyleSheet("background-color: %s" % mColor.name())
+        mColor = QtGui.QColor(settings.value(rc.status_final, DEFAULT_FINAL_COLOR))
+        self.colorStatusFinalButton.setStyleSheet("background-color: %s" % mColor.name())
         settings.endGroup()
 
         settings.beginGroup("specgram_settings")
@@ -398,11 +398,11 @@ class SettingsDialog(QtGui.QDialog):
         settings.setValue(rc.method_other, self.colorMethodOtherButton.palette().color(QtGui.QPalette.Background))
         settings.setValue(rc.mode_manual, self.colorModeManualButton.palette().color(QtGui.QPalette.Background))
         settings.setValue(rc.mode_automatic, self.colorModeAutomaticButton.palette().color(QtGui.QPalette.Background))
-        settings.setValue(rc.status_reported, self.colorStatusReportedButton.palette().color(QtGui.QPalette.Background))
-        settings.setValue(rc.status_revised, self.colorStatusRevisedButton.palette().color(QtGui.QPalette.Background))
+        settings.setValue(rc.status_preliminary, self.colorStatusPreliminaryButton.palette().color(QtGui.QPalette.Background))
+        settings.setValue(rc.status_reviewed, self.colorStatusReviewedButton.palette().color(QtGui.QPalette.Background))
         settings.setValue(rc.status_confirmed, self.colorStatusConfirmedButton.palette().color(QtGui.QPalette.Background))
         settings.setValue(rc.status_rejected, self.colorStatusRejectedButton.palette().color(QtGui.QPalette.Background))
-        settings.setValue(rc.status_undefined, self.colorStatusUndefinedButton.palette().color(QtGui.QPalette.Background))
+        settings.setValue(rc.status_final, self.colorStatusFinalButton.palette().color(QtGui.QPalette.Background))
         settings.endGroup()
 
         settings.beginGroup("specgram_settings")

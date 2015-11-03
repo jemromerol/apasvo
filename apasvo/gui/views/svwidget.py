@@ -42,7 +42,7 @@ import datetime
 from apasvo.gui.views import takanamidialog
 from apasvo.gui.views import settingsdialog
 from apasvo.picking import envelope as env
-from apasvo.picking import record as rc
+from apasvo.picking import apasvotrace as rc
 from apasvo.utils import plotting
 from apasvo.utils import clt
 
@@ -254,8 +254,8 @@ class EventMarker(QtCore.QObject):
         valueChanged: 'event' arrival time changed.
     """
 
-    event_selected = QtCore.Signal(rc.Event)
-    right_clicked = QtCore.Signal(rc.Event)
+    event_selected = QtCore.Signal(rc.ApasvoEvent)
+    right_clicked = QtCore.Signal(rc.ApasvoEvent)
 
     def __init__(self, fig, minimap, document, event, color='b', selected_color='r'):
         super(EventMarker, self).__init__()
@@ -263,7 +263,7 @@ class EventMarker(QtCore.QObject):
         self.minimap = minimap
         self.event = event
         self.document = document
-        self.position = self.event.time
+        self.position = self.event.stime
 
         self.selected = False
         self.color = color
@@ -271,13 +271,13 @@ class EventMarker(QtCore.QObject):
 
         self.markers = []
         # draw markers
-        pos = self.event.time / self.event.record.fs
+        pos = self.event.stime / self.event.trace.fs
         for ax in self.fig.axes:
             marker = ax.axvline(pos)
             marker.set(color=self.color, ls='--', lw=2, picker=5)
             self.markers.append(marker)
         # draw minimap marker
-        self.minimap.create_marker(event, pos, color=self.color, ls='-', lw=1)
+        self.minimap.create_marker(id(event), pos, color=self.color, ls='-', lw=1)
         # draw label
         bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
         self.position_label = self.fig.text(0, 0,
@@ -322,9 +322,9 @@ class EventMarker(QtCore.QObject):
             self._set_animated(False)
 
             self.canvas.widgetlock.release(self)
-            if self.position != self.event.time:
-                self.document.editEvent(self.event, time=self.position,
-                                        mode=rc.mode_manual,
+            if self.position != self.event.stime:
+                self.document.editEvent(self.event, stime=self.position,
+                                        evaluation_mode=rc.mode_manual,
                                         method=rc.method_other)
 
     def onmove(self, mouse_event):
@@ -347,25 +347,26 @@ class EventMarker(QtCore.QObject):
         return inv.transform((event.x, event.y))
 
     def set_position(self, value):
-        time_in_samples = int(value * self.event.record.fs)
+        time_in_samples = int(value * self.event.trace.fs)
         if time_in_samples != self.position:
-            if 0 <= time_in_samples <= len(self.event.record.signal):
+            if 0 <= time_in_samples <= len(self.event.trace.signal):
                 self.position = time_in_samples
-                time_in_seconds = time_in_samples / float(self.event.record.fs)
+                time_in_seconds = time_in_samples / float(self.event.trace.fs)
                 for marker in self.markers:
                     marker.set_xdata(time_in_seconds)
-                if 0 <= self.position < len(self.event.record.cf):
-                    cf_value = self.event.record.cf[self.position]
+                if 0 <= self.position < len(self.event.trace.cf):
+                    cf_value = self.event.trace.cf[self.position]
                 else:
                     cf_value = np.nan
                 self.position_label.set_text("Time: %s seconds.\nCF value: %.6g" %
-                                             (clt.float_secs_2_string_date(time_in_seconds), cf_value))
-                self.minimap.set_marker_position(self.event, time_in_seconds)
+                                             (clt.float_secs_2_string_date(time_in_seconds,
+                                                                           starttime=self.event.trace.starttime), cf_value))
+                self.minimap.set_marker_position(id(self.event), time_in_seconds)
 
     def remove(self):
         for ax, marker in zip(self.fig.axes, self.markers):
             ax.lines.remove(marker)
-        self.minimap.delete_marker(self.event)
+        self.minimap.delete_marker(id(self.event))
         self.draw()
 
     def set_selected(self, value):
@@ -374,11 +375,11 @@ class EventMarker(QtCore.QObject):
             color = self.selected_color if self.selected else self.color
             for marker in self.markers:
                 marker.set(color=color)
-            self.minimap.set_marker(self.event, color=color)
+            self.minimap.set_marker(id(self.event), color=color)
 
     def update(self):
-        if self.event.time != self.position:
-            self.set_position(self.event.time / float(self.event.record.fs))
+        if self.event.stime != self.position:
+            self.set_position(self.event.stime / float(self.event.trace.fs))
             self.draw()
 
     def draw(self):
@@ -792,7 +793,7 @@ class SignalViewerWidget(QtGui.QWidget):
     """
 
     CF_loaded = QtCore.Signal(bool)
-    event_selected = QtCore.Signal(rc.Event)
+    event_selected = QtCore.Signal(rc.ApasvoEvent)
 
     def __init__(self, parent, document=None):
         super(SignalViewerWidget, self).__init__(parent)
@@ -859,7 +860,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.takanami_on_selection_action.triggered.connect(self.apply_takanami_to_selection)
 
         # format axes
-        formatter = FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
+        formatter = FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.document.record.starttime))
         for ax in self.fig.axes:
             ax.callbacks.connect('xlim_changed', self.on_xlim_change)
             ax.xaxis.set_major_formatter(formatter)
@@ -961,18 +962,20 @@ class SignalViewerWidget(QtGui.QWidget):
             self.set_cf_visible(cf_loaded)
 
     def create_event(self, event):
-        if event not in self.eventMarkers:
+        event_id = id(event)
+        if event_id not in self.eventMarkers:
             marker = EventMarker(self.fig, self.minimap, self.document, event)
-            self.eventMarkers[event] = marker
+            self.eventMarkers[event_id] = marker
             marker.event_selected.connect(self.event_selected.emit)
             marker.right_clicked.connect(self.on_event_right_clicked)
 
     def delete_event(self, event):
-        self.eventMarkers[event].remove()
-        self.eventMarkers.pop(event)
+        event_id = id(event)
+        self.eventMarkers[event_id].remove()
+        self.eventMarkers.pop(event_id)
 
     def update_event(self, event):
-        self.eventMarkers[event].update()
+        self.eventMarkers[id(event)].update()
 
     def set_xlim(self, l, r):
         xmin = max(0, l)
@@ -1036,8 +1039,9 @@ class SignalViewerWidget(QtGui.QWidget):
                     ax.set_ylim(ymin, nyquist_freq)
 
     def set_event_selection(self, events):
-        for event in self.eventMarkers:
-            self.eventMarkers[event].set_selected(event in events)
+        event_id_list = [id(event) for event in events]
+        for event_id in self.eventMarkers:
+            self.eventMarkers[event_id].set_selected(event_id in event_id_list)
         self.draw()
         self.minimap.draw()
 
@@ -1053,8 +1057,8 @@ class SignalViewerWidget(QtGui.QWidget):
         self.set_xlim(l, r)
 
     def goto_event(self, event):
-        if event in self.eventMarkers:
-            self.set_position(event.time / self.fs)
+        if id(event) in self.eventMarkers:
+            self.set_position(event.stime / self.fs)
 
     def showEvent(self, event):
         self.draw()

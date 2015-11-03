@@ -26,11 +26,16 @@
 
 from PySide import QtGui
 from apasvo.gui.views.generated import ui_loaddialog
-from apasvo.utils import futils
 from apasvo.utils.formats import rawfile
 
 
-FORMATS = (rawfile.format_binary, rawfile.format_text)
+FORMATS = {'Autodetect': None,
+           'Binary': rawfile.format_binary,
+           'Text': rawfile.format_text,
+           }
+
+DEFAULT_FORMAT = 'Autodetect'
+
 DTYPES = (rawfile.datatype_int16,
           rawfile.datatype_int32,
           rawfile.datatype_int64,
@@ -67,45 +72,51 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
     def __init__(self, parent, filename):
         super(LoadDialog, self).__init__(parent)
         self.setupUi(self)
+
+        self.FileFormatComboBox.currentIndexChanged.connect(self.on_format_change)
+        self.FileFormatComboBox.currentIndexChanged.connect(self.load_preview)
+        self.DataTypeComboBox.currentIndexChanged.connect(self.load_preview)
+        self.ByteOrderComboBox.currentIndexChanged.connect(self.load_preview)
+        # init file format combobox
+        self.FileFormatComboBox.addItems(FORMATS.keys())
+        self.FileFormatComboBox.setCurrentIndex(FORMATS.keys().index(DEFAULT_FORMAT))
         # init datatype combobox
         self.DataTypeComboBox.addItems(DTYPES_LABELS)
         self.DataTypeComboBox.setCurrentIndex(DTYPES.index(rawfile.datatype_float64))
 
         self.filename = filename
 
-        self.FileFormatComboBox.currentIndexChanged.connect(self.on_format_change)
-        self.FileFormatComboBox.currentIndexChanged.connect(self.load_preview)
-        self.DataTypeComboBox.currentIndexChanged.connect(self.load_preview)
-        self.ByteOrderComboBox.currentIndexChanged.connect(self.load_preview)
-
-        # Detect settings
-        if futils.istextfile(self.filename):
-            self.FileFormatComboBox.setCurrentIndex(1)
-            # Detect sample rate
-            fs = futils.get_sample_rate(filename)
-            if fs:
-                self.SampleFrequencySpinBox.setValue(fs)
-        else:
-            self.FileFormatComboBox.setCurrentIndex(0)
-        if futils.is_little_endian():
-            self.ByteOrderComboBox.setCurrentIndex(0)
-        else:
-            self.ByteOrderComboBox.setCurrentIndex(1)
         self.load_preview()
 
     def on_format_change(self, idx):
         """Updates UI after toggling the format value."""
-        fmt = FORMATS[self.FileFormatComboBox.currentIndex()]
+        fmt = FORMATS[self.FileFormatComboBox.currentText()]
         if fmt == rawfile.format_binary:
             self.DataTypeComboBox.setVisible(True)
             self.DataTypeLabel.setVisible(True)
             self.ByteOrderComboBox.setVisible(True)
             self.ByteOrderLabel.setVisible(True)
+            self.groupBox_2.setVisible(True)
+            self.SampleFrequencySpinBox.setVisible(True)
+            self.SampleFrequencyLabel.setVisible(True)
         elif fmt == rawfile.format_text:
             self.DataTypeComboBox.setVisible(False)
             self.DataTypeLabel.setVisible(False)
             self.ByteOrderComboBox.setVisible(False)
             self.ByteOrderLabel.setVisible(False)
+            self.groupBox_2.setVisible(True)
+            self.SampleFrequencySpinBox.setVisible(True)
+            self.SampleFrequencyLabel.setVisible(True)
+        else:
+            self.DataTypeComboBox.setVisible(False)
+            self.DataTypeLabel.setVisible(False)
+            self.ByteOrderComboBox.setVisible(False)
+            self.ByteOrderLabel.setVisible(False)
+            self.groupBox_2.setVisible(False)
+            self.SampleFrequencySpinBox.setVisible(False)
+            self.SampleFrequencyLabel.setVisible(False)
+        self.groupBox.adjustSize()
+        self.adjustSize()
 
     def load_preview(self):
         """Shows a preview of loaded data using the selected parameters."""
@@ -129,7 +140,7 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
 
     def get_values(self):
         """Gets selected parameters."""
-        return {'fmt': FORMATS[self.FileFormatComboBox.currentIndex()],
+        return {'fmt': FORMATS[self.FileFormatComboBox.currentText()],
                 'dtype': DTYPES[self.DataTypeComboBox.currentIndex()],
                 'byteorder': BYTEORDERS[self.ByteOrderComboBox.currentIndex()],
                 'fs': float(self.SampleFrequencySpinBox.value())}

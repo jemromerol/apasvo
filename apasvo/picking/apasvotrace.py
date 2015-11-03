@@ -25,9 +25,19 @@
 '''
 
 import numpy as np
+import obspy as op
+from obspy.core.utcdatetime import UTCDateTime
+from obspy.core.event import Pick
+from obspy.core.event import ResourceIdentifier
+from obspy.core.event import CreationInfo
+from obspy.core.event import WaveformStreamID
+from obspy.core.event import Comment
+from obspy.core.event import Catalog
+from obspy.core.event import Event
+from collections import defaultdict
 import csv
+import copy
 import os
-import datetime
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -41,15 +51,26 @@ method_stalta_takanami = 'STALTA+Takanami'
 method_ampa = 'AMPA'
 method_ampa_takanami = 'AMPA+Takanami'
 
+ALLOWED_METHODS = (
+    method_other,
+    method_takanami,
+    method_stalta,
+    method_stalta_takanami,
+    method_ampa,
+    method_ampa_takanami
+)
+
 mode_manual = 'manual'
 mode_automatic = 'automatic'
-mode_undefined = 'undefined'
 
-status_reported = 'reported'
-status_revised = 'revised'
+status_preliminary = 'preliminary'
+status_reviewed = 'reviewed'
 status_confirmed = 'confirmed'
 status_rejected = 'rejected'
-status_undefined = 'undefined'
+status_final = 'final'
+
+DEFAULT_DTYPE = '=f8'  # Set the default datatype as 8 bits floating point, native ordered
+DEFAULT_DELTA = 0.02
 
 
 def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
@@ -68,7 +89,7 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
             'AMPA+Takanami' and 'other'.
         mode: Event picking mode. Possible values are: 'manual', 'automatic'
             and 'undefined'.
-        status: Revision status of the event. Possible values are: 'reported',
+        status: Revision status of the event. Possible values are: 'preliminary',
             'revised', 'confirmed', 'rejected' and 'undefined'.
         comments: Additional comments.
 
@@ -81,12 +102,12 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
     """
     # Extract data from records
     rows = [{'file_name': record.filename,
-             'time': str(datetime.timedelta(seconds=event.time / record.fs)),
+             'time': record.starttime + event.time,
              'cf_value': event.cf_value,
              'name': event.name,
              'method': event.method,
-             'mode': event.mode,
-             'status': event.status,
+             'mode': event.evaluation_mode,
+             'status': event.evaluation_status,
              'comments': event.comments} for record in records
                                          for event in record.events]
     # Write data to csv
@@ -98,7 +119,7 @@ def generate_csv(records, fout, delimiter=',', lineterminator='\n'):
         writer.writerow(row)
 
 
-class Event(object):
+class ApasvoEvent(Pick):
     """A seismic event found in a Record instance.
 
     This class stores several attributes used to describe a possible event
@@ -118,12 +139,7 @@ class Event(object):
             Possible values are: 'STALTA', 'STALTA+Takanami', 'AMPA',
             'AMPA+Takanami' and 'other'.
             Default: 'other'.
-        mode: Event picking mode. Possible values are: 'manual', 'automatic'
-            and 'undefined'.
-            Default: 'automatic'.
-        status: Revision status of the event. Possible values are: 'reported',
-            'revised', 'confirmed', 'rejected' and 'undefined'.
-            Default: 'reported'.
+            Default: 'preliminary'.
         n0_aic: Start time point of computed AIC values. The value is given in
             samples from the beginning of record.signal.
         aic: List of AIC values from n0_aic.
@@ -131,37 +147,72 @@ class Event(object):
 
     methods = (method_other, method_takanami, method_stalta,
                method_stalta_takanami, method_ampa, method_ampa_takanami)
-    modes = (mode_manual, mode_automatic, mode_undefined)
-    statuses = (status_reported, status_revised, status_confirmed,
-                status_rejected, status_undefined)
 
-    def __init__(self, record, time, name='', comments='',
-                 method=method_other, mode=mode_automatic, status=status_reported,
-                 aic=None, n0_aic=None, **kwargs):
-        super(Event, self).__init__()
-        self.record = record
-        if time < 0 or time >= len(self.record.signal):
+    def __init__(self,
+                 trace,
+                 time,
+                 name='',
+                 comments='',
+                 method=method_other,
+                 aic=None,
+                 n0_aic=None,
+                 *args, **kwargs):
+        self.trace = trace
+        if time < 0 or time >= len(self.trace.signal):
             raise ValueError("Event position must be a value between 0 and %d"
-                             % len(self.record.signal))
-        self.time = time
+                             % len(self.trace.signal))
+        self.stime = time
         self.name = name
-        self.comments = comments
         self.method = method
-        if mode not in self.modes:
-            mode = mode_undefined
-        self.mode = mode
-        if status not in self.statuses:
-            status = status_undefined
-        self.status = status
         self.aic = aic
         self.n0_aic = n0_aic
+        super(ApasvoEvent, self).__init__(time=self.time,
+                                          method_id=ResourceIdentifier(method),
+                                          creation_info=CreationInfo(
+                                              author=kwargs.get('author', ''),
+                                              agency_id=kwargs.get('agency', ''),
+                                              creation_time=UTCDateTime.now(),
+                                          ),
+                                          waveform_id=WaveformStreamID(
+                                              network_code=self.trace.stats.get('network', ''),
+                                              station_code=self.trace.stats.get('station', ''),
+                                              location_code=self.trace.stats.get('location', ''),
+                                              channel_code=self.trace.stats.get('channel', ''),
+                                          ),
+                                          *args,
+                                          **kwargs)
+        self.comments = comments
 
     @property
     def cf_value(self):
-        if 0 <= self.time < len(self.record.cf):
-            return self.record.cf[self.time]
+        if 0 <= self.stime < len(self.trace.cf):
+            return self.trace.cf[self.stime]
         else:
             return np.nan
+
+    def _samples_to_seconds(self, value):
+        return self.trace.starttime + (self.trace.delta * value)
+
+    def _seconds_to_samples(self, value):
+        return int((value - self.trace.starttime) / self.trace.delta)
+
+    def __setattr__(self, key, value):
+        if key == 'stime':
+            self.__dict__[key] = value
+            self.__dict__['time'] = self._samples_to_seconds(value)
+        elif key == 'time':
+            self.__dict__[key] = value
+            self.__dict__['stime'] = self._seconds_to_samples(value)
+        elif key == 'comments':
+            self.__dict__['comments'] = Comment(text=value)
+        else:
+            super(ApasvoEvent, self).__setattr__(key, value)
+
+    def __getattribute__(self, item):
+        if item == 'comments':
+            return self.__dict__['comments'].text
+        else:
+            return super(ApasvoEvent, self).__getattribute__(item)
 
     def plot_aic(self, show_envelope=True, num=None, **kwargs):
         """Plots AIC values for a given event object.
@@ -193,30 +244,30 @@ class Event(object):
 
         # Set limits
         i_from = int(max(0, self.n0_aic))
-        i_to = int(min(len(self.record.signal), self.n0_aic + len(self.aic)))
+        i_to = int(min(len(self.trace.signal), self.n0_aic + len(self.aic)))
         # Create time sequence
-        t = np.arange(i_from, i_to) / self.record.fs
+        t = np.arange(i_from, i_to) / float(self.trace.fs)
         # Create figure
         fig, _ = pl.subplots(2, 1, sharex='all', num=num)
-        fig.canvas.set_window_title(self.record.label)
+        fig.canvas.set_window_title(self.trace.label)
         fig.set_tight_layout(True)
         # Configure axes
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.trace.starttime))
             ax.xaxis.set_major_formatter(formatter)
-            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=8))
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5, prune='lower'))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw signal
         fig.axes[0].set_title('Signal Amplitude')
         fig.axes[0].set_ylabel('Amplitude')
-        fig.axes[0].plot(t, self.record.signal[i_from:i_to], color='black',
+        fig.axes[0].plot(t, self.trace.signal[i_from:i_to], color='black',
                          label='Signal')
         # Draw envelope
         if show_envelope:
-            fig.axes[0].plot(t, env.envelope(self.record.signal[i_from:i_to]),
+            fig.axes[0].plot(t, env.envelope(self.trace.signal[i_from:i_to]),
                          color='r', label='Envelope')
             fig.axes[0].legend(loc=0, fontsize='small')
         # Draw AIC
@@ -224,7 +275,7 @@ class Event(object):
         fig.axes[1].plot(t, self.aic)
         # Draw event
         for ax in fig.axes:
-            vline = ax.axvline(self.time / self.record.fs, label="Event")
+            vline = ax.axvline(self.stime / self.trace.fs, label="Event")
             vline.set(color='r', ls='--', lw=2)
         # Configure limits and draw legend
         for ax in fig.axes:
@@ -233,10 +284,10 @@ class Event(object):
         return fig
 
 
-class Record(object):
-    """A seismic data record.
+class ApasvoTrace(op.Trace):
+    """A seismic data trace.
 
-    The class contains a seismic data trace. Provides methods that allows
+    The class contains a seismic data trace.
 
     Attributes:
         signal: Seismic data, numpy array type.
@@ -248,43 +299,43 @@ class Record(object):
             Default: ''.
         description: Additional comments.
             Default: ''.
-        filename: Name of the file (absolute path) where data is stored.
     """
 
-    def __init__(self, fileobj, fs, label='', description='', fmt='',
-                 dtype=rawfile.datatype_float64,
-                 byteorder=rawfile.byteorder_native, **kwargs):
+    def __init__(self, data=None, header=None, label='', description='', **kwargs):
         """Initializes a Record instance.
 
         Args:
-            fileobj: A file (binary or plain text) storing seismic data.
-            fs: Sample rate in Hz.
             label: A string that identifies the seismic record. Default: ''.
             description: Additional comments.
-            fmt: A string indicating fileobj's format. Possible values are
-                'binary', 'text' or ''. Default value is ''.
-            dtype: Data-type of the data stored in fileobj. Default value
-                is 'float64'.
-            byteorder: Byte-order of the data stored in fileobj.
-                Valid values are: 'little-endian', 'big-endian' and 'native'.
-                Default: 'native'.
         """
-        super(Record, self).__init__()
-        if isinstance(fileobj, file):
-            self.filename = fileobj.name
-        else:
-            self.filename = fileobj
-        fhandler = rawfile.get_file_handler(fileobj, fmt=fmt, dtype=dtype,
-                                            byteorder=byteorder)
-        self.signal = fhandler.read().astype(rawfile.datatype_float64, casting='safe')
-        self.fs = fs
-        self.cf = np.array([], dtype=rawfile.datatype_float64)
+        # Cast data to default datatype
+        if data is None:
+            data = np.ndarray((0,), dtype=DEFAULT_DTYPE)
+        super(ApasvoTrace, self).__init__(data, header)
+        self.cf = np.array([], dtype=DEFAULT_DTYPE)
         self.events = []
-        if label == '':
-            _, rname = os.path.split(self.filename)
-            label, _ = os.path.splitext(rname)
         self.label = label
         self.description = description
+
+    @property
+    def fs(self):
+        return 1. / self.stats.delta
+
+    @property
+    def delta(self):
+        return self.stats.delta
+
+    @property
+    def signal(self):
+        return self.data
+
+    @property
+    def starttime(self):
+        return self.stats.starttime
+
+    @property
+    def endtime(self):
+        return self.stats.endtime
 
     def detect(self, alg, threshold=None, peak_window=1.0,
                takanami=False, takanami_margin=5.0, action='append', **kwargs):
@@ -326,10 +377,11 @@ class Record(object):
         for t in et:
             # set method name
             method_name = alg.__class__.__name__.upper()
-            if method_name not in Event.methods:
+            if method_name not in ApasvoEvent.methods:
                 method_name = method_other
-            events.append(Event(self, t, method=method_name,
-                                     mode=mode_automatic, status=status_reported))
+            events.append(ApasvoEvent(self, t, method=method_name,
+                                      evaluation_mode=mode_automatic,
+                                      evaluation_status=status_preliminary))
         # Refine arrival times
         if takanami:
             events = self.refine_events(events, takanami_margin=takanami_margin)
@@ -375,11 +427,11 @@ class Record(object):
         """
         taka = takanami.Takanami()
         for event in events:
-            t_start = (event.time / self.fs) - takanami_margin
-            t_end = (event.time / self.fs) + takanami_margin
+            t_start = (event.stime / self.fs) - takanami_margin
+            t_end = (event.stime / self.fs) + takanami_margin
             et, event.aic, event.n0_aic = taka.run(self.signal, self.fs,
                                                    t_start, t_end)
-            event.time = et
+            event.stime = et
             # set event method
             if event.method == method_ampa:
                 event.method = method_ampa_takanami
@@ -389,7 +441,7 @@ class Record(object):
                 event.method = method_takanami
         return events
 
-    def save_cf(self, fname, fmt=rawfile.format_binary,
+    def save_cf(self, fname, fmt=rawfile.format_text,
                 dtype=rawfile.datatype_float64,
                 byteorder=rawfile.byteorder_native):
         """Saves characteristic function in a file.
@@ -405,12 +457,12 @@ class Record(object):
                 Valid values are: 'little-endian', 'big-endian' or 'native'.
                 Default: 'native'.
         """
-        if fmt == 'text':
-            fout_handler = rawfile.TextFile(fname, dtype=dtype,
-                                            byteorder=byteorder)
-        else:
+        if fmt == 'binary':
             fout_handler = rawfile.BinFile(fname, dtype=dtype,
                                            byteorder=byteorder)
+        else:
+            fout_handler = rawfile.TextFile(fname, dtype=dtype,
+                                            byteorder=byteorder)
         fout_handler.write(self.cf, header="Sample rate: %g Hz." % self.fs)
 
     def plot_signal(self, t_start=0.0, t_end=np.inf, show_events=True,
@@ -469,7 +521,7 @@ class Record(object):
         else:
             i_to = int(min(len(self.signal), t_end * self.fs))
         # Create time sequence
-        t = np.arange(i_from, i_to) / self.fs
+        t = np.arange(i_from, i_to) / float(self.fs)
         # Create figure
         nplots = show_x + show_cf + show_specgram
         fig, _ = pl.subplots(nplots, 1, sharex='all', num=num)
@@ -479,9 +531,9 @@ class Record(object):
         for ax in fig.axes:
             ax.cla()
             ax.grid(True, which='both')
-            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x))
+            formatter = ticker.FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, self.starttime))
             ax.xaxis.set_major_formatter(formatter)
-            ax.xaxis.set_major_locator(ticker.MaxNLocator(prune='lower'))
+            ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5, prune='lower'))
             ax.set_xlabel('Time (seconds)')
             pl.setp(ax.get_xticklabels(), visible=True)
         # Draw axes
@@ -518,7 +570,7 @@ class Record(object):
         # Draw event markers
         if show_events:
             for event in self.events:
-                arrival_time = event.time / self.fs
+                arrival_time = event.stime / self.fs
                 for ax in fig.axes:
                     xmin, xmax = ax.get_xlim()
                     if arrival_time > xmin and arrival_time < xmax:
@@ -531,56 +583,66 @@ class Record(object):
         return fig
 
 
-class RecordFactory(object):
-    """Builder class to create Record objects.
-
-    Attributes:
-        fs: Sample rate in Hz.
-        dtype: Data-type of the data to read.
-        byteorder: Byte-order of the data to read.
-        max_record_length: Maximum signal length allowed, in seconds.
-            Currently this attribute has no effect.
-            Default value: 604800.0 seconds (1 week).
+class ApasvoStream(op.Stream):
+    """
+    A list of multiple ApasvoTrace objects
     """
 
-    def __init__(self, max_segment_length=24 * 7 * 3600, fs=50.0,
-                 dtype='float64', byteorder='native', **kwargs):
-        self.fs = fs
-        self.dtype = dtype
-        self.byteorder = byteorder
-        self.max_record_length = (max_segment_length * fs)
+    def __init__(self, traces, description='', **kwargs):
+        super(ApasvoStream, self).__init__(traces)
+        self.description = description
 
-    def create_record(self, fileobj, **kwargs):
-        """Creates a Record object.
+    def detect(self, alg, start_trace=None, end_trace=None, **kwargs):
+        for trace in self.traces[start_trace:end_trace]:
+            trace.detect(alg, **kwargs)
 
-        Args:
-            fileobj: A file (binary or plain text) storing seismic data.
-
-        Returns:
-            out: Created Record object.
+    def export_picks(self, filename, start_trace=None, end_trace=None, format="NLLOC_OBS", **kwargs):
         """
-#         segment_n = np.ceil(utils.getSize(fileobj) / self.max_record_length)
-#         if segment_n > 1:
-#             fhandler = utils.get_file_handler(fileobj, dtype=self.dtype, byteorder=self.byteorder)
-#             self.on_notify("File %s is too long, it will be divided into %i parts up to %g seconds each\n"
-#                            % (fhandler.filename, segment_n, self.max_record_length / self.fs))
-#             basename, ext = os.path.splitext(fhandler.filename)
-#             fileno = 0
-#             records = []
-#             for segment in fhandler.read_in_blocks(self.max_record_length):
-#                 filename_out = "%s%02.0i%s" % (basename, fileno, ext)
-#                 fout_handler = utils.TextFile(filename_out, self.dtype, self.byteorder) if isinstance(fhandler, utils.TextFile) else utils.BinFile(filename_out, self.dtype, self.byteorder)
-#                 fileno += 1
-#                 fout_handler.write(segment)
-#                 self.on_notify("%s generated.\n" % fout_handler.filename)
-#                 records.append(fout_handler.filename, self.fs,
-#                                       dtype=self.dtype, byteorder=self.byteorder,
-#                                       **kwargs)
-#             return records
-#         else:
-        return Record(fileobj, self.fs, dtype=self.dtype, byteorder=self.byteorder,
-                      **kwargs)
+        """
+        event_list = []
+        for trace in self.traces[start_trace:end_trace]:
+            event_list.extend([Event(picks=[pick]) for pick in trace.events])
+        # Export to desired format
+        if format == 'NLLOC_OBS':
+            basename, ext = os.path.splitext(filename)
+            for event in event_list:
+                ts = event.picks[0].time.strftime("%Y%m%d%H%M%S%f")
+                event_filename = "%s_%s%s" % (basename, ts, ext)
+                event.write(event_filename, format=format)
+        else:
+            event_catalog = Catalog(event_list)
+            event_catalog.write(filename, format=format, **kwargs)
 
-#     def on_notify(self, msg):
-#         """"""
-#         pass
+def read(filename,
+         format=None,
+         dtype='float64',
+         byteorder='native',
+         description='',
+         *args, **kwargs):
+    """
+    Read signal files into an ApasvoStream object
+    :param filename:
+    :param format:
+    :param file_dtype:
+    :param file_byteorder:
+    :param description:
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    # Try to read using obspy core functionality
+    try:
+        traces = [ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats)) \
+                  for trace in op.read(filename, format=format, *args, **kwargs).traces]
+    # Otherwise try to read as a binary or text file
+    except Exception as e:
+        fhandler = rawfile.get_file_handler(filename,
+                                            format=format,
+                                            dtype=dtype,
+                                            byteorder=byteorder)
+        trace = ApasvoTrace(fhandler.read().astype(DEFAULT_DTYPE, casting='safe'))
+        sample_fs = kwargs.get('fs')
+        trace.stats.delta = DEFAULT_DELTA if sample_fs is None else 1. / sample_fs
+        traces = [trace]
+    # Convert Obspy traces to apasvo traces
+    return ApasvoStream(traces, description=description)

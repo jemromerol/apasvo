@@ -39,7 +39,7 @@ from apasvo.utils import parse
 from apasvo.utils import collections
 from apasvo.picking import stalta
 from apasvo.picking import ampa
-from apasvo.picking import record as rc
+from apasvo.picking import apasvotrace as rc
 
 
 def draw_events_table(record, method):
@@ -53,7 +53,7 @@ def draw_events_table(record, method):
     sys.stdout.write("%i possible events found in %s:\n" %
                      (len(record.events), record.filename))
     sys.stdout.flush()
-    et = ["%s" % datetime.timedelta(seconds=e.time / record.fs)
+    et = [record.starttime + (e.time / record.fs)
           for e in record.events]
     cf_val = [e.cf_value for e in record.events]
     if len(et) > 0:
@@ -75,7 +75,7 @@ def draw_results(records, method):
     """
     # Extract data from records
     data = [{'file_name':record.filename,
-             'time':str(datetime.timedelta(seconds=event.time / record.fs)),
+             'time': record.starttime + (event.time / record.fs),
              'cf_value': event.cf_value} for record in records
                                             for event in record.events]
     sys.stdout.write("Summary of events:\n")
@@ -177,11 +177,9 @@ class Analysis(object):
         method = kwargs.get('method', 'ampa')
         takanami = kwargs.get('takanami', False)
         # Create a list of records from input files
-        factory = rc.RecordFactory(notif=clt.print_msg, **kwargs)
-        factory.on_notify = clt.print_msg
         records = []
         for f in FILEIN:
-            records.append(factory.create_record(f, method=method))
+            records.append(rc.Record(f, **kwargs))
         records = collections.flatten_list(records)
         # Configure method
         self.on_notify('Configuring %s method... ' % method.upper())
