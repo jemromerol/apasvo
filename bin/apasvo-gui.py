@@ -80,6 +80,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.document = None
         self.isModified = False
         self.saved_filename = None
+        self.saved_event_format = None
         self.saved_cf_filename = None
         self.saved_cf_format = None
         self.saved_cf_dtype = None
@@ -92,10 +93,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.EventsTableView.clicked.connect(self.goto_event_position)
 
         self.actionOpen.triggered.connect(self.open)
-        self.actionSave.triggered.connect(self.save_events)
-        self.actionSave.triggered.connect(self.save_cf)
-        self.actionSave_As.triggered.connect(self.save_events_as)
-        self.actionSave_As.triggered.connect(self.save_cf_as)
         self.actionSaveEvents.triggered.connect(self.save_events)
         self.actionSaveEvents_As.triggered.connect(self.save_events_as)
         self.actionSaveCF.triggered.connect(self.save_cf)
@@ -269,9 +266,15 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         filename, _ = QtGui.QFileDialog.getSaveFileName(self, "Save Event List to File", ".",
                                                         ";;".join(self._summary_file_filters))
         if filename != '':
-            self.save_event_list(filename)
+            # Show dialog
+            dialog = save_events_dialog.SaveEventsDialog(self, fmt=self.saved_event_format)
+            return_code = dialog.exec_()
+            # Save Events to file and store settings
+            if return_code == QtGui.QDialog.Accepted:
+                values = dialog.get_values()
+                self.save_event_list(filename, format=values.get('fmt'))
 
-    def save_event_list(self, filename):
+    def save_event_list(self, filename, **kwargs):
         """Saves a results summary to file.
 
         Generates a results CSV summary.
@@ -279,8 +282,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         Args:
             filename: Output file name.
         """
-        rc.ApasvoStream([self.document.record]).export_picks(filename)
+        rc.ApasvoStream([self.document.record]).export_picks(filename, **kwargs)
         self.saved_filename = filename
+        self.saved_event_format = kwargs.get('format')
 
     def save_cf(self):
         """Saves characteristic function to file.
@@ -342,6 +346,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.command_stack.clear()
             self.set_modified(False)
             self.saved_filename = None
+            self.saved_event_format = None
             self.signalViewer.unset_record()
             self.toolBarMedia.disconnect_path()
             # Update GUI
@@ -468,8 +473,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def set_modified(self, value):
         """Sets 'isModified' attribute's value"""
         self.isModified = value
-        self.actionSave.setEnabled(value)
-        self.actionSave_As.setEnabled(value)
         self.actionSaveEvents.setEnabled(value)
         self.actionSaveEvents_As.setEnabled(value)
         self.actionSaveCF.setEnabled(value)
@@ -642,6 +645,7 @@ if __name__ == '__main__':
     from apasvo.gui.views import navigationtoolbar
     from apasvo.gui.views import loaddialog
     from apasvo.gui.views import savedialog
+    from apasvo.gui.views import save_events_dialog
     from apasvo.gui.views import settingsdialog
     from apasvo.gui.views import takanamidialog
     from apasvo.gui.views import staltadialog
