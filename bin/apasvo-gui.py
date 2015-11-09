@@ -476,7 +476,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSaveEvents.setEnabled(value)
         self.actionSaveEvents_As.setEnabled(value)
         # If already computed, enable save CF
-        cf_computed = len(self.document.record.cf) != 0
+        cf_computed = False if self.document is None else len(self.document.record.cf) != 0
         self.actionSaveCF.setEnabled(cf_computed)
         self.actionSaveCF_As.setEnabled(cf_computed)
 
