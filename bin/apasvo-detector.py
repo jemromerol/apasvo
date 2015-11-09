@@ -72,55 +72,48 @@ DEFAULT_OUTPUT_FORMAT = 'nonlinloc'
 DEFAULT_METHOD = 'ampa'
 
 
-def print_settings(args):
+def print_settings(**kwargs):
     """Print settings to stdout.
 
     Args:
         args: Command-line input arguments.
     """
-    sys.stdout.write("\nGeneral settings:\n")
-    sys.stdout.write("%30s: %s\n" % ("Signal frequency(Hz)",
-                                   args.fs))
-    if args.threshold:
-        sys.stdout.write("%30s: %s\n" % ("Threshold",
-                                       args.threshold))
-    sys.stdout.write("%30s: %s\n" % ("Peak checking(s)",
-                                   args.peak_checking))
-    sys.stdout.write("%30s: %s\n" % ("Algorithm used",
-                                   args.method.upper()))
-    sys.stdout.write("%30s: %s\n" % ("Takanami",
-                                   args.takanami))
-    sys.stdout.write("%30s: %s\n" % ("Takanami margin",
-                                   args.takanami_margin))
-    if args.method == 'ampa':
-        sys.stdout.write("\nAMPA settings:\n")
-        sys.stdout.write("%30s: %s\n" % ("Window length(s)",
-                                       args.window))
-        sys.stdout.write("%30s: %s\n" % ("Window overlap",
-                                       args.step))
-        sys.stdout.write("%30s: %s\n" % ("Noise threshold",
-                                       args.noise_thr))
-        sys.stdout.write("%30s: %s\n" % ("Length of the filters used(s)",
-                                       args.L))
-        sys.stdout.write("%30s: %s\n" % ("Negative response coefficient",
-                                       args.L_coef))
-        sys.stdout.write("%30s: %s\n" % ("Coefficient U",
-                                       args.U))
-        sys.stdout.write("\nAMPA filter bank settings:\n")
-        sys.stdout.write("%30s: %s\n" % ("Start frequency(Hz)",
-                                       args.f_start))
-        sys.stdout.write("%30s: %s\n" % ("End frequency(Hz)",
-                                       args.f_end))
-        sys.stdout.write("%30s: %s\n" % ("Subband bandwidth(Hz)",
-                                       args.bandwidth))
-        sys.stdout.write("%30s: %s\n" % ("Subband overlap(Hz)",
-                                       args.overlap))
-    if args.method == 'stalta':
-        sys.stdout.write("\nSTA-LTA settings:\n")
-        sys.stdout.write("%30s: %s\n" % ("STA window length(s)",
-                                       args.sta_length))
-        sys.stdout.write("%30s: %s\n" % ("LTA window length(s)",
-                                       args.lta_length))
+    sys.stdout.write("\n*** General settings ***\n")
+    # Print multiprocessing settings
+    allow_multiprocessing = not kwargs.get('no_multiprocessing')
+    sys.stdout.write("%30s: %s\n" % ("Allow multiprocessing", allow_multiprocessing))
+    if allow_multiprocessing:
+        sys.stdout.write("%30s: %s\n" % ("N. of processes", kwargs.get('processes')))
+    if kwargs.get('threshold'):
+        sys.stdout.write("%30s: %s\n" % ("Threshold", kwargs.get('threshold')))
+    # Print freq. config
+    input_format = kwargs.get('input_format', DEFAULT_INPUT_FORMAT)
+    fs = kwargs.get('fs') if input_format in ['binary', 'text'] else 'Autodetect'
+    sys.stdout.write("%30s: %s\n" % ("Signal frequency(Hz)", fs))
+    if kwargs.get('threshold'):
+        sys.stdout.write("%30s: %s\n" % ("Threshold", kwargs.get('threshold')))
+    sys.stdout.write("%30s: %s\n" % ("Output format", kwargs.get('output_format', '').upper()))
+    sys.stdout.write("%30s: %s\n" % ("Peak checking(s)", kwargs.get('peak_checking')))
+    sys.stdout.write("%30s: %s\n" % ("Algorithm used", kwargs.get('method', '').upper()))
+    sys.stdout.write("%30s: %s\n" % ("Takanami", kwargs.get('takanami')))
+    sys.stdout.write("%30s: %s\n" % ("Takanami margin", kwargs.get('takanami_margin')))
+    if kwargs.get('method') == 'ampa':
+        sys.stdout.write("\n*** AMPA settings ***\n")
+        sys.stdout.write("%30s: %s\n" % ("Window length(s)", kwargs.get('window')))
+        sys.stdout.write("%30s: %s\n" % ("Window overlap", kwargs.get('step')))
+        sys.stdout.write("%30s: %s\n" % ("Noise threshold", kwargs.get('noise_thr')))
+        sys.stdout.write("%30s: %s\n" % ("Length of the filters used(s)", kwargs.get('L')))
+        sys.stdout.write("%30s: %s\n" % ("Negative response coefficient", kwargs.get('L_coef')))
+        sys.stdout.write("%30s: %s\n" % ("Coefficient U", kwargs.get('U')))
+        sys.stdout.write("\n*** AMPA filter bank settings ***\n")
+        sys.stdout.write("%30s: %s\n" % ("Start frequency(Hz)", kwargs.get('f_start')))
+        sys.stdout.write("%30s: %s\n" % ("End frequency(Hz)", kwargs.get('f_end')))
+        sys.stdout.write("%30s: %s\n" % ("Subband bandwidth(Hz)", kwargs.get('bandwidth')))
+        sys.stdout.write("%30s: %s\n" % ("Subband overlap(Hz)", kwargs.get('overlap')))
+    if kwargs.get('method') == 'stalta':
+        sys.stdout.write("\n*** STA-LTA settings ***\n")
+        sys.stdout.write("%30s: %s\n" % ("STA window length(s)", kwargs.get('sta_length')))
+        sys.stdout.write("%30s: %s\n" % ("LTA window length(s)", kwargs.get('lta_length')))
     sys.stdout.write("\n")
     sys.stdout.flush()
 
@@ -137,18 +130,24 @@ def analysis_single_file_task(filename, **kwargs):
     method = METHOD_MAP.get(kwargs.get('method', DEFAULT_METHOD), ampa.Ampa)
     alg = method(**kwargs)
     # Open input file
+    if debug:
+        print "*** Processing file {} ***".format(filename)
     input_format = INPUT_FORMAT_MAP.get(kwargs.get('input_format', DEFAULT_INPUT_FORMAT))
     stream = rc.read(filename, format=input_format, **kwargs)
+    if debug:
+        print "Traces in {}".format(filename)
+        print stream
     # Pick stream traces
     for trace in stream.traces:
-        trace.detect(alg, **kwargs)
+        trace.detect(alg, debug=debug, **kwargs)
     # Export picks
     ouput_format = OUTPUT_FORMAT_MAP.get(kwargs.get('output_format', DEFAULT_OUTPUT_FORMAT))
     extension = OUTPUT_EXTENSION_SET.get(ouput_format, '')
-    basename, _ = os.path.splitext(filename)
+    basename, _ = os.path.splitext(os.path.basename(filename))
+    output_path = kwargs.get('destination_path', os.getcwd())
     trace_suffix = ''.join([tr.getId().replace('.', '_') for tr in stream.traces])
     output_filename = "{}_{}{}".format(basename, trace_suffix, extension)
-    stream.export_picks(output_filename, format=ouput_format)
+    stream.export_picks(os.path.join(output_path, output_filename), format=ouput_format, debug=debug)
 
 
 def analysis_chunk_task(parameters):
@@ -167,7 +166,14 @@ def analysis(**kwargs):
     Performs event detection if parameter 'threshold' is not None, otherwise
     performs event picking.
     """
+    # Get file list
     file_list = kwargs.pop('FILEIN', [])
+
+    # Get debug level
+    debug = kwargs.get('verbosity', 1)
+
+    if debug:
+        print_settings(**kwargs)
 
     if kwargs.get('no_multiprocessing', False):
         analysis_chunk_task((file_list, kwargs))
@@ -261,7 +267,7 @@ def main(argv=None):
     Saves results summary to 'output.csv'.
     Saves characteristic function to './cf_data/meq01.cf.bin'.
 
-    \033[1m>> python apasvo-detector.py meq*.bin --csv example.out --cf --cff text @settings.txt\033[0m
+    \033[1m>> python apasvo-detector.py meq*.bin --output-format quakeml --cf --cff text @settings.txt\033[0m
 
     Performs event picking on all files matching 'meq*.bin' and takes some
     settings from a text file named 'settings.txt'.
@@ -317,11 +323,17 @@ def main(argv=None):
     Selected format for input files. Default value is autodetect, meaning
     format will be inferred for each input file.
         ''')
-        parser.add_argument("-o", "--output_format",
+        parser.add_argument("-o", "--output-format",
                             choices=['nonlinloc', 'quakeml', 'json'],
                             default='nonlinloc',
                             help='''
     Output file format for the picked events. Default: 'nonlinloc'.
+        ''')
+        parser.add_argument("-d", "--destination-path",
+                            metavar='<arg>',
+                            default=os.getcwd(),
+                            help='''
+    Destination path for output files. By default it will be the current working directory.
         ''')
         parser.add_argument("--no-multiprocessing",
                             action='store_true',
@@ -543,7 +555,6 @@ def main(argv=None):
 
         # Parse the args and call whatever function was selected
         args, _ = parser.parse_known_args()
-        print_settings(args)
 
     except Exception, e:
         indent = len(program_name) * " "
