@@ -170,6 +170,12 @@ References
 Changelog
 =========
 
+* 0.0.4 (2015-11-09)
+    * Refactor apasvo classes to use Obspy library. Thanks to Obspy, now the application supports multiple input
+      formats (wav, sac, mseed, segy, ...) besides binary & text, multiple export event formats (NonLinLoc, QuakeML...)
+      and (virtually) support for multitrace files.
+    * Redesign apasvo-detector to detect events for multitrace files in batch.
+    * Fix several bugs
 * 0.0.3 (2014-08-16)
     * Fixed several bugs.
 * 0.0.2 (2014-06-02)
