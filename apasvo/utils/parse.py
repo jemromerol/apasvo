@@ -57,6 +57,13 @@ def positive_int(arg):
         raise argparse.ArgumentTypeError(msg)
     return value
 
+def non_negative_int(arg):
+    """Checks whether an argument is a non negative integer number or not."""
+    value = int(arg)
+    if value < 0:
+        msg = "%r is a negative integer number" % arg
+        raise argparse.ArgumentTypeError(msg)
+    return value
 
 def percentile(arg):
     """Checks if an argument is a valid percentile.

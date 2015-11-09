@@ -32,6 +32,8 @@ import argparse
 import sys
 import os
 import datetime
+import itertools
+import multiprocessing
 
 from apasvo._version import __version__
 from apasvo.utils import clt
@@ -42,52 +44,28 @@ from apasvo.picking import ampa
 from apasvo.picking import apasvotrace as rc
 
 
-def draw_events_table(record, method):
-    """Draws into a CLI table a summary of the events found for a given seismic
-    record.
+INPUT_FORMAT_MAP = {
+    'binary': 'binary',
+    'text': 'text',
+    'autodetect': None,
+    'sac': 'SAC',
+    'mseed': 'MSEED',
+}
 
-    Args:
-        record: A picking.Record object
-        method: Algorithm used, e.g. AMPA or STA-LTA.
-    """
-    sys.stdout.write("%i possible events found in %s:\n" %
-                     (len(record.events), record.filename))
-    sys.stdout.flush()
-    et = [record.starttime + (e.time / record.fs)
-          for e in record.events]
-    cf_val = [e.cf_value for e in record.events]
-    if len(et) > 0:
-        sys.stdout.write("\n%s\n\n" %
-                         clt.Table(clt.Column("No.", range(1, len(et) + 1)),
-                                     clt.Column("Time(s)", et, fmt='%s'),
-                                     clt.Column("%s CF Value" % method.upper(),
-                                                cf_val)))
-        sys.stdout.flush()
+OUTPUT_FORMAT_MAP = {
+    'nonlinloc': 'NLLOC_OBS',
+    'quakeml': 'QUAKEML',
+    'json': 'JSON',
+}
 
+METHOD_MAP = {
+    'stalta': stalta,
+    'ampa': ampa,
+}
 
-def draw_results(records, method):
-    """Draws into a CLI table a summary of the events found for a list of
-    seismic records.
-
-    Args:
-        records: A list of picking.Record objects
-        method: Algorithm used, e.g. AMPA.
-    """
-    # Extract data from records
-    data = [{'file_name':record.filename,
-             'time': record.starttime + (event.time / record.fs),
-             'cf_value': event.cf_value} for record in records
-                                            for event in record.events]
-    sys.stdout.write("Summary of events:\n")
-    sys.stdout.write("\n%s\n\n" %
-                     clt.Table(clt.Column("File Name",
-                                          [e['file_name'] for e in data],
-                                          fmt='%s'),
-                                 clt.Column("Time(s)",
-                                            [e['time'] for e in data], fmt="%s"),
-                                 clt.Column("%s CF Value" % method.upper(),
-                                            [e['cf_value'] for e in data])))
-    sys.stdout.flush()
+DEFAULT_INPUT_FORMAT = 'autodetect'
+DEFAULT_OUTPUT_FORMAT = 'nonlinloc'
+DEFAULT_METHOD = 'ampa'
 
 
 def print_settings(args):
@@ -143,260 +121,40 @@ def print_settings(args):
     sys.stdout.flush()
 
 
-class Analysis(object):
-    """An abstract class to detect/pick earthquakes on seismic data.
+def analysis_single_file_task(filename, **kwargs):
     """
 
-    _cf_dir = './cf_data'
-    _sort_keys = {'va': ('cf_value', False), 'vd': ('cf_value', True),
-                  'ta': ('time', False), 'td': ('time', True)}
-
-    def run(self, FILEIN, csv=None, cf=False, **kwargs):
-        """Event/picking detection on a given set of seismic signals.
-
-        Reads a list of command-line input arguments, performs event analysis
-        over a given list of seismic data inputs and generates a summary of
-        results.
-        Analysis can be performed in two ways: supervised or unsupervised mode.
-        In supervised mode the function graphs each of the candidate events
-        found and asks the user whether to accept them or not, whereas in
-        unsupervised mode the function just computes results without receiving
-        any feedback from users.
-
-        Args:
-            FILEIN: A list of binary or text file objects containing seismic
-                data.
-            csv: Determines whether to save a summary of results to a CSV
-                file or not. Default value is None, meaning no CSV summary
-                will be saved.
-            cf: Determines whether to save generated characteristic function
-                to a file (binary or text format) or not. Default value is
-                False.
-        """
-        # Extract method name from kwargs
-        method = kwargs.get('method', 'ampa')
-        takanami = kwargs.get('takanami', False)
-        # Create a list of records from input files
-        records = []
-        for f in FILEIN:
-            records.append(rc.Record(f, **kwargs))
-        records = collections.flatten_list(records)
-        # Configure method
-        self.on_notify('Configuring %s method... ' % method.upper())
-        if method == 'stalta':
-            alg = stalta.StaLta(**kwargs)
-        else:
-            alg = ampa.Ampa(**kwargs)
-        self.on_notify("Done\n")
-        # Run analysis
-        self._do_analysis(records, alg, **kwargs)
-
-        # Show results
-        draw_results(records, method=method)
-
-        # Generate reports
-        if csv:
-            self.on_notify("Generating CSV report in %s... " % csv.name)
-            rc.generate_csv(records, csv)
-            self.on_notify("Done\n")
-
-        # Save cf
-        if cf:
-            for record in records:
-                # Create a new directory to store CFs
-                cf_path = os.path.abspath(self._cf_dir)
-                if not os.path.exists(cf_path):
-                    os.makedirs(cf_path)
-                # Generate cf filenames
-                bname, rname = os.path.splitext(os.path.basename(os.path.abspath(record.filename)))
-                fname = os.path.join(cf_path, "%s.cf%s" % (bname, rname))
-                self.on_notify("Saving CF for input file %s in %s... " %
-                               (record.filename, fname))
-                record.save_cf(fname, fmt=kwargs.get('cff', 'binary'),
-                               dtype=kwargs.get('cfd', 'float64'),
-                               byteorder=kwargs.get('cfb', 'native'))
-                self.on_notify("Done\n")
-
-    def _do_analysis(self, records, alg, supervised=False, **kwargs):
-        raise NotImplementedError
-
-    def _supervise_events(self, record, takanami=True, show_len=5.0,
-                          show_cf=False, show_specgram=False,
-                          show_envelope=False,
-                          show_all=False, **kwargs):
-        raise NotImplementedError
-
-    def on_notify(self, msg):
-        pass
-
-
-class Detector(Analysis):
-    """A class to perform event detection on seismic data.
-
-    Takes a list of command line arguments and finds all those possible events
-    whose characteristic function value is over a given threshold value for
-    each input signal.
+    :param file:
+    :param kwargs:
     """
-
-    def _do_analysis(self, records, alg, supervised=False, sort=None, **kwargs):
-        # Extract method name from kwargs
-        method = kwargs.get('method', 'ampa')
-        if supervised:
-            import matplotlib
-            if sys.platform == "win32":
-                matplotlib.use('Qt4Agg')
-                matplotlib.rcParams['backend.qt4'] = 'PySide'
-            elif sys.platform == "linux2":
-                matplotlib.use('TkAgg')
-            matplotlib.rcParams['interactive'] = True
-            import matplotlib.pyplot as pl
-        for record in records:
-            self.on_notify("Processing %s... " % record.filename)
-            record.detect(alg, **kwargs)
-            self.on_notify("Done\n")
-            # Sort results
-            if sort:
-                key, reverse = self._sort_keys.get(sort, ('cf_value', True))
-                record.sort_events(key, reverse)
-            draw_events_table(record, method)
-            if supervised:
-                last_response = self._supervise_events(record, **kwargs)
-                if last_response == "quit":
-                    break
-                elif last_response == "continue & don't ask again":
-                    supervised = False
-                    pl.close('all')
-        if supervised:
-            pl.close('all')
-
-    def _supervise_events(self, record, takanami=True, show_len=5.0,
-                          show_cf=False, show_specgram=False,
-                          show_envelope=False,
-                          show_all=False, **kwargs):
-        # Define Q&A for each mode
-        detect_q = "Accept this event?"
-        detect_a = ["&yes", "&no", "&accept all",
-                    "&discard all", "&continue & don't ask again", "&quit"]
-        detect_da = "yes"
-        # Set default answer
-        response = detect_da
-
-        show_cf = True if show_all else show_cf
-        show_specgram = True if show_all else show_specgram
-        show_envelope = True if show_all else show_envelope
-
-        accepted_events = []
-        for i in xrange(len(record.events)):
-            event = record.events[i]
-            self.on_notify("Showing event no. %i of %i\n" %
-                             (i + 1, len(record.events)))
-            record.plot_signal(t_start=(event.time / record.fs) - show_len,
-                               t_end=(event.time / record.fs) + show_len,
-                               num=1,
-                               show_cf=show_cf,
-                               show_specgram=show_specgram,
-                               show_envelope=show_envelope,
-                               **kwargs)
-            if takanami:
-                event.plot_aic(num=2, show_envelope=show_envelope)
-            # Query user and process its response
-            response = clt.query_custom_answers(detect_q, detect_a,
-                                                  default=detect_da)
-            if response == "yes":
-                accepted_events.append(i)
-            elif (response == "accept all" or
-                  response == "continue & don't ask again"):
-                accepted_events.extend(range(i, len(record.events)))
-                break
-            elif response == "discard all" or response == "quit":
-                break
-        # Remove discarded events
-        record.events = [record.events[i] for i in accepted_events]
-        # Return last response
-        return response
+    # Get debug level
+    debug = kwargs.get('verbosity', 1)
+    # Configure algorithm
+    method = kwargs.get('method', DEFAULT_METHOD)
+    if method == 'stalta':
+        alg = stalta.StaLta(**kwargs)
+    else:
+        alg = ampa.Ampa(**kwargs)
+    # Open input file
+    input_format = INPUT_FORMAT_MAP.get(kwargs.get('input_format', DEFAULT_INPUT_FORMAT))
+    stream = rc.read(filename, format=input_format, **kwargs)
+    # Pick stream traces
+    for trace in stream.traces:
+        trace.detect(alg, **kwargs)
+    # Export picks
+    ouput_format = OUTPUT_FORMAT_MAP.get(kwargs.get('output_format', DEFAULT_OUTPUT_FORMAT))
+    stream.export_picks(format=ouput_format)
 
 
-class Picker(Analysis):
-    """A class to perform event picking on seismic data.
 
-    Takes a list of command line input arguments and finds the global maximum
-    of the characteristic function for each seismic input signal.
+def analysis_chunk_task(parameters):
     """
-
-    def _do_analysis(self, records, alg, supervised=False, **kwargs):
-        # Extract method name from kwargs
-        method = kwargs.get('method', 'ampa')
-        if supervised:
-            import matplotlib
-            if sys.platform == "win32":
-                matplotlib.use('Qt4Agg')
-                matplotlib.rcParams['backend.qt4'] = 'PySide'
-            elif sys.platform == "linux2":
-                matplotlib.use('TkAgg')
-            matplotlib.rcParams['interactive'] = True
-            import matplotlib.pyplot as pl
-        for record in records:
-            self.on_notify("Processing %s... " % record.filename)
-            if supervised:
-                record.detect(alg, **kwargs)
-                self.on_notify("Done\n")
-                # Sort events
-                key, reverse = self._sort_keys.get('vd', ('cf_value', True))
-                record.sort_events(key, reverse)
-                draw_events_table(record, method)
-                last_response = self._supervise_events(record, **kwargs)
-                if last_response == 'quit':
-                    break
-                elif last_response == 'all':
-                    supervised = False
-                    pl.close('all')
-            else:
-                record.detect(alg, **kwargs)
-                self.on_notify("Done\n")
-                draw_events_table(record, method)
-        if supervised:
-            pl.close('all')
-
-    def _supervise_events(self, record, takanami=True, show_len=5.0,
-                          show_cf=False, show_specgram=False,
-                          show_envelope=False,
-                          show_all=False, **kwargs):
-        # Define Q&A for each mode
-        pick_q = "Accept this event?"
-        pick_a = ["&yes", "&no", "&all", "&quit"]
-        pick_da = "yes"
-        # Set default answer
-        response = pick_da
-
-        show_cf = True if show_all else show_cf
-        show_specgram = True if show_all else show_specgram
-        show_envelope = True if show_all else show_envelope
-
-        accepted_events = []
-        for i in xrange(len(record.events)):
-            event = record.events[i]
-            self.on_notify("Showing event no. %i of %i\n" %
-                             (i + 1, len(record.events)))
-            record.plot_signal(t_start=(event.time / record.fs) - show_len,
-                               t_end=(event.time / record.fs) + show_len,
-                               num=1,
-                               show_cf=show_cf,
-                               show_specgram=show_specgram,
-                               show_envelope=show_envelope)
-            if takanami:
-                event.plot_aic(num=2, show_envelope=show_envelope)
-            # Query user and process its response
-            response = clt.query_custom_answers(pick_q, pick_a,
-                                                  default=pick_da)
-            if response == "yes" or response == 'all':
-                accepted_events.append(i)
-                break
-            elif response == "quit":
-                break
-        # Remove discarded events
-        record.events = [record.events[i] for i in accepted_events]
-        # Return last response
-        return response
+    :param parameters:
+    """
+    file_list = parameters[0]
+    kwargs = parameters[1]
+    for file in file_list:
+        analysis_single_file_task(file, **kwargs)
 
 
 def analysis(**kwargs):
@@ -405,13 +163,18 @@ def analysis(**kwargs):
     Performs event detection if parameter 'threshold' is not None, otherwise
     performs event picking.
     """
-    threshold = kwargs.get('threshold', None)
-    if threshold is not None:
-        task = Detector()
+    file_list = kwargs.pop('FILEIN', [])
+
+
+    if kwargs.get('no_multiprocessing', False):
+        analysis_chunk_task((file_list, kwargs))
     else:
-        task = Picker()
-    task.on_notify = clt.print_msg
-    task.run(**kwargs)
+        processes = kwargs.get('processes', multiprocessing.cpu_count())
+        p = multiprocessing.Pool(processes=processes)
+        p.map(analysis_chunk_task, itertools.izip(collections.chunkify(file_list, len(file_list) / processes),
+                                            itertools.repeat(kwargs)))
+        p.close()
+        p.join()
 
 
 def main(argv=None):
@@ -529,27 +292,46 @@ def main(argv=None):
                                             epilog=program_examples,
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 fromfile_prefix_chars='@')
-        parser.set_defaults(func=analysis)
         parser.add_argument('-V', '--version', action='version',
                             version=program_version_message)
+        parser.add_argument('-v', '--verbosity',
+                            type=parse.non_negative_int,
+                            default=1,
+                            metavar='<arg>',
+                            help='''
+    Verbosity level. A value of 0 means no output is printed. Default value is 1.
+        ''')
         parser.add_argument("FILEIN", nargs='+',
                             action=parse.GlobInputFilenames,
                             metavar='file',
                             help='''
     Binary or text file containing a seismic-like signal.
         ''')
-        parser.add_argument("--csv", type=argparse.FileType('w'),
-                            default="output.csv",
-                            metavar='<file>',
+        parser.add_argument("-i", "--input-format",
+                            choices=['binary', 'text', 'sac', 'mseed', 'autodetect'],
+                            default='autodetect',
                             help='''
-    Output CSV summary file. Default: 'output.csv'.
+    Selected format for input files. Default value is autodetect, meaning
+    format will be inferred for each input file.
         ''')
-        parser.add_argument("-f", "--frequency", type=parse.positive_int,
-                            default=50.0,
-                            dest='fs',
+        parser.add_argument("-o", "--output_format",
+                            choices=['nonlinloc', 'quakeml', 'json'],
+                            default='nonlinloc',
+                            help='''
+    Output file format for the picked events. Default: 'nonlinloc'.
+        ''')
+        parser.add_argument("--no-multiprocessing",
+                            action='store_true',
+                            default=False,
+                            help='''
+    Do not use multiprocessing during pick estimation.
+        ''')
+        parser.add_argument("-p", "--processes",
+                            type=parse.positive_int,
                             metavar='<arg>',
                             help='''
-    Sample rate in Hz. Default: 50 Hz
+    Number of processes to be used during pick estimation. By default it will be equal to
+    the number of system processors.
         ''')
         parser.add_argument("-m", "--method",
                             choices=['ampa', 'stalta'],
@@ -577,20 +359,20 @@ def main(argv=None):
     a local maximum. If no threshold is provided, this parameter has
     no effect. Default value is 1 s.
         ''')
-        parser.add_argument("--sort", choices=['td', 'ta', 'vd', 'va'],
-                            default='vd',
+        parser.add_argument("-f", "--frequency", type=parse.positive_int,
+                            default=50.0,
+                            dest='fs',
+                            metavar='<arg>',
                             help='''
-    Specifies how to sort results. Choices are time descending/ascending
-    and characteristic function value descending/ascending.
-    Default value is 'vd', meaning value descending.
+    Sample rate in Hz (only has effect for binary and text input files). Default: 50 Hz
         ''')
         parser.add_argument("--datatype",
                             choices=['int16', 'int32', 'int64', 'float16', 'float32', 'float64'],
                             default='float64',
                             dest='dtype',
                             help='''
-    Data-type of input data. Default value is float64, meaning double-precision
-    floating point format.
+    Data-type of input data (only has effect for binary input files).
+    Default value is float64, meaning double-precision floating point format.
         ''')
         parser.add_argument("--byteorder",
                             choices=['little-endian', 'big-endian', 'native'],
@@ -598,34 +380,6 @@ def main(argv=None):
                             help='''
     If the input files are in binary format this will be the byte-order
     of the selected datatype. Default choice is hardware native.
-        ''')
-    # Characteristic function arguments
-        cf_options = parser.add_argument_group("Characteristic Function settings")
-        cf_options.add_argument("--cf", action="store_true", default=False,
-                            help='''
-    Enables saving computed characteristic functions to file. Generated files
-    will be saved to 'cf_data' folder, which will be created if not exists yet.
-    E.g. given input files 'meq1.bin' and 'meq2.bin', saves their
-    characteristic functions to './cf_data/meq1.cf.bin' and
-    './cf_data/meq2.cf.bin'
-        ''')
-        cf_options.add_argument("--cff", choices=["binary", "text"],
-                            default="binary",
-                            help='''
-    Characteristic function output file format.
-    Default value is 'binary'.
-        ''')
-        cf_options.add_argument("--cfd", choices=['int16', 'int32', 'int64', 'float16', 'float32', 'float64'],
-                            default='float64',
-                            help='''
-    Data-type of characteristic function saved data.
-    Default value is 'float64', meaning double-precision floating point data..
-        ''')
-        cf_options.add_argument("--cfe", choices=['little-endian', 'big-endian', 'native'],
-                            default='native',
-                            help='''
-    Endianness of characteristic function saved data.
-    Default value is hardware native.
         ''')
         # STA-LTA arguments
         sta_lta_options = parser.add_argument_group("STA-LTA settings")
@@ -783,48 +537,6 @@ def main(argv=None):
     Default: 5.0 seconds.
         ''')
 
-        # Create arguments for the supervised mode
-        supervised_options = parser.add_argument_group("Supervised mode")
-        supervised_options.add_argument("-s", "--supervised",
-                                        action="store_true", default=False,
-                                        help='''
-    Enables supervised mode. In supervised mode the application graphs
-    each of the candidate events found and asks the user whether to accept
-    them or not.
-        ''')
-        supervised_options.add_argument("--show-cf",
-                                        action="store_true", default=False,
-                                        help='''
-    Plots characteristic function in supervised mode.
-        ''')
-        supervised_options.add_argument("--show-specgram",
-                                        action="store_true", default=False,
-                                        help='''
-    Plots spectrogram in supervised mode.
-        ''')
-        supervised_options.add_argument("--show-envelope",
-                                        action="store_true", default=False,
-                                        help='''
-    Plots signal envelope in supervised mode. The function will be drawn
-    together with signal amplitude.
-        ''')
-        supervised_options.add_argument("--show-all",
-                                        action='store_true', default=False,
-                                        help='''
-    Equivalent to: --show-cf --show_envelope --show-specgram.
-        ''')
-        supervised_options.add_argument("--show-len",
-                                        type=parse.positive_float,
-                                        default=30.0,
-                                        metavar='<arg>',
-                                        help='''
-    Specifies how many seconds will be displayed at most before and after
-    of a possible event. I.e. let 't' a possible arrival time and 'w' the
-    value of '--show-len' parameter, the application will plot data in
-    the interval [t - w, t + w] for that event.
-    Default value is 30.0 seconds.
-        ''')
-
         # Parse the args and call whatever function was selected
         args, _ = parser.parse_known_args()
         print_settings(args)
@@ -835,7 +547,7 @@ def main(argv=None):
         sys.stderr.write(indent + "  for help use --help\n")
         return 2
 
-    args.func(**vars(args))
+    analysis(**vars(args))
 
 if __name__ == "__main__":
     sys.exit(main())
