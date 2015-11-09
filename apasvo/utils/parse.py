@@ -57,6 +57,13 @@ def positive_int(arg):
         raise argparse.ArgumentTypeError(msg)
     return value
 
+def non_negative_int(arg):
+    """Checks whether an argument is a non negative integer number or not."""
+    value = int(arg)
+    if value < 0:
+        msg = "%r is a negative integer number" % arg
+        raise argparse.ArgumentTypeError(msg)
+    return value
 
 def percentile(arg):
     """Checks if an argument is a valid percentile.
@@ -96,8 +103,7 @@ class GlobInputFilenames(argparse.Action):
                 fnames.extend(glob.glob(pname))
             else:
                 fnames.append(pname)
-        files = [self._fopen(fname) for fname in fnames]
-        setattr(namespace, self.dest, files)
+        setattr(namespace, self.dest, fnames)
 
     def _fopen(self, fname):
         if futils.istextfile(fname):

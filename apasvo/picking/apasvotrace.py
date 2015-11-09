@@ -338,7 +338,7 @@ class ApasvoTrace(op.Trace):
         return self.stats.endtime
 
     def detect(self, alg, threshold=None, peak_window=1.0,
-               takanami=False, takanami_margin=5.0, action='append', **kwargs):
+               takanami=False, takanami_margin=5.0, action='append', debug=False, **kwargs):
         """Computes a picking algorithm over self.signal.
 
         Args:
@@ -392,6 +392,10 @@ class ApasvoTrace(op.Trace):
             self.events = events
         else:
             raise ValueError("%s is not a valid value for 'action'" % action)
+        if debug:
+            print "{} event(s) found so far for trace {}:".format(len(self.events), self.getId())
+            for event in self.events:
+                print event.time
         return self.events
 
     def sort_events(self, key='time', reverse=False):
@@ -596,7 +600,7 @@ class ApasvoStream(op.Stream):
         for trace in self.traces[start_trace:end_trace]:
             trace.detect(alg, **kwargs)
 
-    def export_picks(self, filename, start_trace=None, end_trace=None, format="NLLOC_OBS", **kwargs):
+    def export_picks(self, filename, start_trace=None, end_trace=None, format="NLLOC_OBS", debug=False, **kwargs):
         """
         """
         event_list = []
@@ -608,9 +612,13 @@ class ApasvoStream(op.Stream):
             for event in event_list:
                 ts = event.picks[0].time.strftime("%Y%m%d%H%M%S%f")
                 event_filename = "%s_%s%s" % (basename, ts, ext)
+                if debug:
+                    print "Generating event file {}".format(event_filename)
                 event.write(event_filename, format=format)
         else:
             event_catalog = Catalog(event_list)
+            if debug:
+                print "Generating event file {}".format(filename)
             event_catalog.write(filename, format=format, **kwargs)
 
 def read(filename,
