@@ -58,9 +58,15 @@ OUTPUT_FORMAT_MAP = {
     'json': 'JSON',
 }
 
+OUTPUT_EXTENSION_SET = {
+    'NLLOC_OBS': '',
+    'QUAKEML': 'xml',
+    'JSON': 'json',
+}
+
 METHOD_MAP = {
-    'stalta': stalta,
-    'ampa': ampa,
+    'stalta': stalta.StaLta,
+    'ampa': ampa.Ampa,
 }
 
 DEFAULT_INPUT_FORMAT = 'autodetect'
@@ -130,11 +136,8 @@ def analysis_single_file_task(filename, **kwargs):
     # Get debug level
     debug = kwargs.get('verbosity', 1)
     # Configure algorithm
-    method = kwargs.get('method', DEFAULT_METHOD)
-    if method == 'stalta':
-        alg = stalta.StaLta(**kwargs)
-    else:
-        alg = ampa.Ampa(**kwargs)
+    method = METHOD_MAP.get(kwargs.get('method', DEFAULT_METHOD), ampa.Ampa)
+    alg = method(**kwargs)
     # Open input file
     input_format = INPUT_FORMAT_MAP.get(kwargs.get('input_format', DEFAULT_INPUT_FORMAT))
     stream = rc.read(filename, format=input_format, **kwargs)
@@ -143,7 +146,11 @@ def analysis_single_file_task(filename, **kwargs):
         trace.detect(alg, **kwargs)
     # Export picks
     ouput_format = OUTPUT_FORMAT_MAP.get(kwargs.get('output_format', DEFAULT_OUTPUT_FORMAT))
-    stream.export_picks(format=ouput_format)
+    extension = ''
+    basename, _ = os.path.splitext(filename)
+    trace_suffix = ''.join([tr.getId().replace('.', '_') for tr in stream.traces])
+    output_filename = "{}_{}{}".format(basename, trace_suffix, extension)
+    stream.export_picks(output_filename, format=ouput_format)
 
 
 
