@@ -103,8 +103,7 @@ class GlobInputFilenames(argparse.Action):
                 fnames.extend(glob.glob(pname))
             else:
                 fnames.append(pname)
-        files = [self._fopen(fname) for fname in fnames]
-        setattr(namespace, self.dest, files)
+        setattr(namespace, self.dest, fnames)
 
     def _fopen(self, fname):
         if futils.istextfile(fname):

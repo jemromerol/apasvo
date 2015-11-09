@@ -144,7 +144,7 @@ def analysis_single_file_task(filename, **kwargs):
         trace.detect(alg, **kwargs)
     # Export picks
     ouput_format = OUTPUT_FORMAT_MAP.get(kwargs.get('output_format', DEFAULT_OUTPUT_FORMAT))
-    extension = OUTPUT_EXTENSION_SET.get(kwargs.get('output_format', DEFAULT_OUTPUT_FORMAT))
+    extension = OUTPUT_EXTENSION_SET.get(ouput_format, '')
     basename, _ = os.path.splitext(filename)
     trace_suffix = ''.join([tr.getId().replace('.', '_') for tr in stream.traces])
     output_filename = "{}_{}{}".format(basename, trace_suffix, extension)
@@ -168,7 +168,6 @@ def analysis(**kwargs):
     performs event picking.
     """
     file_list = kwargs.pop('FILEIN', [])
-
 
     if kwargs.get('no_multiprocessing', False):
         analysis_chunk_task((file_list, kwargs))
@@ -332,6 +331,7 @@ def main(argv=None):
         ''')
         parser.add_argument("-p", "--processes",
                             type=parse.positive_int,
+                            default=multiprocessing.cpu_count(),
                             metavar='<arg>',
                             help='''
     Number of processes to be used during pick estimation. By default it will be equal to
