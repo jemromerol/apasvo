@@ -86,10 +86,6 @@ def print_settings(**kwargs):
         sys.stdout.write("%30s: %s\n" % ("N. of processes", kwargs.get('processes')))
     if kwargs.get('threshold'):
         sys.stdout.write("%30s: %s\n" % ("Threshold", kwargs.get('threshold')))
-    # Print freq. config
-    input_format = kwargs.get('input_format', DEFAULT_INPUT_FORMAT)
-    fs = kwargs.get('fs') if input_format in ['binary', 'text'] else 'Autodetect'
-    sys.stdout.write("%30s: %s\n" % ("Signal frequency(Hz)", fs))
     if kwargs.get('threshold'):
         sys.stdout.write("%30s: %s\n" % ("Threshold", kwargs.get('threshold')))
     sys.stdout.write("%30s: %s\n" % ("Output format", kwargs.get('output_format', '').upper()))
@@ -145,8 +141,10 @@ def analysis_single_file_task(filename, **kwargs):
     extension = OUTPUT_EXTENSION_SET.get(ouput_format, '')
     basename, _ = os.path.splitext(os.path.basename(filename))
     output_path = kwargs.get('destination_path', os.getcwd())
-    trace_suffix = ''.join([tr.getId().replace('.', '_') for tr in stream.traces])
-    output_filename = "{}_{}{}".format(basename, trace_suffix, extension)
+    stream_suffix = '_'.join([suffix for tr in stream.traces
+                             for suffix in tr.getId().split('.')
+                             if suffix != ''])
+    output_filename = "{}_{}{}".format(basename, stream_suffix, extension)
     stream.export_picks(os.path.join(output_path, output_filename), format=ouput_format, debug=debug)
 
 
@@ -237,7 +235,7 @@ def main(argv=None):
 
     Saves results summary to 'output.csv'.
 
-    \033[1m>> python apasvo-detector.py meq01.txt --csv example.out -m stalta --lta 60 --takanami -s --show-all\033[0m
+    \033[1m>> python apasvo-detector.py meq01.txt -o nonlinloc -m stalta --lta 60 --takanami\033[0m
 
     Let 'meq01.txt' a text file containing seismic data, performs event picking
     with the following settings:
@@ -250,9 +248,9 @@ def main(argv=None):
 
     Works on supervised mode, showing characteristic function, envelope
     function and espectrogram for each possible event.
-    Saves results summary to 'example.out'
+    Saves results to nonlinloc format
 
-    \033[1m>> python apasvo-detector.py meq01.bin --cf -t 1.5 --ampa-filters 50.0 25.0 12.5 6.25  --ampa-noise-threshold 75 -s --show-cf\033[0m
+    \033[1m>> python apasvo-detector.py meq01.bin -t 1.5 --ampa-filters 50.0 25.0 12.5 6.25  --ampa-noise-threshold 75\033[0m
 
     Let 'meq01.bin' a binary file containing seismic data, detects seismic
     events whose characteristic function value is over 1.5.
@@ -262,17 +260,14 @@ def main(argv=None):
             Filter lengths: 50.0 25.0 12.5 6.25 (in seconds).
             Noise threshold percentile: 75
 
-    Works on supervised mode, showing characteristic function for each possible
-    event.
-    Saves results summary to 'output.csv'.
+    Saves results summary to nonlinloc format.
     Saves characteristic function to './cf_data/meq01.cf.bin'.
 
-    \033[1m>> python apasvo-detector.py meq*.bin --output-format quakeml --cf --cff text @settings.txt\033[0m
+    \033[1m>> python apasvo-detector.py meq*.bin --output-format quakeml @settings.txt\033[0m
 
     Performs event picking on all files matching 'meq*.bin' and takes some
     settings from a text file named 'settings.txt'.
-    Saves results summary to 'example.out'.
-    Saves characteristic functions to 'cf_data' folder, plain text format.
+    Saves results to quakeml format.
 
     The following settings are used:
 
