@@ -31,12 +31,10 @@ A tool to detect/pick earthquakes on seismic signals.
 import argparse
 import sys
 import os
-import datetime
 import itertools
 import multiprocessing
 
 from apasvo._version import __version__
-from apasvo.utils import clt
 from apasvo.utils import parse
 from apasvo.utils import collections
 from apasvo.picking import stalta
@@ -59,9 +57,9 @@ OUTPUT_FORMAT_MAP = {
 }
 
 OUTPUT_EXTENSION_SET = {
-    'NLLOC_OBS': '',
-    'QUAKEML': 'xml',
-    'JSON': 'json',
+    'NLLOC_OBS': '.hyp',
+    'QUAKEML': '.xml',
+    'JSON': '.json',
 }
 
 METHOD_MAP = {
@@ -146,12 +144,11 @@ def analysis_single_file_task(filename, **kwargs):
         trace.detect(alg, **kwargs)
     # Export picks
     ouput_format = OUTPUT_FORMAT_MAP.get(kwargs.get('output_format', DEFAULT_OUTPUT_FORMAT))
-    extension = ''
+    extension = OUTPUT_EXTENSION_SET.get(kwargs.get('output_format', DEFAULT_OUTPUT_FORMAT))
     basename, _ = os.path.splitext(filename)
     trace_suffix = ''.join([tr.getId().replace('.', '_') for tr in stream.traces])
     output_filename = "{}_{}{}".format(basename, trace_suffix, extension)
     stream.export_picks(output_filename, format=ouput_format)
-
 
 
 def analysis_chunk_task(parameters):
