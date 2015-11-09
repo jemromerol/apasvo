@@ -24,7 +24,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-
 def flatten_dict(d, sep='_'):
     """Flattens a dict.
 
@@ -67,3 +66,12 @@ def flatten_list(l):
         else:
             out.append(v)
     return out[::-1]
+
+
+def chunkify(l, n):
+    """Splits a list into chunks
+    :param l: Input list
+    :param n: Length of each chunk
+    """
+    for i in xrange(0, len(l), n):
+        yield l[i:i + n]
