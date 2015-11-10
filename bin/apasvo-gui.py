@@ -35,13 +35,16 @@ from apasvo._version import _organization
 from apasvo.gui.views.generated import ui_mainwindow
 from apasvo.utils.formats import rawfile
 
+
 format_csv = 'csv'
+format_xml = 'xml'
 format_other = 'other'
 
 binary_files_filter = 'Binary Files (*.bin)'
 text_files_filter = 'Text Files (*.txt)'
 all_files_filter = 'All Files (*.*)'
 csv_files_filter = 'CSV Files (*.csv)'
+xml_files_filter = 'XML Files (*.xml)'
 
 APASVO_URL = 'https://github.com/jemromerol/apasvo/wiki'
 
@@ -65,7 +68,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     _cf_file_filters = {binary_files_filter: rawfile.format_binary,
                         text_files_filter: rawfile.format_text,
                         all_files_filter: format_other}
-    _summary_file_filters = {csv_files_filter: format_csv,
+    _summary_file_filters = {xml_files_filter: format_xml,
                              text_files_filter: rawfile.format_text,
                              all_files_filter: format_other}
 
@@ -77,25 +80,19 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.document = None
         self.isModified = False
         self.saved_filename = None
+        self.saved_event_format = None
         self.saved_cf_filename = None
         self.saved_cf_format = None
         self.saved_cf_dtype = None
         self.saved_cf_byteorder = None
 
-        stateDelegate = cbdelegate.ComboBoxDelegate(self.EventsTableView, rc.Event.statuses)
-        self.EventsTableView.setItemDelegateForColumn(5, stateDelegate)
-        self.EventsTableView.clicked.connect(self.goto_event_position)
-
         # Create context menu for events table
         self.event_context_menu = QtGui.QMenu(self)
         self.event_context_menu.addAction(self.actionDelete_Selected)
         self.EventsTableView.customContextMenuRequested.connect(lambda: self.event_context_menu.exec_(QtGui.QCursor.pos()))
+        self.EventsTableView.clicked.connect(self.goto_event_position)
 
         self.actionOpen.triggered.connect(self.open)
-        self.actionSave.triggered.connect(self.save_events)
-        self.actionSave.triggered.connect(self.save_cf)
-        self.actionSave_As.triggered.connect(self.save_events_as)
-        self.actionSave_As.triggered.connect(self.save_cf_as)
         self.actionSaveEvents.triggered.connect(self.save_events)
         self.actionSaveEvents_As.triggered.connect(self.save_events_as)
         self.actionSaveCF.triggered.connect(self.save_cf)
@@ -179,7 +176,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         """
         if filename is None:
             filename, _ = QtGui.QFileDialog.getOpenFileName(self, "Open Data File", ".",
-                                                            ";;".join(self._file_filters))
+                                                            ";;".join(self._file_filters), all_files_filter)
         if filename != '':
             if self.document is None:
                 try:
@@ -189,14 +186,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         values = dialog.get_values()
                         # Load and visualize the opened record
                         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                        record = rc.Record(filename, **values)
-                        self.document = eventlistmodel.EventListModel(record, ['name', 'time',
-                                                                      'cf_value',
-                                                                      'mode',
-                                                                      'method',
-                                                                      'status',
-                                                                      'comments'],
-                                                                      self.command_stack)
+                        record = rc.read(filename, **values)[0]
+                        self.document = eventlistmodel.EventListModel(record, self.command_stack)
                         self.document.emptyList.connect(self.set_modified)
                         self.actionUndo = self.document.command_stack.createUndoAction(self)
                         self.actionRedo = self.document.command_stack.createRedoAction(self)
@@ -204,6 +195,14 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         self.EventsTableView.setModel(self.document)
                         model = self.EventsTableView.selectionModel()
                         model.selectionChanged.connect(self.on_event_selection)
+                        # Connect Delegates
+                        for i, attribute in enumerate(self.document.attributes):
+                            if attribute.get('attribute_type') == 'enum' and attribute.get('editable', False):
+                                delegate = cbdelegate.ComboBoxDelegate(self.EventsTableView,
+                                                                       attribute.get('value_list', []))
+                                self.EventsTableView.setItemDelegateForColumn(i, delegate)
+                            else:
+                                self.EventsTableView.setItemDelegateForColumn(i, None)
                         # connect document model to signalViewer
                         self.document.eventCreated.connect(self.signalViewer.create_event)
                         self.document.eventDeleted.connect(self.signalViewer.delete_event)
@@ -267,9 +266,15 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         filename, _ = QtGui.QFileDialog.getSaveFileName(self, "Save Event List to File", ".",
                                                         ";;".join(self._summary_file_filters))
         if filename != '':
-            self.save_event_list(filename)
+            # Show dialog
+            dialog = save_events_dialog.SaveEventsDialog(self, fmt=self.saved_event_format)
+            return_code = dialog.exec_()
+            # Save Events to file and store settings
+            if return_code == QtGui.QDialog.Accepted:
+                values = dialog.get_values()
+                self.save_event_list(filename, format=values.get('fmt'))
 
-    def save_event_list(self, filename):
+    def save_event_list(self, filename, **kwargs):
         """Saves a results summary to file.
 
         Generates a results CSV summary.
@@ -277,9 +282,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         Args:
             filename: Output file name.
         """
-        with open(filename, 'w') as f:
-            rc.generate_csv([self.document.record], f)
-            self.saved_filename = filename
+        rc.ApasvoStream([self.document.record]).export_picks(filename, **kwargs)
+        self.saved_filename = filename
+        self.saved_event_format = kwargs.get('format')
 
     def save_cf(self):
         """Saves characteristic function to file.
@@ -341,6 +346,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.command_stack.clear()
             self.set_modified(False)
             self.saved_filename = None
+            self.saved_event_format = None
             self.signalViewer.unset_record()
             self.toolBarMedia.disconnect_path()
             # Update GUI
@@ -467,16 +473,16 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def set_modified(self, value):
         """Sets 'isModified' attribute's value"""
         self.isModified = value
-        self.actionSave.setEnabled(value)
-        self.actionSave_As.setEnabled(value)
         self.actionSaveEvents.setEnabled(value)
         self.actionSaveEvents_As.setEnabled(value)
-        self.actionSaveCF.setEnabled(value)
-        self.actionSaveCF_As.setEnabled(value)
+        # If already computed, enable save CF
+        cf_computed = False if self.document is None else len(self.document.record.cf) != 0
+        self.actionSaveCF.setEnabled(cf_computed)
+        self.actionSaveCF_As.setEnabled(cf_computed)
 
     def set_title(self):
         """Sets current window's title."""
-        prefix = '' if self.document is None else "%s - " % self.document.record.filename
+        prefix = '' if self.document is None else "%s - " % str(self.document.record)
         self.setWindowTitle('%s%s v.%s' % (prefix, _application_name, __version__))
 
     def strippedName(self, fullFileName):
@@ -641,6 +647,7 @@ if __name__ == '__main__':
     from apasvo.gui.views import navigationtoolbar
     from apasvo.gui.views import loaddialog
     from apasvo.gui.views import savedialog
+    from apasvo.gui.views import save_events_dialog
     from apasvo.gui.views import settingsdialog
     from apasvo.gui.views import takanamidialog
     from apasvo.gui.views import staltadialog
@@ -650,7 +657,7 @@ if __name__ == '__main__':
 
     from apasvo.picking import stalta
     from apasvo.picking import ampa
-    from apasvo.picking import record as rc
+    from apasvo.picking import apasvotrace as rc
 
     app.processEvents()
 

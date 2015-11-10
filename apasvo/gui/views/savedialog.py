@@ -31,6 +31,7 @@ from apasvo.utils.formats import rawfile
 
 
 FORMATS = (rawfile.format_binary, rawfile.format_text)
+DEFAULT_FORMAT = 'Binary'
 FORMATS_LABELS = ('Binary', 'Text')
 DTYPES = (rawfile.datatype_int16,
           rawfile.datatype_int32,
@@ -69,17 +70,17 @@ class SaveDialog(QtGui.QDialog, ui_savedialog.Ui_SaveDialog):
             Default: 'native'.
     """
 
-    def __init__(self, parent, fmt='binary', dtype='float64', byteorder='native'):
+    def __init__(self, parent, fmt=None, dtype='float64', byteorder='native'):
+        fmt = fmt.title() if fmt is not None else DEFAULT_FORMAT
         super(SaveDialog, self).__init__(parent)
         self.setupUi(self)
+        self.FileFormatComboBox.currentIndexChanged.connect(self.on_format_change)
         # init comboboxes
         self.FileFormatComboBox.addItems(FORMATS_LABELS)
         self.DataTypeComboBox.addItems(DTYPES_LABELS)
         self.ByteOrderComboBox.addItems(BYTEORDERS_LABELS)
-
-        self.FileFormatComboBox.currentIndexChanged.connect(self.on_format_change)
         # Set defaults
-        self.FileFormatComboBox.setCurrentIndex(FORMATS.index(fmt))
+        self.FileFormatComboBox.setCurrentIndex(FORMATS_LABELS.index(fmt))
         self.DataTypeComboBox.setCurrentIndex(DTYPES.index(dtype))
         # Detect endianness if 'native' byteorder is selected
         if byteorder == rawfile.byteorder_native:
@@ -103,6 +104,9 @@ class SaveDialog(QtGui.QDialog, ui_savedialog.Ui_SaveDialog):
             self.DataTypeLabel.setVisible(False)
             self.ByteOrderComboBox.setVisible(False)
             self.ByteOrderLabel.setVisible(False)
+        self.groupBox.adjustSize()
+        self.buttonBox.adjustSize()
+        self.adjustSize()
 
     def get_values(self):
         """Gets selected parameters."""

@@ -35,12 +35,12 @@
 from PySide import QtCore, QtGui
 
 
-class Ui_SaveDialog(object):
-    def setupUi(self, SaveDialog):
-        SaveDialog.setObjectName("SaveDialog")
-        self.verticalLayout = QtGui.QVBoxLayout(SaveDialog)
+class Ui_SaveEventsDialog(object):
+    def setupUi(self, SaveEventsDialog):
+        SaveEventsDialog.setObjectName("SaveEventsDialog")
+        self.verticalLayout = QtGui.QVBoxLayout(SaveEventsDialog)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.groupBox = QtGui.QGroupBox(SaveDialog)
+        self.groupBox = QtGui.QGroupBox(SaveEventsDialog)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -57,31 +57,20 @@ class Ui_SaveDialog(object):
         self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.FileFormatLabel)
         self.FileFormatComboBox = QtGui.QComboBox(self.groupBox)
         self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.FileFormatComboBox)
-        self.DataTypeLabel = QtGui.QLabel(self.groupBox)
-        self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole, self.DataTypeLabel)
-        self.DataTypeComboBox = QtGui.QComboBox(self.groupBox)
-        self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole, self.DataTypeComboBox)
-        self.ByteOrderLabel = QtGui.QLabel(self.groupBox)
-        self.formLayout.setWidget(2, QtGui.QFormLayout.LabelRole, self.ByteOrderLabel)
-        self.ByteOrderComboBox = QtGui.QComboBox(self.groupBox)
-        self.formLayout.setWidget(2, QtGui.QFormLayout.FieldRole, self.ByteOrderComboBox)
         self.verticalLayout.addWidget(self.groupBox)
-        self.buttonBox = QtGui.QDialogButtonBox(SaveDialog)
+        self.buttonBox = QtGui.QDialogButtonBox(SaveEventsDialog)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(False)
         self.verticalLayout.addWidget(self.buttonBox)
 
-        self.retranslateUi(SaveDialog)
-        self.DataTypeComboBox.setCurrentIndex(2)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), SaveDialog.accept)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), SaveDialog.reject)
-        QtCore.QMetaObject.connectSlotsByName(SaveDialog)
+        self.retranslateUi(SaveEventsDialog)
+        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), SaveEventsDialog.accept)
+        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), SaveEventsDialog.reject)
+        QtCore.QMetaObject.connectSlotsByName(SaveEventsDialog)
 
-    def retranslateUi(self, SaveDialog):
-        SaveDialog.setWindowTitle(QtGui.QApplication.translate("SaveDialog", "Save Characteristic Function As...", None, QtGui.QApplication.UnicodeUTF8))
-        self.groupBox.setTitle(QtGui.QApplication.translate("SaveDialog", "Options", None, QtGui.QApplication.UnicodeUTF8))
-        self.FileFormatLabel.setText(QtGui.QApplication.translate("SaveDialog", "File Format:", None, QtGui.QApplication.UnicodeUTF8))
-        self.DataTypeLabel.setText(QtGui.QApplication.translate("SaveDialog", "Encoding Data Type:", None, QtGui.QApplication.UnicodeUTF8))
-        self.ByteOrderLabel.setText(QtGui.QApplication.translate("SaveDialog", "Byte Order:", None, QtGui.QApplication.UnicodeUTF8))
+    def retranslateUi(self, SaveEventsDialog):
+        SaveEventsDialog.setWindowTitle(QtGui.QApplication.translate("SaveEventsDialog", "Save Events As...", None, QtGui.QApplication.UnicodeUTF8))
+        self.groupBox.setTitle(QtGui.QApplication.translate("SaveEventsDialog", "Options", None, QtGui.QApplication.UnicodeUTF8))
+        self.FileFormatLabel.setText(QtGui.QApplication.translate("SaveEventsDialog", "Export File Format:", None, QtGui.QApplication.UnicodeUTF8))
 
