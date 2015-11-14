@@ -58,6 +58,7 @@ from apasvo.gui.views import savedialog
 from apasvo.gui.views import save_events_dialog
 from apasvo.gui.views import settingsdialog
 from apasvo.gui.views import takanamidialog
+from apasvo.gui.views import trace_selector_dialog
 from apasvo.gui.views import staltadialog
 from apasvo.gui.views import ampadialog
 from apasvo.gui.views import playertoolbar
@@ -105,6 +106,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.setupUi(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+        self.stream = None
+        self.document_list = []
         self.document = None
         self.isModified = False
         self.saved_filename = None
@@ -120,7 +123,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.EventsTableView.customContextMenuRequested.connect(lambda: self.event_context_menu.exec_(QtGui.QCursor.pos()))
         self.EventsTableView.clicked.connect(self.goto_event_position)
 
-        self.actionOpen.triggered.connect(self.open)
+        self.actionOpen.triggered.connect(self.load)
         self.actionSaveEvents.triggered.connect(self.save_events)
         self.actionSaveEvents_As.triggered.connect(self.save_events_as)
         self.actionSaveCF.triggered.connect(self.save_cf)
@@ -136,6 +139,13 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionDelete_Selected.triggered.connect(self.delete_selected_events)
         self.actionAbout.triggered.connect(self.show_about)
         self.actionOnlineHelp.triggered.connect(lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl(APASVO_URL)))
+
+        # Create stream viewer dialog
+        self.trace_selector = trace_selector_dialog.TraceSelectorDialog(self.stream, parent=self)
+        self.action_show_trace_selector.toggled.connect(self.trace_selector.setVisible)
+        self.trace_selector.closed.connect(lambda: self.action_show_trace_selector.setChecked(True))
+        self.trace_selector.selection_changed.connect(self.toogle_document)
+
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
         self.splitter.addWidget(self.signalViewer)
@@ -184,13 +194,10 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionAnalysis_Toolbar.toggled.connect(self.toolBarAnalysis.setVisible)
         self.actionNavigation_Toolbar.toggled.connect(self.toolBarNavigation.setVisible)
 
-        if filename is not None:
-            self.open(filename)
-
         self.set_title()
         self.set_recent_menu()
 
-    def open(self, filename=None):
+    def load(self, filename=None):
         """Opens a new document.
 
         Opens selected document in the current window if it isn't currently
@@ -206,78 +213,31 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             filename, _ = QtGui.QFileDialog.getOpenFileName(self, "Open Data File", ".",
                                                             ";;".join(self._file_filters), all_files_filter)
         if filename != '':
-            if self.document is None:
-                try:
-                    dialog = loaddialog.LoadDialog(self, filename)
-                    return_code = dialog.exec_()
-                    if return_code == QtGui.QDialog.Accepted:
-                        values = dialog.get_values()
-                        # Load and visualize the opened record
-                        QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                        record = rc.read(filename, **values)[0]
-                        self.document = eventlistmodel.EventListModel(record, self.command_stack)
-                        self.document.emptyList.connect(self.set_modified)
-                        self.actionUndo = self.document.command_stack.createUndoAction(self)
-                        self.actionRedo = self.document.command_stack.createRedoAction(self)
-                        ########
-                        self.EventsTableView.setModel(self.document)
-                        model = self.EventsTableView.selectionModel()
-                        model.selectionChanged.connect(self.on_event_selection)
-                        # Connect Delegates
-                        for i, attribute in enumerate(self.document.attributes):
-                            if attribute.get('attribute_type') == 'enum' and attribute.get('editable', False):
-                                delegate = cbdelegate.ComboBoxDelegate(self.EventsTableView,
-                                                                       attribute.get('value_list', []))
-                                self.EventsTableView.setItemDelegateForColumn(i, delegate)
-                            else:
-                                self.EventsTableView.setItemDelegateForColumn(i, None)
-                        # connect document model to signalViewer
-                        self.document.eventCreated.connect(self.signalViewer.create_event)
-                        self.document.eventDeleted.connect(self.signalViewer.delete_event)
-                        self.document.eventModified.connect(self.signalViewer.update_event)
-                        self.document.detectionPerformed.connect(self.signalViewer.update_cf)
-                        self.document.detectionPerformed.connect(self.toolBarNavigation.update)
-                        # load document data into signal viewer
-                        self.signalViewer.set_record(self.document)
-                        self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
-                        self.signalViewer.set_signal_amplitude_visible(self.actionSignal_Amplitude.isChecked())
-                        self.signalViewer.set_signal_envelope_visible(self.actionSignal_Envelope.isChecked())
-                        self.signalViewer.set_cf_visible(self.actionCharacteristic_Function.isChecked())
-                        self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
-                        self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
-                        self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
-                        self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
-                        self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
-                        self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
-                        self.toolBarMedia.connect_path()
-                        # Update recent list
-                        self.push_recent_list(filename)
-                        # Update GUI
-                        self.centralwidget.setVisible(True)
-                        self.actionClose.setEnabled(True)
-                        self.actionClear_Event_List.setEnabled(True)
-                        self.actionSTA_LTA.setEnabled(True)
-                        self.actionAMPA.setEnabled(True)
-                        self.toolBarNavigation.setEnabled(True)
-                        self.toolBarAnalysis.setEnabled(True)
-                        self.toolBarMedia.set_enabled(True)
-                        self.set_title()
-                except Exception, e:
-                    error.display_error_dlg(str(e), traceback.format_exc())
-                    self.close()
-                finally:
-                    QtGui.QApplication.restoreOverrideCursor()
-            else:
-                other = MainWindow(filename=filename)
-                MainWindow.windowList.append(other)
-                other.move(self.x() + 40, self.y() + 40)
-                other.show()
+            dialog = loaddialog.LoadDialog(self, filename)
+            return_code = dialog.exec_()
+            if return_code == QtGui.QDialog.Accepted:
+                values = dialog.get_values()
+                # Load and visualize the opened record
+                stream = rc.read(filename, **values)
+                self.stream = stream if self.stream is None else self.stream.extend(stream)
+                if stream:
+                    for trace in stream:
+                        document = eventlistmodel.EventListModel(trace, self.command_stack)
+                        self.document_list.append(document)
+                    self.trace_selector.refresh()
+                    if len(self.stream) > 1:
+                        self.action_show_trace_selector.setEnabled(True)
+                        self.action_show_trace_selector.setChecked(True)
+                    if self.document is None:
+                        self.toogle_document(0)
+            # Update recent list
+            self.push_recent_list(filename)
 
     def open_recent(self):
         """Opens a document from recent opened list."""
         action = self.sender()
         if action:
-            self.open(action.data())
+            self.load(action.data())
 
     def save_events(self):
         """Saves event list to file.
@@ -386,6 +346,62 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.toolBarNavigation.setEnabled(False)
             self.toolBarAnalysis.setEnabled(False)
             self.set_title()
+
+    def toogle_document(self, document_idx):
+        """
+
+        :param document:
+        :return:
+        """
+        document = self.document_list[document_idx]
+        if document != self.document:
+            # Load and visualize the opened record
+            self.document = document
+            self.document.emptyList.connect(self.set_modified)
+            ########
+            self.EventsTableView.setModel(self.document)
+            model = self.EventsTableView.selectionModel()
+            model.selectionChanged.connect(self.on_event_selection)
+            # Connect Delegates
+            for i, attribute in enumerate(self.document.attributes):
+                if attribute.get('attribute_type') == 'enum' and attribute.get('editable', False):
+                    delegate = cbdelegate.ComboBoxDelegate(self.EventsTableView,
+                                                           attribute.get('value_list', []))
+                    self.EventsTableView.setItemDelegateForColumn(i, delegate)
+                else:
+                    self.EventsTableView.setItemDelegateForColumn(i, None)
+            # connect document model to signalViewer
+            self.document.eventCreated.connect(self.signalViewer.create_event)
+            self.document.eventDeleted.connect(self.signalViewer.delete_event)
+            self.document.eventModified.connect(self.signalViewer.update_event)
+            self.document.detectionPerformed.connect(self.signalViewer.update_cf)
+            self.document.detectionPerformed.connect(self.toolBarNavigation.update)
+            # load document data into signal viewer
+            self.signalViewer.unset_record()
+            self.signalViewer.set_record(self.document)
+            self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
+            self.signalViewer.set_signal_amplitude_visible(self.actionSignal_Amplitude.isChecked())
+            self.signalViewer.set_signal_envelope_visible(self.actionSignal_Envelope.isChecked())
+            self.signalViewer.set_cf_visible(self.actionCharacteristic_Function.isChecked())
+            self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
+            self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
+            self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
+            self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
+            self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
+            self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
+            self.toolBarMedia.connect_path()
+            # Update GUI
+            self.centralwidget.setVisible(True)
+            self.actionClose.setEnabled(True)
+            self.actionClear_Event_List.setEnabled(True)
+            self.actionSTA_LTA.setEnabled(True)
+            self.actionAMPA.setEnabled(True)
+            self.toolBarNavigation.setEnabled(True)
+            self.toolBarAnalysis.setEnabled(True)
+            self.toolBarMedia.set_enabled(True)
+            self.set_title()
+
+
 
     def edit_settings(self):
         """Opens settings dialog."""

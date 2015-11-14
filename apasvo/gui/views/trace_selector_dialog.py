@@ -110,49 +110,16 @@ class TraceSelectorDialog(QtGui.QDialog):
             by using the estimated arrival time after clicking on 'Accept'
     """
 
-    def __init__(self, document, t_start=None, t_end=None, seismic_event=None, parent=None):
+    closed = QtCore.Signal()
+    selection_changed = QtCore.Signal(int)
+
+    def __init__(self, stream, parent=None):
         super(TraceSelectorDialog, self).__init__(parent)
 
-        self.document = document
-        self.record = self.document.record
-
-        self.load_settings()
-
-        self.seismic_event = seismic_event
-        self._start = t_start
-        self._end = t_end
-
-        if self.seismic_event is not None:
-            self.event_time = self.seismic_event.stime
-            if self._start is None:
-                self._start = max(0, self.event_time - self.default_margin)
-            if self._end is None:
-                self._end = min(len(self.record.signal) - 1, self.event_time + self.default_margin)
-        else:
-            if self._start is None or self._end is None:
-                raise ValueError("t_start and t_end values not specified")
-            else:
-                self._start = max(0, int(t_start * self.record.fs))
-                self._end = min(len(self.record.signal) - 1, int(t_end * self.record.fs))
-                self.event_time = self._start + int((self._end - self._start) / 2)
-
-        if not 0 <= self._start < self._end:
-            raise ValueError("Invalid t_start value")
-        if not self._start < self._end < len(self.record.signal):
-            raise ValueError("Invalid t_end value")
-        if (self._end - self._start) < (MINIMUM_MARGIN_IN_SECS * self.record.fs):
-            raise ValueError("Distance between t_start and t_end must be"
-                             " at least of %g seconds" % MINIMUM_MARGIN_IN_SECS)
-        if not self._start < self.event_time < self._end:
-            raise ValueError("Event time must be a value between t-start and t_end")
+        self.stream = stream
 
         self._init_ui()
 
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-        self.button_box.clicked.connect(self.on_click)
-        self.start_point_spinbox.timeChanged.connect(self.on_start_point_changed)
-        self.end_point_spinbox.timeChanged.connect(self.on_end_point_changed)
 
     def _init_ui(self):
         self.setWindowTitle("Takanami's Autoregressive Method")
@@ -196,51 +163,25 @@ class TraceSelectorDialog(QtGui.QDialog):
         self.layout.addWidget(self.group_box)
         self.layout.addWidget(self.button_box)
 
-        # set spinboxes's initial values and limits
-        max_time_in_msecs = int(((len(self.record.signal) - 1) * 1000) / self.record.fs)
-        start_time_in_msecs = int((self._start * 1000.0) / self.record.fs)
-        end_time_in_msecs = int((self._end * 1000.0) / self.record.fs)
-        self.start_point_spinbox.setTime(QtCore.QTime().addMSecs(start_time_in_msecs))
-        self.end_point_spinbox.setTime(QtCore.QTime().addMSecs(end_time_in_msecs))
-        self.start_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(0))
-        self.end_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(start_time_in_msecs + MINIMUM_MARGIN_IN_SECS * 1000))
-        self.start_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(end_time_in_msecs - MINIMUM_MARGIN_IN_SECS * 1000))
-        self.end_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(max_time_in_msecs))
+        # # set spinboxes's initial values and limits
+        # max_time_in_msecs = int(((len(self.record.signal) - 1) * 1000) / self.record.fs)
+        # start_time_in_msecs = int((self._start * 1000.0) / self.record.fs)
+        # end_time_in_msecs = int((self._end * 1000.0) / self.record.fs)
+        # self.start_point_spinbox.setTime(QtCore.QTime().addMSecs(start_time_in_msecs))
+        # self.end_point_spinbox.setTime(QtCore.QTime().addMSecs(end_time_in_msecs))
+        # self.start_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(0))
+        # self.end_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(start_time_in_msecs + MINIMUM_MARGIN_IN_SECS * 1000))
+        # self.start_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(end_time_in_msecs - MINIMUM_MARGIN_IN_SECS * 1000))
+        # self.end_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(max_time_in_msecs))
 
-    def on_click(self, button):
-        if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Ok:
-            self.save_event()
-        if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Apply:
-            self.do_takanami()
+    def closeEvent(self, event):
+        if True:
+            event.accept()
+        else:
+            event.ignore()
 
-    def on_start_point_changed(self, value):
-        time_in_msecs = QtCore.QTime().msecsTo(value)
-        t_start = int(max(0, (time_in_msecs / 1000.0) *
-                          self.record.fs))
-        if self._start != t_start:
-            self._start = t_start
-            self.end_point_spinbox.setMinimumTime(QtCore.QTime().
-                                                  addMSecs(time_in_msecs + MINIMUM_MARGIN_IN_SECS * 1000))
-
-    def on_end_point_changed(self, value):
-        time_in_msecs = QtCore.QTime().msecsTo(value)
-        t_end = int(min(len(self.record.signal),
-                        ((time_in_msecs / 1000.0) *
-                         self.record.fs)))
-        if self._end != t_end:
-            self._end = t_end
-            self.start_point_spinbox.setMaximumTime(QtCore.QTime().
-                                                    addMSecs(time_in_msecs - MINIMUM_MARGIN_IN_SECS * 1000))
-
-    def on_position_estimated(self, time, aic, n0_aic):
-        self.event_time = time
-        time_in_secs = self.event_time / self.record.fs
-        self.position_label.setText("Estimated Arrival Time: {}".format(
-            clt.float_secs_2_string_date(time_in_secs, starttime=self.record.starttime)))
-        # Plot estimated arrival time
-        m_event = rc.ApasvoEvent(self.record, time, aic=aic, n0_aic=n0_aic)
-        m_event.plot_aic(show_envelope=True, num=self.fig.number)
-        self.fig.canvas.draw_idle()
+    def refresh(self):
+        pass
 
     def load_settings(self):
         """Loads settings from persistent storage."""
@@ -250,29 +191,3 @@ class TraceSelectorDialog(QtGui.QDialog):
                              self.record.fs)
         settings.endGroup()
 
-    def save_event(self):
-        """"""
-        if self.seismic_event is not None:
-            if self.seismic_event.stime != self.event_time:
-                self.document.editEvent(self.seismic_event,
-                                        stime=self.event_time,
-                                        method=rc.method_takanami,
-                                        evaluation_mode=rc.mode_automatic,
-                                        evaluation_status=rc.status_preliminary)
-        else:
-            self.document.createEvent(self.event_time,
-                                      method=rc.method_takanami,
-                                      evaluation_mode=rc.mode_automatic,
-                                      evaluation_status=rc.status_preliminary)
-
-    def do_takanami(self):
-        self._task = TakanamiTask(self.record, self._start, self._end)
-        self._task.position_estimated.connect(self.on_position_estimated)
-        self.wait_dialog = processingdialog.ProcessingDialog(label_text="Applying Takanami's AR method...")
-        self.wait_dialog.setWindowTitle("Event detection")
-        return self.wait_dialog.run(self._task)
-
-    def exec_(self, *args, **kwargs):
-        return_code = self.do_takanami()
-        if return_code == QtGui.QDialog.Accepted:
-            return QtGui.QDialog.exec_(self, *args, **kwargs)

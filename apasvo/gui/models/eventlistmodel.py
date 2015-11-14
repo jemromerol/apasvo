@@ -71,6 +71,7 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.color_key = None
         self.color_map = {}
         self.loadColorMap()
+        # Set visualization settings
 
     @property
     def empty(self):
