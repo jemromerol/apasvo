@@ -168,6 +168,7 @@ class DetectEvents(QtGui.QUndoCommand):
                                            upper())
         self.model = model
         self.n_events_before = len(self.model.record.events)
+        self.events_old = self.model.record.events[:]
         self.events = list(self.model.record.detect(alg, **kwargs))
         self.n_events_after = len(self.events)
         self.model.detectionPerformed.emit()
@@ -175,7 +176,7 @@ class DetectEvents(QtGui.QUndoCommand):
     def undo(self):
         self.model.beginRemoveRows(QtCore.QModelIndex(), self.n_events_before,
                                    self.n_events_after - 1)
-        self.model.record.events = self.model.record.events[:self.n_events_before]
+        self.model.record.events = self.events_old[:]
         for i in range(self.n_events_before, self.n_events_after):
             self.model.eventDeleted.emit(self.events[i])
         self.model.endRemoveRows()
@@ -183,7 +184,7 @@ class DetectEvents(QtGui.QUndoCommand):
     def redo(self):
         self.model.beginInsertRows(QtCore.QModelIndex(), self.n_events_before,
                                    self.n_events_after - 1)
-        self.model.record.events = list(self.events)
+        self.model.record.events = self.events[:]
         for i in range(self.n_events_before, self.n_events_after):
             self.model.eventCreated.emit(self.events[i])
         self.model.endInsertRows()
@@ -196,10 +197,16 @@ class OpenStream(QtGui.QUndoCommand):
 
     def __init__(self, main_window, stream):
         super(OpenStream, self).__init__('Open stream')
-        self.stream = stream[:]
         self.main_window = main_window
         self.old_stream = self.main_window.stream[:]
         self.old_document_list = self.main_window.document_list[:]
+        self.stream = stream[:] if self.main_window.stream is None \
+            else self.main_window.stream[:].extend(stream)
+        self.stream = self.main_window.stream[:]
+        self.document_list = self.main_window.document_list[:]
+        for trace in stream:
+            self.stream.append(trace)
+            self.document_list.append(EventListModel(trace, self.main_window.command_stack))
 
     def undo(self):
         self.main_window.stream = self.old_stream[:]
@@ -215,11 +222,8 @@ class OpenStream(QtGui.QUndoCommand):
             self.main_window.close()
 
     def redo(self):
-        self.main_window.stream = self.stream if self.main_window.stream is None \
-            else self.main_window.stream.extend(self.stream)
-        for trace in self.stream:
-            document = EventListModel(trace, self.main_window.command_stack)
-            self.main_window.document_list.append(document)
+        self.main_window.stream = self.stream[:]
+        self.main_window.document_list = self.document_list[:]
         self.main_window.trace_selector.refresh()
         if len(self.main_window.stream) > 1:
             self.main_window.action_show_trace_selector.setEnabled(True)
