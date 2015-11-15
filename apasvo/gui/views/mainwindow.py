@@ -321,7 +321,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         """
         if self.maybeSave():
             if self.document is not None:
-                self.document.emptyList.disconnect(self.set_modified)
+                # Disconnect all signals!!
                 self.document = None
             self.set_modified(False)
             self.saved_filename = None
@@ -348,6 +348,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.current_document_idx = document_idx
         document = self.document_list[document_idx]
         if document != self.document:
+            self.disconnect_document()
             # Load and visualize the opened record
             self.document = document
             self.document.emptyList.connect(self.set_modified)
@@ -394,7 +395,17 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.toolBarMedia.set_enabled(True)
             self.set_title()
 
-
+    def disconnect_document(self):
+        if self.document is not None:
+            # Disconnect existing signals
+            self.document.emptyList.disconnect(self.set_modified)
+            self.document.eventCreated.disconnect(self.signalViewer.create_event)
+            self.document.eventDeleted.disconnect(self.signalViewer.delete_event)
+            self.document.eventModified.disconnect(self.signalViewer.update_event)
+            self.document.detectionPerformed.disconnect(self.signalViewer.update_cf)
+            self.document.detectionPerformed.disconnect(self.toolBarNavigation.update)
+            model = self.EventsTableView.selectionModel()
+            model.selectionChanged.disconnect(self.on_event_selection)
 
     def edit_settings(self):
         """Opens settings dialog."""
