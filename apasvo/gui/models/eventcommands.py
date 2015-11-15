@@ -27,6 +27,8 @@
 from PySide import QtCore
 from PySide import QtGui
 
+from apasvo.gui.models.eventlistmodel import EventListModel
+
 
 class AppendEvent(QtGui.QUndoCommand):
 
@@ -190,6 +192,82 @@ class DetectEvents(QtGui.QUndoCommand):
         return 6
 
 
+class OpenStream(QtGui.QUndoCommand):
+
+    def __init__(self, main_window, stream):
+        super(OpenStream, self).__init__('Open stream')
+        self.stream = stream[:]
+        self.main_window = main_window
+        self.old_stream = self.main_window.stream[:]
+        self.old_document_list = self.main_window.document_list[:]
+
+    def undo(self):
+        self.main_window.stream = self.old_stream[:]
+        self.main_window.document_list = self.old_document_list[:]
+        self.main_window.trace_selector.refresh()
+        if self.main_window.stream:
+            if len(self.main_window.stream) < 2:
+                self.main_window.action_show_trace_selector.setEnabled(False)
+                self.main_window.action_show_trace_selector.setChecked(False)
+            if self.main_window.current_document_idx not in range(len(self.main_window.document_list)):
+                self.main_window.toogle_document(0)
+        else:
+            self.main_window.close()
+
+    def redo(self):
+        self.main_window.stream = self.stream if self.main_window.stream is None \
+            else self.main_window.stream.extend(self.stream)
+        for trace in self.stream:
+            document = EventListModel(trace, self.main_window.command_stack)
+            self.main_window.document_list.append(document)
+        self.main_window.trace_selector.refresh()
+        if len(self.main_window.stream) > 1:
+            self.main_window.action_show_trace_selector.setEnabled(True)
+            self.main_window.action_show_trace_selector.setChecked(True)
+        # if self.document is None:
+        #     self.toogle_document(0)
+        self.main_window.toogle_document(-1)
+
+    def id(self):
+        return 7
+
+
+class CloseTraces(QtGui.QUndoCommand):
+
+    def __init__(self, main_window, trace_idx_list):
+        super(CloseTraces, self).__init__('Close trace')
+        self.trace_idx_set = set(trace_idx_list)
+        self.main_window = main_window
+        self.removed_traces_list = {i: self.main_window.stream[i] for i in self.trace_idx_set}
+        self.removed_documents_list = {i: self.main_window.document_list[i] for i in self.trace_idx_set}
+
+    def undo(self):
+        for i in sorted(self.trace_idx_set):
+            self.main_window.stream.insert(i, self.removed_traces_list[i])
+            self.main_window.document_list.insert(i, self.removed_documents_list[i])
+        self.main_window.trace_selector.refresh()
+        if len(self.main_window.stream) > 1:
+            self.main_window.action_show_trace_selector.setEnabled(True)
+            self.main_window.action_show_trace_selector.setChecked(True)
+        elif len(self.main_window.stream) == 1:
+            self.main_window.toogle_document(0)
+
+    def redo(self):
+        for i in sorted(self.trace_idx_set, reverse=True):
+            self.main_window.stream.pop(i)
+            self.main_window.document_list.pop(i)
+        self.main_window.trace_selector.refresh()
+        if self.main_window.stream:
+            if len(self.main_window.stream) < 2:
+                self.main_window.action_show_trace_selector.setEnabled(False)
+                self.main_window.action_show_trace_selector.setChecked(False)
+            if self.main_window.current_document_idx in self.trace_idx_set:
+                self.main_window.toogle_document(0)
+        else:
+            self.main_window.close()
+
+    def id(self):
+        return 8
 
 
 

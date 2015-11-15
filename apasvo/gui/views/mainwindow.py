@@ -33,6 +33,7 @@ matplotlib.rcParams['patch.antialiased'] = False
 matplotlib.rcParams['agg.path.chunksize'] = 80000
 
 import numpy as np
+import obspy as op
 import traceback
 
 from apasvo.picking import stalta
@@ -48,8 +49,8 @@ from apasvo.gui.views.generated import ui_mainwindow
 from apasvo.utils.formats import rawfile
 from apasvo.gui.views.generated import qrc_icons
 from apasvo.gui.delegates import cbdelegate
-from apasvo.gui.models import eventlistmodel
 from apasvo.gui.models import pickingtask
+from apasvo.gui.models import eventcommands as commands
 from apasvo.gui.views import aboutdialog
 from apasvo.gui.views import svwidget
 from apasvo.gui.views import navigationtoolbar
@@ -106,8 +107,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.setupUi(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        self.stream = None
+        self.stream = op.core.Stream()
         self.document_list = []
+        self.current_document_idx = -1
         self.document = None
         self.isModified = False
         self.saved_filename = None
@@ -128,7 +130,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSaveEvents_As.triggered.connect(self.save_events_as)
         self.actionSaveCF.triggered.connect(self.save_cf)
         self.actionSaveCF_As.triggered.connect(self.save_cf_as)
-        self.actionClose.triggered.connect(self.close)
+        self.actionClose.triggered.connect(lambda: self.command_stack.push(commands.CloseTraces(self, [self.current_document_idx])))
         self.actionQuit.triggered.connect(QtGui.qApp.closeAllWindows)
         self.actionClearRecent.triggered.connect(self.clear_recent_list)
         self.actionSettings.triggered.connect(self.edit_settings)
@@ -143,7 +145,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         # Create stream viewer dialog
         self.trace_selector = trace_selector_dialog.TraceSelectorDialog(self.stream, parent=self)
         self.action_show_trace_selector.toggled.connect(self.trace_selector.setVisible)
-        self.trace_selector.closed.connect(lambda: self.action_show_trace_selector.setChecked(True))
+        self.trace_selector.closed.connect(lambda: self.action_show_trace_selector.setChecked(False))
         self.trace_selector.selection_changed.connect(self.toogle_document)
 
         # add navigation toolbar
@@ -219,17 +221,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                 values = dialog.get_values()
                 # Load and visualize the opened record
                 stream = rc.read(filename, **values)
-                self.stream = stream if self.stream is None else self.stream.extend(stream)
-                if stream:
-                    for trace in stream:
-                        document = eventlistmodel.EventListModel(trace, self.command_stack)
-                        self.document_list.append(document)
-                    self.trace_selector.refresh()
-                    if len(self.stream) > 1:
-                        self.action_show_trace_selector.setEnabled(True)
-                        self.action_show_trace_selector.setChecked(True)
-                    if self.document is None:
-                        self.toogle_document(0)
+                self.command_stack.push(commands.OpenStream(self, stream))
             # Update recent list
             self.push_recent_list(filename)
 
@@ -331,7 +323,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             if self.document is not None:
                 self.document.emptyList.disconnect(self.set_modified)
                 self.document = None
-            self.command_stack.clear()
             self.set_modified(False)
             self.saved_filename = None
             self.saved_event_format = None
@@ -345,6 +336,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.actionAMPA.setEnabled(False)
             self.toolBarNavigation.setEnabled(False)
             self.toolBarAnalysis.setEnabled(False)
+            self.adjustSize()
             self.set_title()
 
     def toogle_document(self, document_idx):
@@ -353,6 +345,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         :param document:
         :return:
         """
+        self.current_document_idx = document_idx
         document = self.document_list[document_idx]
         if document != self.document:
             # Load and visualize the opened record

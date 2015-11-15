@@ -163,22 +163,20 @@ class TraceSelectorDialog(QtGui.QDialog):
         self.layout.addWidget(self.group_box)
         self.layout.addWidget(self.button_box)
 
-        # # set spinboxes's initial values and limits
-        # max_time_in_msecs = int(((len(self.record.signal) - 1) * 1000) / self.record.fs)
-        # start_time_in_msecs = int((self._start * 1000.0) / self.record.fs)
-        # end_time_in_msecs = int((self._end * 1000.0) / self.record.fs)
-        # self.start_point_spinbox.setTime(QtCore.QTime().addMSecs(start_time_in_msecs))
-        # self.end_point_spinbox.setTime(QtCore.QTime().addMSecs(end_time_in_msecs))
-        # self.start_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(0))
-        # self.end_point_spinbox.setMinimumTime(QtCore.QTime().addMSecs(start_time_in_msecs + MINIMUM_MARGIN_IN_SECS * 1000))
-        # self.start_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(end_time_in_msecs - MINIMUM_MARGIN_IN_SECS * 1000))
-        # self.end_point_spinbox.setMaximumTime(QtCore.QTime().addMSecs(max_time_in_msecs))
-
     def closeEvent(self, event):
-        if True:
-            event.accept()
-        else:
-            event.ignore()
+        settings = QtCore.QSettings(_organization, _application_name)
+        settings.beginGroup("geometry")
+        settings.setValue("trace_selector", self.saveGeometry())
+        settings.endGroup()
+        self.closed.emit()
+        super(TraceSelectorDialog, self).closeEvent(event)
+
+    def showEvent(self, event):
+        settings = QtCore.QSettings(_organization, _application_name)
+        settings.beginGroup("geometry")
+        self.restoreGeometry(settings.value("trace_selector"))
+        settings.endGroup()
+        super(TraceSelectorDialog, self).showEvent(event)
 
     def refresh(self):
         pass

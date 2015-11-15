@@ -27,7 +27,7 @@
 from PySide import QtCore
 from PySide import QtGui
 import obspy as op
-from apasvo.gui.models import eventcommands as commands
+import eventcommands as commands
 from apasvo.gui.views.settingsdialog import COLOR_KEYS
 from apasvo.gui.views.settingsdialog import DEFAULT_COLOR_KEY
 from apasvo.gui.views.settingsdialog import DEFAULT_COLOR_SCHEME
@@ -71,7 +71,6 @@ class EventListModel(QtCore.QAbstractTableModel):
         self.color_key = None
         self.color_map = {}
         self.loadColorMap()
-        # Set visualization settings
 
     @property
     def empty(self):
