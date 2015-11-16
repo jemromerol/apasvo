@@ -2,8 +2,6 @@
 '''
 @author:     Jose Emilio Romero Lopez
 
-@copyright:  Copyright 2013-2014, Jose Emilio Romero Lopez.
-
 @license:    GPL
 
 @contact:    jemromerol@gmail.com
@@ -27,25 +25,15 @@
 from PySide import QtCore
 from PySide import QtGui
 
-import matplotlib
-matplotlib.rcParams['backend'] = 'qt4agg'
-matplotlib.rcParams['backend.qt4'] = 'PySide'
-matplotlib.rcParams['patch.antialiased'] = False
-matplotlib.rcParams['agg.path.chunksize'] = 80000
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from apasvo.gui.views import navigationtoolbar
 from apasvo.gui.views import processingdialog
-from apasvo.utils import clt
-import matplotlib.pyplot as plt
+from apasvo.gui.views import tsvwidget
 
 import numpy as np
 import traceback
-from apasvo.picking import apasvotrace as rc
 from apasvo.picking import takanami
 from apasvo._version import _application_name
 from apasvo._version import _organization
-
-MINIMUM_MARGIN_IN_SECS = 0.5
 
 
 class StreamPickingTask(QtCore.QObject):
@@ -99,7 +87,7 @@ class StreamPickingTask(QtCore.QObject):
         self._abort = True
 
 
-class TraceSelectorDialog(QtGui.QDialog):
+class TraceSelectorDialog(QtGui.QMainWindow):
     """A dialog to apply Takanami's AR picking method to a selected piece of a
     seismic signal.
 
@@ -113,55 +101,74 @@ class TraceSelectorDialog(QtGui.QDialog):
     closed = QtCore.Signal()
     selection_changed = QtCore.Signal(int)
 
-    def __init__(self, stream, parent=None):
+    def __init__(self, stream, parent):
         super(TraceSelectorDialog, self).__init__(parent)
 
+        self.main_window = parent
         self.stream = stream
-
         self._init_ui()
+
+        # Connect signals
 
 
     def _init_ui(self):
-        self.setWindowTitle("Takanami's Autoregressive Method")
-        self.fig, _ = plt.subplots(2, 1, sharex=True)
-        self.canvas = FigureCanvas(self.fig)
-        self.canvas.setMinimumSize(self.canvas.size())
-        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
-                                                    QtGui.QSizePolicy.Policy.Expanding))
-        self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
-        self.position_label = QtGui.QLabel("Estimated Arrival Time: 00 h 00 m 00.000 s")
-        self.group_box = QtGui.QGroupBox(self)
-        self.group_box.setTitle("Limits")
-        self.start_point_label = QtGui.QLabel("Start point:")
-        self.start_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
-                                                               QtGui.QSizePolicy.Policy.Preferred))
-        self.start_point_spinbox = QtGui.QTimeEdit(self.group_box)
-        self.start_point_spinbox.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
-        self.end_point_label = QtGui.QLabel("End point:")
-        self.end_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
-                                                               QtGui.QSizePolicy.Policy.Preferred))
-        self.end_point_spinbox = QtGui.QTimeEdit(self.group_box)
-        self.end_point_spinbox.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
-        self.group_box_layout = QtGui.QHBoxLayout(self.group_box)
-        self.group_box_layout.setContentsMargins(9, 9, 9, 9)
-        self.group_box_layout.setSpacing(12)
-        self.group_box_layout.addWidget(self.start_point_label)
-        self.group_box_layout.addWidget(self.start_point_spinbox)
-        self.group_box_layout.addWidget(self.end_point_label)
-        self.group_box_layout.addWidget(self.end_point_spinbox)
-        self.button_box = QtGui.QDialogButtonBox(self)
-        self.button_box.setOrientation(QtCore.Qt.Horizontal)
-        self.button_box.setStandardButtons(QtGui.QDialogButtonBox.Apply |
-                                           QtGui.QDialogButtonBox.Cancel |
-                                           QtGui.QDialogButtonBox.Ok)
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.setContentsMargins(9, 9, 9, 9)
-        self.layout.setSpacing(6)
-        self.layout.addWidget(self.toolBarNavigation)
-        self.layout.addWidget(self.canvas)
-        self.layout.addWidget(self.position_label)
-        self.layout.addWidget(self.group_box)
-        self.layout.addWidget(self.button_box)
+        self.setWindowTitle("Opened Traces")
+        # Create main structure
+        self.centralwidget = QtGui.QWidget(self)
+        self.centralwidget.setVisible(False)
+        self.setCentralWidget(self.centralwidget)
+        self.layout = QtGui.QVBoxLayout(self.centralwidget)
+        self.stream_viewer = tsvwidget.StreamViewerWidget(self)
+        self.layout.addWidget(self.stream_viewer)
+
+        # Add main toolbar
+        self.tool_bar_main = QtGui.QToolBar(self)
+        self.action_save = QtGui.QAction(self)
+        self.action_save.setIcon(QtGui.QIcon(":/save.png"))
+        self.action_save.setEnabled(False)
+        self.action_close = QtGui.QAction(self)
+        self.action_close.setIcon(QtGui.QIcon(":/close.png"))
+        self.action_close.setEnabled(False)
+        self.tool_bar_main.addAction(self.action_save)
+        self.tool_bar_main.addAction(self.action_close)
+        self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_main)
+
+        # Add analysis toolbar
+        self.tool_bar_analysis = QtGui.QToolBar(self)
+        self.action_sta_lta = QtGui.QAction(self)
+        self.action_sta_lta.setIcon(QtGui.QIcon(":/stalta.png"))
+        self.action_sta_lta.setEnabled(False)
+        self.action_sta_lta.setToolTip("Apply STA-LTA algorithm")
+        self.action_ampa = QtGui.QAction(self)
+        self.action_ampa.setIcon(QtGui.QIcon(":/ampa.png"))
+        self.action_ampa.setEnabled(False)
+        self.action_ampa.setToolTip("Apply AMPA algorithm")
+        self.tool_bar_analysis.addAction(self.action_sta_lta)
+        self.tool_bar_analysis.addAction(self.action_ampa)
+        # self.tool_bar_analysis.addSeparator()
+        # self.action_activate_threshold = QtGui.QAction(self)
+        # self.action_activate_threshold.setIcon(QtGui.QIcon(":/threshold.png"))
+        # self.action_activate_threshold.setCheckable(True)
+        # self.action_activate_threshold.setChecked(False)
+        # self.action_activate_threshold.setToolTip("Enable/Disable Threshold")
+        # self.tool_bar_analysis.addAction(self.action_activate_threshold)
+        # self.threshold_label = QtGui.QLabel(" Threshold value: ", parent=self.tool_bar_analysis)
+        # self.threshold_label.setEnabled(False)
+        # self.tool_bar_analysis.addWidget(self.threshold_label)
+        # self.threshold_spinbox = QtGui.QDoubleSpinBox(self.tool_bar_analysis)
+        # self.threshold_spinbox.setMinimum(0.0)
+        # self.threshold_spinbox.setMaximum(20.0)
+        # self.threshold_spinbox.setSingleStep(0.01)
+        # self.threshold_spinbox.setValue(1.0)
+        # self.threshold_spinbox.setAccelerated(True)
+        # self.threshold_spinbox.setEnabled(False)
+        # self.tool_bar_analysis.addWidget(self.threshold_spinbox)
+        self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_analysis)
+
+        # Add navigation toolbar
+        self.tool_bar_navigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
+        self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_navigation)
+        self.addToolBarBreak()
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(_organization, _application_name)
@@ -179,13 +186,9 @@ class TraceSelectorDialog(QtGui.QDialog):
         super(TraceSelectorDialog, self).showEvent(event)
 
     def refresh(self):
-        pass
+        self.stream_viewer.set_stream(self.stream)
+        stream_has_any_trace = len(self.stream)
+        self.action_sta_lta.setEnabled(stream_has_any_trace)
+        self.action_ampa.setEnabled(stream_has_any_trace)
 
-    def load_settings(self):
-        """Loads settings from persistent storage."""
-        settings = QtCore.QSettings(_organization, _application_name)
-        settings.beginGroup("takanami_settings")
-        self.default_margin = int(float(settings.value('takanami_margin', 5.0)) *
-                             self.record.fs)
-        settings.endGroup()
 
