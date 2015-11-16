@@ -112,7 +112,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
 
     def _init_ui(self):
-        self.setWindowTitle("Opened Traces")
+        self.set_title()
         # Create main structure
         self.centralwidget = QtGui.QWidget(self)
         self.centralwidget.setVisible(False)
@@ -170,6 +170,9 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_navigation)
         self.addToolBarBreak()
 
+        # Connect widget signals
+        self.stream_viewer.trace_selected.connect(lambda x: self.selection_changed.emit(x))
+
     def closeEvent(self, event):
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("geometry")
@@ -185,6 +188,9 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         settings.endGroup()
         super(TraceSelectorDialog, self).showEvent(event)
 
+    def set_title(self):
+        self.setWindowTitle("Opened Traces - {}".format(", ".join([tr.id for tr in self.stream])))
+
     def set_stream(self, stream):
         self.stream = stream
         self.stream_viewer.set_stream(self.stream)
@@ -192,6 +198,6 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.centralwidget.setVisible(stream_has_any_trace)
         self.action_sta_lta.setEnabled(stream_has_any_trace)
         self.action_ampa.setEnabled(stream_has_any_trace)
-        self.adjustSize()
+        self.set_title()
 
 
