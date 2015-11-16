@@ -211,7 +211,7 @@ class OpenStream(QtGui.QUndoCommand):
     def undo(self):
         self.main_window.stream = self.old_stream[:]
         self.main_window.document_list = self.old_document_list[:]
-        self.main_window.trace_selector.refresh()
+        self.main_window.trace_selector.set_stream(self.main_window.stream)
         if self.main_window.stream:
             if len(self.main_window.stream) < 2:
                 self.main_window.action_show_trace_selector.setEnabled(False)
@@ -224,7 +224,7 @@ class OpenStream(QtGui.QUndoCommand):
     def redo(self):
         self.main_window.stream = self.stream[:]
         self.main_window.document_list = self.document_list[:]
-        self.main_window.trace_selector.refresh()
+        self.main_window.trace_selector.set_stream(self.main_window.stream)
         if len(self.main_window.stream) > 1:
             self.main_window.action_show_trace_selector.setEnabled(True)
             self.main_window.action_show_trace_selector.setChecked(True)
@@ -249,7 +249,7 @@ class CloseTraces(QtGui.QUndoCommand):
         for i in sorted(self.trace_idx_set):
             self.main_window.stream.insert(i, self.removed_traces_list[i])
             self.main_window.document_list.insert(i, self.removed_documents_list[i])
-        self.main_window.trace_selector.refresh()
+        self.main_window.trace_selector.set_stream(self.main_window.stream)
         if len(self.main_window.stream) > 1:
             self.main_window.action_show_trace_selector.setEnabled(True)
             self.main_window.action_show_trace_selector.setChecked(True)
@@ -260,7 +260,7 @@ class CloseTraces(QtGui.QUndoCommand):
         for i in sorted(self.trace_idx_set, reverse=True):
             self.main_window.stream.pop(i)
             self.main_window.document_list.pop(i)
-        self.main_window.trace_selector.refresh()
+        self.main_window.trace_selector.set_stream(self.main_window.stream)
         if self.main_window.stream:
             if len(self.main_window.stream) < 2:
                 self.main_window.action_show_trace_selector.setEnabled(False)

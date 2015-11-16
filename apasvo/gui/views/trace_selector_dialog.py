@@ -166,7 +166,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_analysis)
 
         # Add navigation toolbar
-        self.tool_bar_navigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
+        self.tool_bar_navigation = navigationtoolbar.NavigationToolBar(self.stream_viewer.canvas, self)
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_navigation)
         self.addToolBarBreak()
 
@@ -185,10 +185,13 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         settings.endGroup()
         super(TraceSelectorDialog, self).showEvent(event)
 
-    def refresh(self):
+    def set_stream(self, stream):
+        self.stream = stream
         self.stream_viewer.set_stream(self.stream)
         stream_has_any_trace = len(self.stream)
+        self.centralwidget.setVisible(stream_has_any_trace)
         self.action_sta_lta.setEnabled(stream_has_any_trace)
         self.action_ampa.setEnabled(stream_has_any_trace)
+        self.adjustSize()
 
 
