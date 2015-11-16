@@ -91,8 +91,8 @@ class StreamViewerWidget(QtGui.QWidget):
         for axes in self.fig.axes:
             self.fig.delaxes(axes)
         # Plot stream traces
-        for trace in stream:
-            self._draw_trace(trace)
+        for trace_idx in range(len(self.stream)):
+            self._draw_trace(trace_idx)
         # Plot event markers
         self.markers = {}
         for trace_idx, trace in enumerate(self.stream):
@@ -165,8 +165,9 @@ class StreamViewerWidget(QtGui.QWidget):
             self.fig.axes[trace_idx].lines.remove(marker)
             self.markers.pop(key)
 
-    def _draw_trace(self, trace):
+    def _draw_trace(self, trace_idx):
         if self.stream:
+            trace = self.stream.traces[trace_idx]
             # Get trace dataseries
             signal = trace.signal
             time = np.linspace(0, len(signal) / trace.fs, num=len(signal), endpoint=False)
@@ -175,7 +176,6 @@ class StreamViewerWidget(QtGui.QWidget):
             # pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
             # x_data, y_data = plotting.reduce_data(time, signal, pixel_width, xmin, xmax)
             # Create axes with trace and add to existing axes
-            trace_idx = self.stream.traces.index(trace)
             ax = self.fig.add_subplot(len(self.stream), 1, trace_idx)
             ax.set_xlim(xmin, xmax)
             ax.plot(time, signal, color='black', rasterized=True)
