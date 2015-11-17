@@ -1,4 +1,4 @@
-# encoding: utf-8
+1# encoding: utf-8
 '''
 @author:     Jose Emilio Romero Lopez
 

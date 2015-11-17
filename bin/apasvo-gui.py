@@ -174,6 +174,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             file dialog to let the user select a file.
             Default: None.
         """
+
         if filename is None:
             filename, _ = QtGui.QFileDialog.getOpenFileName(self, "Open Data File", ".",
                                                             ";;".join(self._file_filters), all_files_filter)
@@ -186,6 +187,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         values = dialog.get_values()
                         # Load and visualize the opened record
                         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                        #record = rc.read(filename, **values)[0]
                         record = rc.read(filename, **values)[0]
                         self.document = eventlistmodel.EventListModel(record, self.command_stack)
                         self.document.emptyList.connect(self.set_modified)
@@ -244,6 +246,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                 MainWindow.windowList.append(other)
                 other.move(self.x() + 40, self.y() + 40)
                 other.show()
+
 
     def open_recent(self):
         """Opens a document from recent opened list."""
@@ -654,6 +657,7 @@ if __name__ == '__main__':
     from apasvo.gui.views import ampadialog
     from apasvo.gui.views import playertoolbar
     from apasvo.gui.views import error
+    from apasvo.gui.views import multiTrace_window
 
     from apasvo.picking import stalta
     from apasvo.picking import ampa
