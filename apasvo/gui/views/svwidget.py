@@ -916,7 +916,8 @@ class SignalViewerWidget(QtGui.QWidget):
         self._cf_data = self.cf_ax.plot(self.time[:len(self.cf)],
                                               self.cf,
                                               color='black', rasterized=True)[0]
-        plotting.adjust_axes_height(self.signal_ax)
+        if cf_loaded:
+            plotting.adjust_axes_height(self.cf_ax)
         self.thresholdMarker = ThresholdMarker(self.cf_ax)
         # Plot espectrogram
         plotting.plot_specgram(self.specgram_ax, self.signal, self.fs,
@@ -966,6 +967,10 @@ class SignalViewerWidget(QtGui.QWidget):
             self.CF_loaded.emit(cf_loaded)
             self.set_cf_visible(cf_loaded)
 
+    def create_events(self, new_events_set):
+        for event in new_events_set.get(id(self.document.record), []):
+            self.create_event(event)
+
     def create_event(self, event):
         event_id = event.resource_id.uuid
         if event_id not in self.eventMarkers:
@@ -973,6 +978,10 @@ class SignalViewerWidget(QtGui.QWidget):
             self.eventMarkers[event_id] = marker
             marker.event_selected.connect(self.event_selected.emit)
             marker.right_clicked.connect(self.on_event_right_clicked)
+
+    def delete_events(self, new_events_set):
+        for event in new_events_set.get(id(self.document.record), []):
+            self.delete_event(event)
 
     def delete_event(self, event):
         event_id = event.resource_id.uuid

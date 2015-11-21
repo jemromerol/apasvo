@@ -193,6 +193,36 @@ class DetectEvents(QtGui.QUndoCommand):
         return 6
 
 
+class DetectStreamEvents(QtGui.QUndoCommand):
+
+    def __init__(self, trace_selector_widget, alg, trace_list=None, **kwargs):
+        super(DetectStreamEvents, self).__init__('Apply %s' % alg.__class__.__name__.
+                                           upper())
+        self.trace_selector = trace_selector_widget
+        self.events_old = {id(trace): trace.events[:] for trace in self.trace_selector.stream.traces}
+        self.trace_selector.stream.detect(alg, trace_list, **kwargs)
+        self.events = {id(trace): trace.events[:] for trace in self.trace_selector.stream.traces}
+        self.new_events = {id(trace): [event for event in self.events[id(trace)] if event not in self.events_old[id(trace)]] \
+                           for trace in self.trace_selector.stream.traces}
+
+    def undo(self):
+        for trace in self.trace_selector.stream.traces:
+            if id(trace) in self.events_old:
+                trace.events = self.events_old[id(trace)][:]
+        # Update current model data
+        self.trace_selector.events_deleted.emit(self.new_events)
+
+    def redo(self):
+        for trace in self.trace_selector.stream.traces:
+            if id(trace) in self.events_old:
+                trace.events = self.events[id(trace)][:]
+        # Update current model data
+        self.trace_selector.events_created.emit(self.new_events)
+
+    def id(self):
+        return 7
+
+
 class OpenStream(QtGui.QUndoCommand):
 
     def __init__(self, main_window, stream):
@@ -228,12 +258,11 @@ class OpenStream(QtGui.QUndoCommand):
         if len(self.main_window.stream) > 1:
             self.main_window.action_show_trace_selector.setEnabled(True)
             self.main_window.action_show_trace_selector.setChecked(True)
-        # if self.document is None:
-        #     self.toogle_document(0)
-        self.main_window.toogle_document(-1)
+        if self.main_window.document is None:
+            self.main_window.toogle_document(0)
 
     def id(self):
-        return 7
+        return 8
 
 
 class CloseTraces(QtGui.QUndoCommand):
@@ -271,7 +300,7 @@ class CloseTraces(QtGui.QUndoCommand):
             self.main_window.close()
 
     def id(self):
-        return 8
+        return 9
 
 
 

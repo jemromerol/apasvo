@@ -31,7 +31,7 @@ def display_error_dlg(msg, additional_info=None, parent=None):
     """Displays an error dialog."""
     msgBox = QtGui.QMessageBox(parent)
     msgBox.setText("An error occurred:")
-    horizontalSpacer = QtGui.QSpacerItem(320, 0, QtGui.QSizePolicy.Minimum,
+    horizontalSpacer = QtGui.QSpacerItem(480, 0, QtGui.QSizePolicy.Minimum,
                                          QtGui.QSizePolicy.Expanding)
     layout = msgBox.layout()
     layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())

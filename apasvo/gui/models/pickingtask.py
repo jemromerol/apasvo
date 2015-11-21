@@ -29,6 +29,7 @@ from PySide import QtCore
 import traceback
 from apasvo._version import _application_name
 from apasvo._version import _organization
+from apasvo.gui.models import eventcommands as commands
 
 
 class PickingTask(QtCore.QObject):
@@ -58,7 +59,47 @@ class PickingTask(QtCore.QObject):
                                takanami_margin=takanami_margin)
         except Exception, e:
             self.error.emit(str(e), traceback.format_exc())
-        self.finished.emit()
+        finally:
+            self.finished.emit()
+
+    def abort(self):
+        pass
+
+
+class PickingStreamTask(QtCore.QObject):
+    """A class to handle an event picking/detection task.
+
+    PickingTask objects are meant to be passed to a QThread instance
+    that controls their execution.
+
+    """
+
+    finished = QtCore.Signal()
+    error = QtCore.Signal(str, str)
+
+    def __init__(self, trace_selector_widget, alg, trace_list=None, threshold=None):
+        super(PickingStreamTask, self).__init__()
+        self.trace_selector = trace_selector_widget
+        self.alg = alg
+        self.trace_list = self.trace_selector.stream.traces if trace_list is None else trace_list
+        self.threshold = threshold
+
+    def run(self):
+        settings = QtCore.QSettings(_organization, _application_name)
+        takanami = int(settings.value('takanami_settings/takanami', False))
+        takanami_margin = float(settings.value('takanami_margin', 5.0))
+        try:
+            detect_command = commands.DetectStreamEvents(self.trace_selector,
+                                                         self.alg,
+                                                         self.trace_list,
+                                                         threshold=self.threshold,
+                                                         takanami=takanami,
+                                                         takanami_margin=takanami_margin)
+            self.trace_selector.main_window.command_stack.push(detect_command)
+        except Exception, e:
+            self.error.emit(str(e), traceback.format_exc())
+        finally:
+            self.finished.emit()
 
     def abort(self):
         pass

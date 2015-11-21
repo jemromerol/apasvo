@@ -37,14 +37,15 @@ class AmpaDialog(QtGui.QDialog):
     """
     """
 
-    def __init__(self, document, parent=None):
+    def __init__(self, stream, trace_list=None, parent=None):
         super(AmpaDialog, self).__init__(parent)
-        self.document = document
 
-        self.step = 1.0 / self.document.record.fs
-        self.max_value = ((len(self.document.record.signal) - 1) /  # Signal starts at t0 = 0
-                          self.document.record.fs)
-        self.nyquist_freq = self.document.record.fs / 2.0
+        traces = stream.traces if trace_list is None else trace_list
+
+        self.step = 1.0 / max([trace.fs for trace in traces])
+        self.max_value = min([((len(trace) - 1) / trace.fs) for trace in traces])
+
+        self.nyquist_freq = max([trace.fs for trace in traces]) / 2.0
         self.setup_ui()
 
         self._filters = filterlistmodel.FilterListModel([])

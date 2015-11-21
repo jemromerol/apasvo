@@ -26,6 +26,8 @@
 
 import numpy as np
 import obspy as op
+import multiprocessing as mp
+import itertools
 from obspy.core.utcdatetime import UTCDateTime
 from obspy.core.event import Pick
 from obspy.core.event import ResourceIdentifier
@@ -42,6 +44,7 @@ import os
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
 from apasvo.utils.formats import rawfile
+from apasvo.utils import collections
 from apasvo.utils import clt
 
 method_other = 'other'
@@ -587,6 +590,14 @@ class ApasvoTrace(op.Trace):
         return fig
 
 
+def _detect(parameters):
+    alg = parameters[0]
+    trace_list = parameters[1]
+    kwargs = parameters[2]
+    for trace in trace_list:
+        trace.detect(alg, **kwargs)
+    return trace_list
+
 class ApasvoStream(op.Stream):
     """
     A list of multiple ApasvoTrace objects
@@ -596,15 +607,34 @@ class ApasvoStream(op.Stream):
         super(ApasvoStream, self).__init__(traces)
         self.description = description
 
-    def detect(self, alg, start_trace=None, end_trace=None, **kwargs):
-        for trace in self.traces[start_trace:end_trace]:
-            trace.detect(alg, **kwargs)
+    def detect(self, alg, trace_list=None, allow_multiprocessing=True, **kwargs):
+        """
+        """
+        trace_list = self.traces if trace_list is None else trace_list
+        n_traces = len(trace_list)
+        if allow_multiprocessing and n_traces > 1:
+            processes = min(mp.cpu_count(), n_traces)
+            p = mp.Pool(processes=processes)
+            processed_traces = p.map(_detect, itertools.izip(itertools.repeat(alg),
+                                               collections.chunkify(trace_list, n_traces / processes),
+                                               itertools.repeat(kwargs)))
+            processed_traces = collections.flatten_list(processed_traces)
+            # Update existing traces w. new events and cf from  processed events
+            for trace, processed_trace in zip(trace_list, processed_traces):
+                new_events = [event for event in processed_trace.events if event not in trace.events]
+                trace.events.extend(new_events)
+                trace.cf = processed_trace.cf
+            p.close()
+            p.join()
+        else:
+            self._detect((alg, trace_list, kwargs))
 
-    def export_picks(self, filename, start_trace=None, end_trace=None, format="NLLOC_OBS", debug=False, **kwargs):
+    def export_picks(self, filename, trace_list=None, format="NLLOC_OBS", debug=False, **kwargs):
         """
         """
+        trace_list = self.traces if trace_list is None else trace_list
         event_list = []
-        for trace in self.traces[start_trace:end_trace]:
+        for trace in trace_list:
             event_list.extend([Event(picks=[pick]) for pick in trace.events])
         # Export to desired format
         if format == 'NLLOC_OBS':

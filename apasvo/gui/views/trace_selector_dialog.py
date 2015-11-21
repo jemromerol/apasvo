@@ -24,67 +24,19 @@
 
 from PySide import QtCore
 from PySide import QtGui
+import numpy as np
 
 from apasvo.gui.views import navigationtoolbar
-from apasvo.gui.views import processingdialog
 from apasvo.gui.views import tsvwidget
+from apasvo.gui.views import staltadialog
+from apasvo.gui.views import ampadialog
+from apasvo.picking import stalta
+from apasvo.picking import ampa
+from apasvo.gui.models import pickingtask
+from apasvo.gui.views import error
 
-import numpy as np
-import traceback
-from apasvo.picking import takanami
 from apasvo._version import _application_name
 from apasvo._version import _organization
-
-
-class StreamPickingTask(QtCore.QObject):
-    """A class to handle a Takanami exec. task.
-
-    Attributes:
-        record: An opened seismic record.
-        start: Start point of the signal segment where
-            the algorithm is going to be applied.
-        end: End point of the signal segment where
-            the algorithm is going to be applied.
-
-    Signals:
-        finished: Task finishes.
-        position_estimated: Return values of Takanami method are ready.
-    """
-
-    finished = QtCore.Signal()
-    error = QtCore.Signal(str, str)
-    position_estimated = QtCore.Signal(int, np.ndarray, int)
-
-    def __init__(self, record, start, end):
-        super(StreamPickingTask, self).__init__()
-        self.record = record
-        self.start = start
-        self.end = end
-        self.algorithm = takanami.Takanami()
-        self._abort = False
-
-    def run(self):
-        self._abort = False
-        start_time_in_secs = max(0.0, self.start) / self.record.fs
-        end_time_in_secs = (min(len(self.record.signal), self.end) /
-                            self.record.fs)
-        if self._abort:  # checkpoint
-            return
-        try:
-            et, aic, n0_aic = self.algorithm.run(self.record.signal,
-                                                 self.record.fs,
-                                                 start_time_in_secs,
-                                                 end_time_in_secs)
-        except Exception, e:
-            self.error.emit(str(e), traceback.format_exc())
-            return
-        if self._abort:  # checkpoint
-            return
-        self.position_estimated.emit(et, aic, n0_aic)
-        self.finished.emit()
-
-    def abort(self):
-        self._abort = True
 
 
 class TraceSelectorDialog(QtGui.QMainWindow):
@@ -100,15 +52,17 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
     closed = QtCore.Signal()
     selection_changed = QtCore.Signal(int)
+    events_created = QtCore.Signal(dict)
+    events_deleted = QtCore.Signal(dict)
 
     def __init__(self, stream, parent):
         super(TraceSelectorDialog, self).__init__(parent)
 
         self.main_window = parent
         self.stream = stream
-        self._init_ui()
+        self.selected_traces = []
 
-        # Connect signals
+        self._init_ui()
 
 
     def _init_ui(self):
@@ -170,8 +124,22 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_navigation)
         self.addToolBarBreak()
 
+        # set up status bar
+        self.statusbar = QtGui.QStatusBar(self)
+        self.statusbar.setObjectName("statusbar")
+        self.setStatusBar(self.statusbar)
+        self.analysis_label = QtGui.QLabel("", self.statusbar)
+        self.analysis_progress_bar = QtGui.QProgressBar(self.statusbar)
+        self.analysis_progress_bar.setOrientation(QtCore.Qt.Horizontal)
+        self.analysis_progress_bar.setRange(0, 0)
+        self.analysis_progress_bar.hide()
+        self.statusbar.addPermanentWidget(self.analysis_label)
+        self.statusbar.addPermanentWidget(self.analysis_progress_bar)
+
         # Connect widget signals
         self.stream_viewer.trace_selected.connect(lambda x: self.selection_changed.emit(x))
+        self.action_sta_lta.triggered.connect(self.doSTALTA)
+        self.action_ampa.triggered.connect(self.doAMPA)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(_organization, _application_name)
@@ -200,4 +168,89 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.action_ampa.setEnabled(stream_has_any_trace)
         self.set_title()
 
+    def update_events(self):
+        pass
 
+    def doSTALTA(self):
+        """Performs event detection/picking by using STA-LTA method."""
+        dialog = staltadialog.StaLtaDialog(self.stream)
+        return_code = dialog.exec_()
+        if return_code == QtGui.QDialog.Accepted:
+            # Read settings
+            settings = QtCore.QSettings(_organization, _application_name)
+            settings.beginGroup('stalta_settings')
+            sta_length = float(settings.value('sta_window_len', 5.0))
+            lta_length = float(settings.value('lta_window_len', 100.0))
+            settings.endGroup()
+            # # Get threshold value
+            # if self.actionActivateThreshold.isChecked():
+            #     threshold = self.thresholdSpinBox.value()
+            # else:
+            #     threshold = None
+            # # Create an STA-LTA algorithm instance with selected settings
+            alg = stalta.StaLta(sta_length, lta_length)
+            # perform task
+            selected_traces = self.stream.traces if self.selected_traces else None
+            analysis_task = pickingtask.PickingStreamTask(self, alg, trace_list=selected_traces)
+            self.launch_analysis_task(analysis_task,
+                                      label="Applying %s..." % alg.__class__.__name__.upper())
+
+    def doAMPA(self):
+        """Performs event detection/picking by using AMPA method."""
+        dialog = ampadialog.AmpaDialog(self.stream)
+        return_code = dialog.exec_()
+        if return_code == QtGui.QDialog.Accepted:
+            # Read settings
+            settings = QtCore.QSettings(_organization, _application_name)
+            settings.beginGroup('ampa_settings')
+            wlen = float(settings.value('window_len', 100.0))
+            wstep = float(settings.value('step', 50.0))
+            nthres = float(settings.value('noise_threshold', 90))
+            filters = settings.value('filters', [30.0, 20.0, 10.0,
+                                                               5.0, 2.5])
+            filters = list(filters) if isinstance(filters, list) else [filters]
+            filters = np.array(filters).astype(float)
+            settings.beginGroup('filter_bank_settings')
+            startf = float(settings.value('startf', 2.0))
+            endf = float(settings.value('endf', 12.0))
+            bandwidth = float(settings.value('bandwidth', 3.0))
+            overlap = float(settings.value('overlap', 1.0))
+            settings.endGroup()
+            settings.endGroup()
+            # Get threshold value
+            # if self.actionActivateThreshold.isChecked():
+            #     threshold = self.thresholdSpinBox.value()
+            # else:
+            #     threshold = None
+            # Create an AMPA algorithm instance with selected settings
+            alg = ampa.Ampa(wlen, wstep, filters, noise_thr=nthres,
+                            bandwidth=bandwidth, overlap=overlap,
+                            f_start=startf, f_end=endf)
+            # perform task
+            selected_traces = self.stream.traces if self.selected_traces else None
+            analysis_task = pickingtask.PickingStreamTask(self, alg, trace_list=selected_traces)
+            self.launch_analysis_task(analysis_task,
+                                      label="Applying %s..." % alg.__class__.__name__.upper())
+
+    def launch_analysis_task(self, task, label=""):
+        QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        self.action_ampa.setEnabled(False)
+        self.action_sta_lta.setEnabled(False)
+        self.analysis_label.setText(label)
+        self.analysis_progress_bar.show()
+        self._thread = QtCore.QThread(self)
+        task.moveToThread(self._thread)
+        self._thread.started.connect(task.run)
+        task.finished.connect(self._thread.quit)
+        task.finished.connect(self.on_analysis_finished)
+        task.finished.connect(task.deleteLater)
+        task.error.connect(error.display_error_dlg)
+        self._thread.finished.connect(self._thread.deleteLater)
+        self._thread.start()
+
+    def on_analysis_finished(self):
+        QtGui.QApplication.restoreOverrideCursor()
+        self.action_ampa.setEnabled(True)
+        self.action_sta_lta.setEnabled(True)
+        self.analysis_progress_bar.hide()
+        self.analysis_label.setText("")

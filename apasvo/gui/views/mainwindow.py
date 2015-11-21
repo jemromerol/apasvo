@@ -35,6 +35,7 @@ matplotlib.rcParams['agg.path.chunksize'] = 80000
 import numpy as np
 import obspy as op
 import traceback
+import os
 
 from apasvo.picking import stalta
 from apasvo.picking import ampa
@@ -107,7 +108,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.setupUi(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        self.stream = op.core.Stream()
+        self.stream = rc.ApasvoStream([])
         self.document_list = []
         self.current_document_idx = -1
         self.document = None
@@ -196,6 +197,10 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionAnalysis_Toolbar.toggled.connect(self.toolBarAnalysis.setVisible)
         self.actionNavigation_Toolbar.toggled.connect(self.toolBarNavigation.setVisible)
 
+        # Connect trace selector to signal viewer
+        self.trace_selector.events_created.connect(self.signalViewer.create_events)
+        self.trace_selector.events_deleted.connect(self.signalViewer.delete_events)
+
         self.set_title()
         self.set_recent_menu()
 
@@ -218,12 +223,23 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             dialog = loaddialog.LoadDialog(self, filename)
             return_code = dialog.exec_()
             if return_code == QtGui.QDialog.Accepted:
-                values = dialog.get_values()
-                # Load and visualize the opened record
-                stream = rc.read(filename, **values)
-                self.command_stack.push(commands.OpenStream(self, stream))
-            # Update recent list
-            self.push_recent_list(filename)
+                try:
+                    values = dialog.get_values()
+                    # Load and visualize the opened record
+                    QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                    self.analysis_label.setText("Loading {}...".format(os.path.basename(filename)))
+                    self.analysis_progress_bar.show()
+                    stream = rc.read(filename, **values)
+                    self.command_stack.push(commands.OpenStream(self, stream))
+                    # Update recent list
+                    self.push_recent_list(filename)
+                except Exception as e:
+                    error.display_error_dlg(str(e), traceback.format_exc())
+                finally:
+                    self.analysis_progress_bar.hide()
+                    self.analysis_label.setText("")
+                    QtGui.QApplication.restoreOverrideCursor()
+
 
     def open_recent(self):
         """Opens a document from recent opened list."""
@@ -364,6 +380,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                     self.EventsTableView.setItemDelegateForColumn(i, delegate)
                 else:
                     self.EventsTableView.setItemDelegateForColumn(i, None)
+            # connect trace selector to document
+            self.trace_selector.events_created.connect(lambda x: self.document.updateList())
+            self.trace_selector.events_deleted.connect(lambda x: self.document.updateList())
             # connect document model to signalViewer
             self.document.eventCreated.connect(self.signalViewer.create_event)
             self.document.eventDeleted.connect(self.signalViewer.delete_event)
@@ -398,6 +417,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def disconnect_document(self):
         if self.document is not None:
             # Disconnect existing signals
+            self.trace_selector.events_created.disconnect()
+            self.trace_selector.events_deleted.disconnect()
+            # Disconnect document signal
             self.document.emptyList.disconnect(self.set_modified)
             self.document.eventCreated.disconnect(self.signalViewer.create_event)
             self.document.eventDeleted.disconnect(self.signalViewer.delete_event)
@@ -544,7 +566,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
     def doSTALTA(self):
         """Performs event detection/picking by using STA-LTA method."""
-        dialog = staltadialog.StaLtaDialog(self.document)
+        dialog = staltadialog.StaLtaDialog(self.stream,
+                                           trace_list=[self.document.record])
         return_code = dialog.exec_()
         if return_code == QtGui.QDialog.Accepted:
             # Read settings
@@ -568,7 +591,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
     def doAMPA(self):
         """Performs event detection/picking by using AMPA method."""
-        dialog = ampadialog.AmpaDialog(self.document)
+        dialog = ampadialog.AmpaDialog(self.stream,
+                                       trace_list=[self.document.record])
         return_code = dialog.exec_()
         if return_code == QtGui.QDialog.Accepted:
             # Read settings
@@ -604,10 +628,11 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                                       label="Applying %s..." % alg.__class__.__name__.upper())
 
     def launch_analysis_task(self, task, label=""):
+        QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         self.actionAMPA.setEnabled(False)
         self.actionSTA_LTA.setEnabled(False)
-        self.analysis_progress_bar.show()
         self.analysis_label.setText(label)
+        self.analysis_progress_bar.show()
         self._thread = QtCore.QThread(self)
         task.moveToThread(self._thread)
         self._thread.started.connect(task.run)
@@ -619,6 +644,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self._thread.start()
 
     def on_analysis_finished(self):
+        QtGui.QApplication.restoreOverrideCursor()
         self.actionAMPA.setEnabled(True)
         self.actionSTA_LTA.setEnabled(True)
         self.analysis_progress_bar.hide()
