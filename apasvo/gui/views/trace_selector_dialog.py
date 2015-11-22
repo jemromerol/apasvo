@@ -60,7 +60,6 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
         self.main_window = parent
         self.stream = stream
-        self.selected_traces = []
 
         self._init_ui()
 
@@ -120,9 +119,9 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_analysis)
 
         # Add navigation toolbar
-        self.tool_bar_navigation = navigationtoolbar.NavigationToolBar(self.stream_viewer.canvas, self)
-        self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_navigation)
-        self.addToolBarBreak()
+        # self.tool_bar_navigation = navigationtoolbar.NavigationToolBar(self.stream_viewer.canvas, self)
+        # self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_navigation)
+        # self.addToolBarBreak()
 
         # set up status bar
         self.statusbar = QtGui.QStatusBar(self)
@@ -168,8 +167,8 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.action_ampa.setEnabled(stream_has_any_trace)
         self.set_title()
 
-    def update_events(self):
-        pass
+    def update_events(self, *args, **kwargs):
+        self.stream_viewer.update_markers()
 
     def doSTALTA(self):
         """Performs event detection/picking by using STA-LTA method."""
@@ -190,8 +189,9 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             # # Create an STA-LTA algorithm instance with selected settings
             alg = stalta.StaLta(sta_length, lta_length)
             # perform task
-            selected_traces = self.stream.traces if self.selected_traces else None
-            analysis_task = pickingtask.PickingStreamTask(self, alg, trace_list=selected_traces)
+            analysis_task = pickingtask.PickingStreamTask(self,
+                                                          alg,
+                                                          trace_list=self.stream_viewer.selected_traces)
             self.launch_analysis_task(analysis_task,
                                       label="Applying %s..." % alg.__class__.__name__.upper())
 
@@ -227,8 +227,9 @@ class TraceSelectorDialog(QtGui.QMainWindow):
                             bandwidth=bandwidth, overlap=overlap,
                             f_start=startf, f_end=endf)
             # perform task
-            selected_traces = self.stream.traces if self.selected_traces else None
-            analysis_task = pickingtask.PickingStreamTask(self, alg, trace_list=selected_traces)
+            analysis_task = pickingtask.PickingStreamTask(self,
+                                                          alg,
+                                                          trace_list=self.stream_viewer.selected_traces)
             self.launch_analysis_task(analysis_task,
                                       label="Applying %s..." % alg.__class__.__name__.upper())
 

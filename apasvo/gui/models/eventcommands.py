@@ -210,6 +210,7 @@ class DetectStreamEvents(QtGui.QUndoCommand):
             if id(trace) in self.events_old:
                 trace.events = self.events_old[id(trace)][:]
         # Update current model data
+        self.trace_selector.update_events()
         self.trace_selector.events_deleted.emit(self.new_events)
 
     def redo(self):
@@ -217,6 +218,7 @@ class DetectStreamEvents(QtGui.QUndoCommand):
             if id(trace) in self.events_old:
                 trace.events = self.events[id(trace)][:]
         # Update current model data
+        self.trace_selector.update_events()
         self.trace_selector.events_created.emit(self.new_events)
 
     def id(self):

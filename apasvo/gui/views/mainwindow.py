@@ -385,8 +385,11 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.trace_selector.events_deleted.connect(lambda x: self.document.updateList())
             # connect document model to signalViewer
             self.document.eventCreated.connect(self.signalViewer.create_event)
+            self.document.eventCreated.connect(self.trace_selector.update_events)
             self.document.eventDeleted.connect(self.signalViewer.delete_event)
+            self.document.eventDeleted.connect(self.trace_selector.update_events)
             self.document.eventModified.connect(self.signalViewer.update_event)
+            self.document.eventModified.connect(self.trace_selector.update_events)
             self.document.detectionPerformed.connect(self.signalViewer.update_cf)
             self.document.detectionPerformed.connect(self.toolBarNavigation.update)
             # load document data into signal viewer
@@ -421,9 +424,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.trace_selector.events_deleted.disconnect()
             # Disconnect document signal
             self.document.emptyList.disconnect(self.set_modified)
-            self.document.eventCreated.disconnect(self.signalViewer.create_event)
-            self.document.eventDeleted.disconnect(self.signalViewer.delete_event)
-            self.document.eventModified.disconnect(self.signalViewer.update_event)
+            self.document.eventCreated.disconnect()
+            self.document.eventDeleted.disconnect()
+            self.document.eventModified.disconnect()
             self.document.detectionPerformed.disconnect(self.signalViewer.update_cf)
             self.document.detectionPerformed.disconnect(self.toolBarNavigation.update)
             model = self.EventsTableView.selectionModel()

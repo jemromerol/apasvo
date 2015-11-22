@@ -627,7 +627,7 @@ class ApasvoStream(op.Stream):
             p.close()
             p.join()
         else:
-            self._detect((alg, trace_list, kwargs))
+            _detect((alg, trace_list, kwargs))
 
     def export_picks(self, filename, trace_list=None, format="NLLOC_OBS", debug=False, **kwargs):
         """

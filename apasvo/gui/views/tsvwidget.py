@@ -44,8 +44,6 @@ from apasvo.utils import clt
 
 class TracePlot(QtCore.QObject):
 
-    trace_selected = QtCore.Signal(int)
-
     def __init__(self, parent, trace, fig_nrows=1, fig_ncols=1, ax_pos=1):
         super(TracePlot, self).__init__()
         self.parent = parent
@@ -66,24 +64,13 @@ class TracePlot(QtCore.QObject):
         plt.setp(self.ax.get_xticklabels(), visible=True)
         self.ax.grid(True, which='both')
         # Set event markers
+        self.marker_select_color = 'r'
+        self.marker_color = 'b'
         self.markers = {}
-        for event in self.trace.events:
-            self.create_marker(event)
-        # Event handling
-        self.trace_selected.connect(self.parent.trace_selected)
-        self.press_selector = None
-        self.fig.canvas.mpl_connect('button_press_event', self.on_press)
-
-    def on_press(self, event):
-        if event.button == 1:# and event.dblclick:
-            ymin, ymax = self.ax.get_position().ymin, self.ax.get_position().ymax
-            _, yfig = self._event_to_fig_coords(event)
-            if ymin <= yfig <= ymax:
-                self.trace_selected.emit(self.fig.axes.index(self.ax))
-
-    def _event_to_fig_coords(self, event):
-        inv = self.fig.transFigure.inverted()
-        return inv.transform((event.x, event.y))
+        self.update_markers()
+        # Selection parameters
+        self.selected = False
+        self.selector = self.ax.axvspan(0, self.xmax, fc='LightCoral', ec='r', alpha=0.5, animated=True, visible=False)
 
     def on_xlim_change(self, ax):
         xmin, xmax = ax.get_xlim()
@@ -103,30 +90,44 @@ class TracePlot(QtCore.QObject):
     def create_marker(self, event, **kwargs):
         event_id = event.resource_id.uuid
         position = event.time
-        marker = self.ax.axvline(position, animated=True)
+        marker = self.ax.axvline(position, color=self.marker_color, ls='--', lw=2, animated=True)
         self.markers[event_id] = marker
         self.markers[event_id].set(**kwargs)
 
-    def set_marker_position(self, event):
-        event_id = event.resource_id.uuid
-        position = event.time
-        marker = self.markers[event_id]
-        if marker is not None:
-            marker.set_xdata(position)
-
-    def set_marker(self, event, **kwargs):
-        event_id = event.resource_id.uuid
-        marker = self.markers[event_id]
-        if marker is not None:
-            kwargs.pop("animated", None)  # marker's animated property must be always true to be drawn properly
-            marker.set(**kwargs)
-
-    def delete_marker(self, event):
-        event_id = event.resource_id.uuid
+    def delete_marker(self, event_id):
         marker = self.markers[event_id]
         if marker is not None:
             self.ax.lines.remove(marker)
             self.markers.pop(event_id)
+
+    def update_markers(self, draw=False):
+        for event_id in self.markers.keys():
+            self.delete_marker(event_id)
+        for event in self.trace.events:
+            self.create_marker(event)
+        if draw:
+            self.parent.draw()
+
+    def set_selected_marker(self, selected):
+        color = self.marker_select_color if selected else self.marker_color
+        for marker in self.markers:
+            marker.set(color=color)
+
+    def set_event_selection(self, event_list):
+        event_id_list = [event.resource_id.uuid for event in event_list]
+        for event_id in self.markers.keys():
+            self.markers[event_id].select_marker(event_id in event_id_list)
+        self.parent.draw()
+
+    def set_selected(self, selected):
+        if self.selected != selected:
+            self.selected = selected
+            if self.selected:
+                self.selector.set_visible(True)
+                # self.ax.set_axis_bgcolor('LightCoral')
+            else:
+                self.selector.set_visible(False)
+                # self.ax.set_axis_bgcolor('white')
 
     def remove(self):
         self.fig.delaxes(self.ax)
@@ -156,6 +157,8 @@ class StreamViewerWidget(QtGui.QWidget):
         self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
                                                     QtGui.QSizePolicy.Policy.Expanding))
         self.canvas.setMinimumHeight(320)
+        self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.canvas.setFocus()
         self.graphArea = QtGui.QScrollArea(self)
         self.graphArea.setWidget(self.canvas)
         self.graphArea.setWidgetResizable(True)
@@ -175,6 +178,56 @@ class StreamViewerWidget(QtGui.QWidget):
         if stream is not None:
             self.set_stream(stream)
 
+        # Event handling
+        self._selected_traces = set()
+        self.shift_pressed = False
+        self.press_selector = None
+        self.fig.canvas.mpl_connect('button_press_event', self.on_press)
+        self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
+        self.fig.canvas.mpl_connect('key_release_event', self.on_key_release)
+
+    @property
+    def selected_traces(self):
+        if self.stream is not None:
+            return [self.stream.traces[i] for i in self._selected_traces] \
+                if self._selected_traces else self.stream.traces
+        return []
+
+    def on_key_press(self, event):
+        if event.key == 'shift':
+            self.shift_pressed = True
+
+    def on_key_release(self, event):
+        self.shift_pressed = False
+
+    def on_press(self, event):
+        trace_selected = False
+        if event.button == 1:# and event.dblclick:
+            for i, ax in enumerate(self.fig.axes):
+                ymin, ymax = ax.get_position().ymin, ax.get_position().ymax
+                xmin, xmax = ax.get_position().xmin, ax.get_position().xmax
+                xfig, yfig = self._event_to_fig_coords(event)
+                if ymin <= yfig <= ymax and xmin <= xfig <= xmax:
+                    trace_selected = True
+                    if self.shift_pressed:
+                        if self._selected_traces:
+                            self.trace_selected.emit(i)
+                        self._selected_traces.add(i)
+                    else:
+                        self.trace_selected.emit(i)
+                        self._selected_traces = {i}
+            # if the user clicked out of any trace (and he's not using shift), then deselect all
+            if not trace_selected and not self.shift_pressed:
+                self._selected_traces = set()
+            # Now update selection status on plots
+            for i, plot in enumerate(self.trace_plots):
+                plot.set_selected(i in self._selected_traces)
+            self.draw()
+
+    def _event_to_fig_coords(self, event):
+        inv = self.fig.transFigure.inverted()
+        return inv.transform((event.x, event.y))
+
     def set_stream(self, stream):
         self.stream = stream
         # Clear canvas
@@ -190,8 +243,8 @@ class StreamViewerWidget(QtGui.QWidget):
         self.draw()
 
     def draw(self):
-        self.canvas.draw()
-        #self.draw_animate()
+        #self.canvas.draw()
+        self.draw_animate()
 
     def draw_animate(self):
         size = self.fig.bbox.width, self.fig.bbox.height
@@ -200,11 +253,27 @@ class StreamViewerWidget(QtGui.QWidget):
             self.canvas.draw()
             self.background = self.canvas.copy_from_bbox(self.fig.bbox)
         self.canvas.restore_region(self.background)
-        for trace_idx in self.markers.keys():
-            for event_id in self.markers[trace_idx].keys():
-                marker = self.markers[trace_idx].get(event_id)
-                self.fig.draw_artist(marker)
+        for artist in self._get_animated_artists():
+            if artist.get_visible():
+                ax = artist.get_axes()
+                if ax is not None:
+                    if artist.get_axes().get_visible():
+                        self.fig.draw_artist(artist)
+                else:
+                    self.fig.draw_artist(artist)
         self.canvas.blit(self.fig.bbox)
+
+    def _get_animated_artists(self):
+        artists = []
+        for ax in self.fig.axes:
+            artists.extend(ax.images)
+            artists.extend(ax.lines)
+            artists.append(ax.xaxis)
+            artists.append(ax.yaxis)
+            artists.extend(ax.patches)
+            artists.extend(ax.spines.values())
+        for artist in artists:
+            yield artist
 
     def set_visible(self, value):
         self.canvas.setVisible(value)
@@ -230,4 +299,11 @@ class StreamViewerWidget(QtGui.QWidget):
 
     def resizeEvent(self, event):
         self.draw()
+
+    def update_markers(self):
+        for plot in self.trace_plots:
+            plot.update_markers()
+        self.draw()
+
+
 

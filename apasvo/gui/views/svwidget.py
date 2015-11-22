@@ -82,7 +82,7 @@ class SpanSelector(QtCore.QObject):
         self.active = False
         self.enabled = True
 
-        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5, picker=5)
+        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.7, picker=5)
                           for ax in self.fig.axes]
         for s in self.selectors:
             s.set_visible(False)
