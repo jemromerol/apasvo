@@ -273,7 +273,8 @@ class StreamViewerWidget(QtGui.QWidget):
             artists.extend(ax.patches)
             artists.extend(ax.spines.values())
         for artist in artists:
-            yield artist
+            if artist.get_animated():
+                yield artist
 
     def set_visible(self, value):
         self.canvas.setVisible(value)
