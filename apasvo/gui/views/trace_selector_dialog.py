@@ -55,6 +55,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
     selection_changed = QtCore.Signal(int)
     events_created = QtCore.Signal(dict)
     events_deleted = QtCore.Signal(dict)
+    detection_performed = QtCore.Signal()
 
     def __init__(self, stream, parent):
         super(TraceSelectorDialog, self).__init__(parent)

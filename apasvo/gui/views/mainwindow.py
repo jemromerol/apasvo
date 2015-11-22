@@ -200,6 +200,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         # Connect trace selector to signal viewer
         self.trace_selector.events_created.connect(self.signalViewer.create_events)
         self.trace_selector.events_deleted.connect(self.signalViewer.delete_events)
+        self.trace_selector.detection_performed.connect(self.signalViewer.update_cf)
 
         self.set_title()
         self.set_recent_menu()

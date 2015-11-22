@@ -204,6 +204,7 @@ class DetectStreamEvents(QtGui.QUndoCommand):
         self.events = {id(trace): trace.events[:] for trace in self.trace_selector.stream.traces}
         self.new_events = {id(trace): [event for event in self.events[id(trace)] if event not in self.events_old[id(trace)]] \
                            for trace in self.trace_selector.stream.traces}
+        self.trace_selector.detection_performed.emit()
 
     def undo(self):
         for trace in self.trace_selector.stream.traces:
