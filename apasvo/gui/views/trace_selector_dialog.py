@@ -33,6 +33,7 @@ from apasvo.gui.views import ampadialog
 from apasvo.picking import stalta
 from apasvo.picking import ampa
 from apasvo.gui.models import pickingtask
+from apasvo.gui.models import eventcommands as commands
 from apasvo.gui.views import error
 
 from apasvo._version import _application_name
@@ -137,8 +138,10 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
         # Connect widget signals
         self.stream_viewer.trace_selected.connect(lambda x: self.selection_changed.emit(x))
+        self.stream_viewer.selection_made.connect(self.action_close.setEnabled)
         self.action_sta_lta.triggered.connect(self.doSTALTA)
         self.action_ampa.triggered.connect(self.doAMPA)
+        self.action_close.triggered.connect(self.close_selected_traces)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(_organization, _application_name)
@@ -189,9 +192,11 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             # # Create an STA-LTA algorithm instance with selected settings
             alg = stalta.StaLta(sta_length, lta_length)
             # perform task
+            selected_traces = self.stream_viewer.selected_traces
+            selected_traces = selected_traces if selected_traces else self.stream.traces
             analysis_task = pickingtask.PickingStreamTask(self,
                                                           alg,
-                                                          trace_list=self.stream_viewer.selected_traces)
+                                                          trace_list=selected_traces)
             self.launch_analysis_task(analysis_task,
                                       label="Applying %s..." % alg.__class__.__name__.upper())
 
@@ -227,9 +232,11 @@ class TraceSelectorDialog(QtGui.QMainWindow):
                             bandwidth=bandwidth, overlap=overlap,
                             f_start=startf, f_end=endf)
             # perform task
+            selected_traces = self.stream_viewer.selected_traces
+            selected_traces = selected_traces if selected_traces else self.stream.traces
             analysis_task = pickingtask.PickingStreamTask(self,
                                                           alg,
-                                                          trace_list=self.stream_viewer.selected_traces)
+                                                          trace_list=selected_traces)
             self.launch_analysis_task(analysis_task,
                                       label="Applying %s..." % alg.__class__.__name__.upper())
 
@@ -255,3 +262,8 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.action_sta_lta.setEnabled(True)
         self.analysis_progress_bar.hide()
         self.analysis_label.setText("")
+
+    def close_selected_traces(self):
+        selected_traces_idx = [self.stream.traces.index(trace) for trace in self.stream_viewer.selected_traces]
+        if selected_traces_idx:
+            self.main_window.command_stack.push(commands.CloseTraces(self.main_window, selected_traces_idx))

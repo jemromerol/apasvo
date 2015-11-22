@@ -65,7 +65,7 @@ class TracePlot(QtCore.QObject):
         self.ax.grid(True, which='both')
         # Set event markers
         self.marker_select_color = 'r'
-        self.marker_color = 'b'
+        self.marker_color = 'r'
         self.markers = {}
         self.update_markers()
         # Selection parameters
@@ -90,7 +90,7 @@ class TracePlot(QtCore.QObject):
     def create_marker(self, event, **kwargs):
         event_id = event.resource_id.uuid
         position = event.time
-        marker = self.ax.axvline(position, color=self.marker_color, ls='--', lw=2, animated=True)
+        marker = self.ax.axvline(position, color=self.marker_color, ls='--', lw=3, animated=True)
         self.markers[event_id] = marker
         self.markers[event_id].set(**kwargs)
 
@@ -148,6 +148,7 @@ class StreamViewerWidget(QtGui.QWidget):
     """
 
     trace_selected = QtCore.Signal(int)
+    selection_made = QtCore.Signal(bool)
 
     def __init__(self, parent, stream=None):
         super(StreamViewerWidget, self).__init__(parent)
@@ -189,8 +190,7 @@ class StreamViewerWidget(QtGui.QWidget):
     @property
     def selected_traces(self):
         if self.stream is not None:
-            return [self.stream.traces[i] for i in self._selected_traces] \
-                if self._selected_traces else self.stream.traces
+            return [self.stream.traces[i] for i in self._selected_traces]
         return []
 
     def on_key_press(self, event):
@@ -212,13 +212,16 @@ class StreamViewerWidget(QtGui.QWidget):
                     if self.shift_pressed:
                         if self._selected_traces:
                             self.trace_selected.emit(i)
+                            self.selection_made.emit(True)
                         self._selected_traces.add(i)
                     else:
                         self.trace_selected.emit(i)
+                        self.selection_made.emit(True)
                         self._selected_traces = {i}
             # if the user clicked out of any trace (and he's not using shift), then deselect all
             if not trace_selected and not self.shift_pressed:
                 self._selected_traces = set()
+                self.selection_made.emit(False)
             # Now update selection status on plots
             for i, plot in enumerate(self.trace_plots):
                 plot.set_selected(i in self._selected_traces)
