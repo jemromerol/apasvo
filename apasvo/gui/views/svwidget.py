@@ -664,7 +664,14 @@ class MiniMap(QtGui.QWidget):
         formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
         ax.xaxis.set_major_formatter(formatter)
         ax.grid(True, which='both')
-        ax.plot(self.xrange, self.record.signal, color='black', rasterized=True)
+        # Set dataseries to plot
+        xmin = self.xmin * self.record.fs
+        xmax = self.xmax * self.record.fs
+        pixel_width = np.ceil(self.minimapFig.get_figwidth() * self.minimapFig.get_dpi())
+        x_data, y_data = plotting.reduce_data(self.xrange, self.record.signal, pixel_width, xmin, xmax)
+        # self._plot_data.set_xdata(x_data)
+        # self._plot_data.set_ydata(y_data)
+        ax.plot(x_data, y_data, color='black', rasterized=True)
         ax.set_xlim(self.xmin, self.xmax)
         plotting.adjust_axes_height(ax)
         # Set the playback marker
