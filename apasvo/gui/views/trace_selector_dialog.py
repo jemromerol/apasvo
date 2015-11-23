@@ -78,9 +78,9 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
         # Add main toolbar
         self.tool_bar_main = QtGui.QToolBar(self)
-        self.action_save = QtGui.QAction(self)
-        self.action_save.setIcon(QtGui.QIcon(":/save.png"))
-        self.action_save.setEnabled(False)
+        # self.action_save = QtGui.QAction(self)
+        # self.action_save.setIcon(QtGui.QIcon(":/save.png"))
+        # self.action_save.setEnabled(False)
         self.action_close = QtGui.QAction(self)
         self.action_close.setIcon(QtGui.QIcon(":/close.png"))
         self.action_close.setEnabled(False)
