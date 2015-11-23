@@ -194,8 +194,10 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         super(TraceSelectorDialog, self).showEvent(event)
 
     def set_title(self):
-        self.setWindowTitle("{} Traces Opened - {}".format(len(self.stream.traces),
-                                                           ", ".join([tr.id for tr in self.stream])))
+        traces_description = " - ".join([trace.short_name for trace in self.stream.traces[:3]])
+        if len(self.stream) > 3:
+            traces_description = "{0} ...".format(traces_description)
+        self.setWindowTitle("{0} Traces Opened - {1}".format(len(self.stream.traces), traces_description))
 
     def set_stream(self, stream):
         self.stream = stream

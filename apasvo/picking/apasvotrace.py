@@ -36,7 +36,6 @@ from obspy.core.event import WaveformStreamID
 from obspy.core.event import Comment
 from obspy.core.event import Catalog
 from obspy.core.event import Event
-from collections import defaultdict
 import csv
 import copy
 import os
@@ -304,7 +303,7 @@ class ApasvoTrace(op.Trace):
             Default: ''.
     """
 
-    def __init__(self, data=None, header=None, label='', description='', **kwargs):
+    def __init__(self, data=None, header=None, label='', description='', filename='', **kwargs):
         """Initializes a Record instance.
 
         Args:
@@ -319,6 +318,7 @@ class ApasvoTrace(op.Trace):
         self.events = []
         self.label = label
         self.description = description
+        self.filename = filename
 
     @property
     def fs(self):
@@ -339,6 +339,14 @@ class ApasvoTrace(op.Trace):
     @property
     def endtime(self):
         return self.stats.endtime
+
+    @property
+    def short_name(self):
+        return "{0} | {1}".format(os.path.basename(self.filename), self.id)
+
+    @property
+    def name(self):
+        return "{0} | {1}".format(os.path.basename(self.filename), str(self))
 
     def detect(self, alg, threshold=None, peak_window=1.0,
                takanami=False, takanami_margin=5.0, action='append', debug=False, **kwargs):
@@ -603,9 +611,10 @@ class ApasvoStream(op.Stream):
     A list of multiple ApasvoTrace objects
     """
 
-    def __init__(self, traces, description='', **kwargs):
+    def __init__(self, traces, description='', filename='', **kwargs):
         super(ApasvoStream, self).__init__(traces)
         self.description = description
+        self.filename = filename
 
     def detect(self, alg, trace_list=None, allow_multiprocessing=True, **kwargs):
         """
@@ -670,7 +679,7 @@ def read(filename,
     """
     # Try to read using obspy core functionality
     try:
-        traces = [ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats)) \
+        traces = [ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats), filename=filename) \
                   for trace in op.read(filename, format=format, *args, **kwargs).traces]
     # Otherwise try to read as a binary or text file
     except Exception as e:
@@ -678,9 +687,9 @@ def read(filename,
                                             format=format,
                                             dtype=dtype,
                                             byteorder=byteorder)
-        trace = ApasvoTrace(fhandler.read().astype(DEFAULT_DTYPE, casting='safe'))
+        trace = ApasvoTrace(fhandler.read().astype(DEFAULT_DTYPE, casting='safe'), filename=filename)
         sample_fs = kwargs.get('fs')
         trace.stats.delta = DEFAULT_DELTA if sample_fs is None else 1. / sample_fs
         traces = [trace]
     # Convert Obspy traces to apasvo traces
-    return ApasvoStream(traces, description=description)
+    return ApasvoStream(traces, description=description, filename=filename)

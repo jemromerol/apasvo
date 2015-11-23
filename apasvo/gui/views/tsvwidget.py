@@ -37,6 +37,7 @@ matplotlib.rcParams['agg.path.chunksize'] = 80000
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
 from apasvo.utils import plotting
 from apasvo.utils import clt
@@ -72,6 +73,10 @@ class TracePlot(QtCore.QObject):
         # Selection parameters
         self.selected = False
         self.selector = self.ax.axvspan(0, self.xmax, fc='LightCoral', ec='r', alpha=0.5, visible=False)#, animated=True)
+        # Place legend
+        at = AnchoredText(self.trace.short_name, prop=dict(size=12), frameon=True, loc=2)
+        at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+        self.ax.add_artist(at)
 
     def on_xlim_change(self, ax):
         xmin, xmax = ax.get_xlim()
@@ -184,6 +189,7 @@ class StreamViewerWidget(QtGui.QWidget):
         self._selected_traces = set()
         self.shift_pressed = False
         self.press_selector = None
+        self.fig.canvas.mpl_connect('motion_notify_event', self.on_move)
         self.fig.canvas.mpl_connect('button_press_event', self.on_press)
         self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
         self.fig.canvas.mpl_connect('key_release_event', self.on_key_release)
@@ -193,6 +199,20 @@ class StreamViewerWidget(QtGui.QWidget):
         if self.stream is not None:
             return [self.stream.traces[i] for i in self._selected_traces]
         return []
+
+    def on_move(self, event):
+        axes_selected = False
+        for i, axes in enumerate(self.fig.axes):
+            if axes.get_visible():
+                ymin, ymax = axes.get_position().ymin, axes.get_position().ymax
+                xmin, xmax = axes.get_position().xmin, axes.get_position().xmax
+                xfig, yfig = self._event_to_fig_coords(event)
+                if ymin <= yfig <= ymax and xmin <= xfig <= xmax:
+                    self.canvas.setToolTip(self.stream.traces[i].name)
+                    axes_selected = True
+                    break
+        if not axes_selected:
+            self.canvas.setToolTip("")
 
     def on_key_press(self, event):
         if event.key == 'control':
@@ -220,6 +240,7 @@ class StreamViewerWidget(QtGui.QWidget):
                             self.trace_selected.emit(i)
                             self.selection_made.emit(True)
                             self._selected_traces = {i}
+                        break
             # if the user clicked out of any trace (and he's not using shift), then deselect all
             if not trace_selected and not self.shift_pressed:
                 self._selected_traces = set()
