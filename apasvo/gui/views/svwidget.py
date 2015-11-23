@@ -605,7 +605,7 @@ class MiniMap(QtGui.QWidget):
 
         self.xmin = 0.0
         self.xmax = 0.0
-        self.step = 10.0
+        self.step = 5.0
         self.xrange = np.array([])
 
         self.minimapFig = plt.figure()
