@@ -63,7 +63,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.main_window = parent
         self.stream = stream
         self.skip = 0
-        self.step = 10
+        self.step = 5
 
         self._init_ui()
 
