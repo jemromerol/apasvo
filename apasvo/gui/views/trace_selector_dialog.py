@@ -138,6 +138,8 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.statusbar.addPermanentWidget(self.analysis_progress_bar)
 
         # Connect widget signals
+        self.events_created.connect(self.stream_viewer.update_markers)
+        self.events_deleted.connect(self.stream_viewer.update_markers)
         self.stream_viewer.trace_selected.connect(lambda x: self.selection_changed.emit(x))
         self.stream_viewer.selection_made.connect(self.action_close.setEnabled)
         self.action_sta_lta.triggered.connect(self.doSTALTA)
@@ -194,7 +196,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             alg = stalta.StaLta(sta_length, lta_length)
             # perform task
             selected_traces = self.stream_viewer.selected_traces
-            selected_traces = selected_traces if selected_traces else self.stream.traces
+            selected_traces = selected_traces if selected_traces else self.stream_viewer.stream.traces
             analysis_task = pickingtask.PickingStreamTask(self,
                                                           alg,
                                                           trace_list=selected_traces)
@@ -234,7 +236,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
                             f_start=startf, f_end=endf)
             # perform task
             selected_traces = self.stream_viewer.selected_traces
-            selected_traces = selected_traces if selected_traces else self.stream.traces
+            selected_traces = selected_traces if selected_traces else self.stream_viewer.stream.traces
             analysis_task = pickingtask.PickingStreamTask(self,
                                                           alg,
                                                           trace_list=selected_traces)
