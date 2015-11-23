@@ -131,7 +131,6 @@ class TracePlot(QtCore.QObject):
 
     def remove(self):
         self.fig.delaxes(self.ax)
-        self.trace_selected.disconnect()
         self.parent.subplots_adjust()
         self.parent.draw()
 
@@ -234,12 +233,12 @@ class StreamViewerWidget(QtGui.QWidget):
     def set_stream(self, stream):
         self.stream = stream
         # Clear canvas
-        for axes in self.fig.axes:
-            self.fig.delaxes(axes)
-        # Plot stream traces
+        for plot in self.trace_plots:
+            plot.remove()
         self.trace_plots = []
+        # Plot stream traces
         for i, trace in enumerate(self.stream.traces):
-            self.trace_plots.append(TracePlot(self, trace, fig_nrows=len(stream), ax_pos=i))
+            self.trace_plots.append(TracePlot(self, trace, fig_nrows=len(stream), ax_pos=i + 1))
         # Draw canvas
         self.canvas.draw()
         self.background = self.canvas.copy_from_bbox(self.fig.bbox)
