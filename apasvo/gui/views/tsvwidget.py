@@ -168,6 +168,7 @@ class StreamViewerWidget(QtGui.QWidget):
         self.graphArea = QtGui.QScrollArea(self)
         self.graphArea.setWidget(self.canvas)
         self.graphArea.setWidgetResizable(True)
+        self.graphArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         # Set the layout
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.graphArea)
