@@ -48,7 +48,7 @@ class TracePlot(QtCore.QObject):
         super(TracePlot, self).__init__()
         self.parent = parent
         self.fig = parent.fig
-        self.ax = self.fig.add_subplot(fig_nrows, fig_ncols, ax_pos)
+        self.ax = self.fig.add_subplot(fig_nrows, fig_ncols, ax_pos, visible=False)
         self.trace = trace
         # Get trace dataseries
         self.signal = trace.signal
@@ -61,7 +61,8 @@ class TracePlot(QtCore.QObject):
         # Format axes
         axes_formatter = FuncFormatter(lambda x, pos: clt.float_secs_2_string_date(x, trace.starttime))
         self.ax.xaxis.set_major_formatter(axes_formatter)
-        plt.setp(self.ax.get_xticklabels(), visible=True)
+        plt.setp(self.ax.get_xticklabels(), visible=False)
+        plt.setp(self.ax.get_yticklabels(), visible=False)
         self.ax.grid(True, which='both')
         # Set event markers
         self.marker_select_color = 'r'
@@ -70,7 +71,7 @@ class TracePlot(QtCore.QObject):
         self.update_markers()
         # Selection parameters
         self.selected = False
-        self.selector = self.ax.axvspan(0, self.xmax, fc='LightCoral', ec='r', alpha=0.5, animated=True, visible=False)
+        self.selector = self.ax.axvspan(0, self.xmax, fc='LightCoral', ec='r', alpha=0.5, visible=False)#, animated=True)
 
     def on_xlim_change(self, ax):
         xmin, xmax = ax.get_xlim()
@@ -90,7 +91,7 @@ class TracePlot(QtCore.QObject):
     def create_marker(self, event, **kwargs):
         event_id = event.resource_id.uuid
         position = event.time
-        marker = self.ax.axvline(position, color=self.marker_color, ls='--', lw=3, animated=True)
+        marker = self.ax.axvline(position, color=self.marker_color, ls='--', lw=3)#, animated=True)
         self.markers[event_id] = marker
         self.markers[event_id].set(**kwargs)
 
@@ -179,6 +180,7 @@ class StreamViewerWidget(QtGui.QWidget):
             self.set_stream(stream)
 
         # Event handling
+        self.visible_axes = []
         self._selected_traces = set()
         self.shift_pressed = False
         self.press_selector = None
@@ -193,7 +195,7 @@ class StreamViewerWidget(QtGui.QWidget):
         return []
 
     def on_key_press(self, event):
-        if event.key == 'shift':
+        if event.key == 'control':
             self.shift_pressed = True
 
     def on_key_release(self, event):
@@ -203,20 +205,21 @@ class StreamViewerWidget(QtGui.QWidget):
         trace_selected = False
         if event.button == 1:# and event.dblclick:
             for i, ax in enumerate(self.fig.axes):
-                ymin, ymax = ax.get_position().ymin, ax.get_position().ymax
-                xmin, xmax = ax.get_position().xmin, ax.get_position().xmax
-                xfig, yfig = self._event_to_fig_coords(event)
-                if ymin <= yfig <= ymax and xmin <= xfig <= xmax:
-                    trace_selected = True
-                    if self.shift_pressed:
-                        if self._selected_traces:
+                if ax.get_visible():
+                    ymin, ymax = ax.get_position().ymin, ax.get_position().ymax
+                    xmin, xmax = ax.get_position().xmin, ax.get_position().xmax
+                    xfig, yfig = self._event_to_fig_coords(event)
+                    if ymin <= yfig <= ymax and xmin <= xfig <= xmax:
+                        trace_selected = True
+                        if self.shift_pressed:
+                            if self._selected_traces:
+                                self.trace_selected.emit(i)
+                                self.selection_made.emit(True)
+                            self._selected_traces.add(i)
+                        else:
                             self.trace_selected.emit(i)
                             self.selection_made.emit(True)
-                        self._selected_traces.add(i)
-                    else:
-                        self.trace_selected.emit(i)
-                        self.selection_made.emit(True)
-                        self._selected_traces = {i}
+                            self._selected_traces = {i}
             # if the user clicked out of any trace (and he's not using shift), then deselect all
             if not trace_selected and not self.shift_pressed:
                 self._selected_traces = set()
@@ -240,13 +243,14 @@ class StreamViewerWidget(QtGui.QWidget):
         for i, trace in enumerate(self.stream.traces):
             self.trace_plots.append(TracePlot(self, trace, fig_nrows=len(stream), ax_pos=i + 1))
         # Draw canvas
+        self.subplots_adjust()
         self.canvas.draw()
         self.background = self.canvas.copy_from_bbox(self.fig.bbox)
         self.draw()
 
     def draw(self):
-        #self.canvas.draw()
-        self.draw_animate()
+        self.canvas.draw()
+        #self.draw_animate()
 
     def draw_animate(self):
         size = self.fig.bbox.width, self.fig.bbox.height
@@ -294,8 +298,8 @@ class StreamViewerWidget(QtGui.QWidget):
             if correct_geometry != ax.get_geometry():
                 ax.change_geometry(len(visible_subplots), 1, i + 1)
         # Adjust space between subplots
-        self.fig.subplots_adjust(left=0.06, right=0.95, bottom=0.14,
-                                 top=0.95, hspace=0.22)
+        self.fig.subplots_adjust(left=0.02, right=0.98, bottom=0.02,
+                                 top=0.98, hspace=0.05)
 
     def showEvent(self, event):
         self.draw()
@@ -308,5 +312,8 @@ class StreamViewerWidget(QtGui.QWidget):
             plot.update_markers()
         self.draw()
 
-
-
+    def visualize_stream_range(self, start_trace=None, end_trace=None):
+        for i, ax in enumerate(self.fig.axes):
+            ax.set_visible(start_trace <= i < end_trace)
+        self.subplots_adjust()
+        self.canvas.draw()

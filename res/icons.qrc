@@ -25,5 +25,8 @@
         <file alias="app.png">images/app.png</file>
         <file alias="splash.png">images/splash.png</file>
         <file alias="marker.png">images/marker.png</file>
+        <file alias="go-next-view.png">images/go-next-view.png</file>
+        <file alias="go-previous-view.png">images/go-previous-view.png</file>
+        <file alias="marker.png">images/marker.png</file>
     </qresource>
 </RCC>

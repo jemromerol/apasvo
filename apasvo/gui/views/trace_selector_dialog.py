@@ -62,6 +62,8 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
         self.main_window = parent
         self.stream = stream
+        self.skip = 0
+        self.step = 10
 
         self._init_ui()
 
@@ -78,16 +80,40 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
         # Add main toolbar
         self.tool_bar_main = QtGui.QToolBar(self)
-        self.action_save = QtGui.QAction(self)
-        self.action_save.setIcon(QtGui.QIcon(":/save.png"))
-        self.action_save.setEnabled(False)
+        # self.action_save = QtGui.QAction(self)
+        # self.action_save.setIcon(QtGui.QIcon(":/save.png"))
+        # self.action_save.setEnabled(False)
         self.action_close = QtGui.QAction(self)
         self.action_close.setIcon(QtGui.QIcon(":/close.png"))
         self.action_close.setEnabled(False)
-        self.tool_bar_main.addAction(self.action_save)
+        self.action_previous_view = QtGui.QAction(self)
+        self.action_previous_view.setIcon(QtGui.QIcon(":/go-previous-view.png"))
+        self.action_previous_view.setEnabled(True)
+        self.action_next_view = QtGui.QAction(self)
+        self.action_next_view.setIcon(QtGui.QIcon(":/go-next-view.png"))
+        self.action_next_view.setEnabled(True)
+        # self.tool_bar_main.addAction(self.action_save)
         self.tool_bar_main.addAction(self.action_close)
+        self.tool_bar_main.addSeparator()
+        self.tool_bar_main.addAction(self.action_previous_view)
+        self.skip_label = QtGui.QLabel(" Skip: ", parent=self.tool_bar_main)
+        self.tool_bar_main.addWidget(self.skip_label)
+        self.skip_spinbox = QtGui.QSpinBox(self.tool_bar_main)
+        self.skip_spinbox.setMinimum(0)
+        self.skip_spinbox.setValue(self.skip)
+        self.skip_spinbox.setAccelerated(True)
+        self.skip_spinbox.setToolTip("Number of traces to skip")
+        self.tool_bar_main.addWidget(self.skip_spinbox)
+        self.step_label = QtGui.QLabel(" Step: ", parent=self.tool_bar_main)
+        self.tool_bar_main.addWidget(self.step_label)
+        self.step_spinbox = QtGui.QSpinBox(self.tool_bar_main)
+        self.step_spinbox.setMinimum(1)
+        self.step_spinbox.setValue(self.step)
+        self.step_spinbox.setAccelerated(True)
+        self.step_spinbox.setToolTip("Number of traces shown at once")
+        self.tool_bar_main.addWidget(self.step_spinbox)
+        self.tool_bar_main.addAction(self.action_next_view)
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_main)
-
         # Add analysis toolbar
         self.tool_bar_analysis = QtGui.QToolBar(self)
         self.action_sta_lta = QtGui.QAction(self)
@@ -125,6 +151,15 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         # self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar_navigation)
         # self.addToolBarBreak()
 
+        # Connect actions
+        self.action_sta_lta.triggered.connect(self.doSTALTA)
+        self.action_ampa.triggered.connect(self.doAMPA)
+        self.action_close.triggered.connect(self.close_selected_traces)
+        self.action_previous_view.triggered.connect(self.on_previous_view)
+        self.action_next_view.triggered.connect(self.on_next_view)
+        self.step_spinbox.valueChanged.connect(self.on_step_modified)
+        self.skip_spinbox.valueChanged.connect(self.on_skip_modified)
+
         # set up status bar
         self.statusbar = QtGui.QStatusBar(self)
         self.statusbar.setObjectName("statusbar")
@@ -142,9 +177,6 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.events_deleted.connect(self.stream_viewer.update_markers)
         self.stream_viewer.trace_selected.connect(lambda x: self.selection_changed.emit(x))
         self.stream_viewer.selection_made.connect(self.action_close.setEnabled)
-        self.action_sta_lta.triggered.connect(self.doSTALTA)
-        self.action_ampa.triggered.connect(self.doAMPA)
-        self.action_close.triggered.connect(self.close_selected_traces)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(_organization, _application_name)
@@ -162,11 +194,13 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         super(TraceSelectorDialog, self).showEvent(event)
 
     def set_title(self):
-        self.setWindowTitle("Opened Traces - {}".format(", ".join([tr.id for tr in self.stream])))
+        self.setWindowTitle("{} Traces Opened - {}".format(len(self.stream.traces),
+                                                           ", ".join([tr.id for tr in self.stream])))
 
     def set_stream(self, stream):
         self.stream = stream
         self.stream_viewer.set_stream(self.stream)
+        self._visualize_current_stream_range()
         stream_has_any_trace = len(self.stream)
         self.centralwidget.setVisible(stream_has_any_trace)
         self.action_sta_lta.setEnabled(stream_has_any_trace)
@@ -270,3 +304,21 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         selected_traces_idx = [self.stream.traces.index(trace) for trace in self.stream_viewer.selected_traces]
         if selected_traces_idx:
             self.main_window.command_stack.push(commands.CloseTraces(self.main_window, selected_traces_idx))
+
+    def on_skip_modified(self, skip):
+        self.skip = skip
+        self._visualize_current_stream_range()
+
+    def on_step_modified(self, step):
+        self.step = step
+        self._visualize_current_stream_range()
+
+    def on_previous_view(self):
+        self.skip_spinbox.setValue(max(0, self.skip - self.step))
+
+    def on_next_view(self):
+        self.skip_spinbox.setValue(self.skip + self.step)
+
+    def _visualize_current_stream_range(self):
+        self.stream_viewer.visualize_stream_range(start_trace=self.skip, end_trace=self.skip + self.step)
+
