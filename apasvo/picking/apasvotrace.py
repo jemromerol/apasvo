@@ -303,7 +303,7 @@ class ApasvoTrace(op.Trace):
             Default: ''.
     """
 
-    def __init__(self, data=None, header=None, label='', description='', filename='', **kwargs):
+    def __init__(self, data=None, header=None, label='', description='', filename='', normalize=True, **kwargs):
         """Initializes a Record instance.
 
         Args:
@@ -315,6 +315,9 @@ class ApasvoTrace(op.Trace):
             data = np.ndarray((0,), dtype=DEFAULT_DTYPE)
         super(ApasvoTrace, self).__init__(data, header)
         self.cf = np.array([], dtype=DEFAULT_DTYPE)
+        if normalize:
+            self.data = self.data - np.mean(self.data)
+            self.data = self.data/ np.max(np.abs(self.data))
         self.events = []
         self.label = label
         self.description = description
@@ -557,8 +560,17 @@ class ApasvoTrace(op.Trace):
         if show_x:
             fig.axes[ax_idx].set_title("Signal Amplitude (%gHz)" % self.fs)
             fig.axes[ax_idx].set_ylabel('Amplitude')
+
+            #mean 0
+            self.signal= self.signal-np.ones(len(self.signal),1)*np.mean(self.signal)
+
+            #normalize
+            self.signal=self.signal/(np.ones(len(self.signal),1)*max(abs(self.signal)));
+
             fig.axes[ax_idx].plot(t, self.signal[i_from:i_to], color='black',
                                   label='Signal')
+            #fig.axes[ax_idx].plot(t, signal_norm, color='black',
+                                  #label='Signal')
             # Draw signal envelope
             if show_envelope:
                 fig.axes[ax_idx].plot(t, env.envelope(self.signal[i_from:i_to]),
@@ -665,6 +677,7 @@ def read(filename,
          dtype='float64',
          byteorder='native',
          description='',
+         normalize=True,
          *args, **kwargs):
     """
     Read signal files into an ApasvoStream object
@@ -679,7 +692,7 @@ def read(filename,
     """
     # Try to read using obspy core functionality
     try:
-        traces = [ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats), filename=filename) \
+        traces = [ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats), filename=filename, normalize=normalize) \
                   for trace in op.read(filename, format=format, *args, **kwargs).traces]
     # Otherwise try to read as a binary or text file
     except Exception as e:
