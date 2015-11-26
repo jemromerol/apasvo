@@ -62,6 +62,12 @@ ALLOWED_METHODS = (
     method_ampa_takanami
 )
 
+PHASE_VALUES = (
+    "P wave",
+    "S wave",
+    "Other",
+)
+
 mode_manual = 'manual'
 mode_automatic = 'automatic'
 
@@ -156,6 +162,7 @@ class ApasvoEvent(Pick):
                  name='',
                  comments='',
                  method=method_other,
+                 phase_hint=None,
                  aic=None,
                  n0_aic=None,
                  *args, **kwargs):
@@ -168,8 +175,10 @@ class ApasvoEvent(Pick):
         self.method = method
         self.aic = aic
         self.n0_aic = n0_aic
+        phase_hint = phase_hint if phase_hint in PHASE_VALUES else PHASE_VALUES[0]
         super(ApasvoEvent, self).__init__(time=self.time,
                                           method_id=ResourceIdentifier(method),
+                                          phase_hint=phase_hint,
                                           creation_info=CreationInfo(
                                               author=kwargs.get('author', ''),
                                               agency_id=kwargs.get('agency', ''),
@@ -317,7 +326,7 @@ class ApasvoTrace(op.Trace):
         self.cf = np.array([], dtype=DEFAULT_DTYPE)
         if normalize:
             self.data = self.data - np.mean(self.data)
-            self.data = self.data/ np.max(np.abs(self.data))
+            #self.data = self.data/ np.max(np.abs(self.data))
         self.events = []
         self.label = label
         self.description = description
@@ -628,7 +637,7 @@ class ApasvoStream(op.Stream):
         self.description = description
         self.filename = filename
 
-    def detect(self, alg, trace_list=None, allow_multiprocessing=True, **kwargs):
+    def detect(self, alg, trace_list=None, allow_multiprocessing=False, **kwargs):
         """
         """
         trace_list = self.traces if trace_list is None else trace_list

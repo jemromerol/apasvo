@@ -40,10 +40,11 @@ class AmpaDialog(QtGui.QDialog):
     def __init__(self, stream, trace_list=None, parent=None):
         super(AmpaDialog, self).__init__(parent)
 
-        traces = stream.traces if trace_list is None else trace_list
-
+        traces = stream.traces if not trace_list else trace_list
         self.step = 1.0 / max([trace.fs for trace in traces])
         self.max_value = min([((len(trace) - 1) / trace.fs) for trace in traces])
+
+
 
         self.nyquist_freq = max([trace.fs for trace in traces]) / 2.0
         self.setup_ui()
@@ -282,6 +283,7 @@ class AmpaDialog(QtGui.QDialog):
         settings.endGroup()
 
     def onclick(self, button):
+
         if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.RestoreDefaults:
             self.load_settings()
         if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.Apply:

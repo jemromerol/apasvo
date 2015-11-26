@@ -872,11 +872,11 @@ class SignalViewerWidget(QtGui.QWidget):
             ax.callbacks.connect('xlim_changed', self.on_xlim_change)
             ax.xaxis.set_major_formatter(formatter)
             plt.setp(ax.get_xticklabels(), visible=True)
-            plt.setp(ax.get_yticklabels(), visible=False)
+            #plt.setp(ax.get_yticklabels(), visible=False)
             ax.grid(True, which='both')
         self.specgram_ax.callbacks.connect('ylim_changed', self.on_ylim_change)
         self.specgram_ax.set_xlabel('Time (seconds)')
-        #self.signal_ax.set_ylabel('Signal Amp.')
+        self.signal_ax.set_ylabel('Signal Amp.')
         self.cf_ax.set_ylabel('CF Amp.')
         self.specgram_ax.set_ylabel('Frequency (Hz)')
 

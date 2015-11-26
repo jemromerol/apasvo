@@ -29,7 +29,7 @@ from apasvo.gui.views.generated import ui_save_events_dialog
 
 
 FORMATS = ('JSON', 'NLLOC_OBS', 'QUAKEML')
-DEFAULT_FORMAT = 'NonLinLoc'
+DEFAULT_FORMAT = 'NLLOC_OBS'
 FORMATS_LABELS = ('JSON', 'NonLinLoc', 'QuakeML')
 
 
@@ -60,7 +60,7 @@ class SaveEventsDialog(QtGui.QDialog, ui_save_events_dialog.Ui_SaveEventsDialog)
         # init comboboxes
         self.FileFormatComboBox.addItems(FORMATS_LABELS)
         # Set defaults
-        self.FileFormatComboBox.setCurrentIndex(FORMATS_LABELS.index(fmt))
+        self.FileFormatComboBox.setCurrentIndex(FORMATS.index(fmt))
 
     def get_values(self):
         """Gets selected parameters."""

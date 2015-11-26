@@ -214,7 +214,8 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
     def doSTALTA(self):
         """Performs event detection/picking by using STA-LTA method."""
-        dialog = staltadialog.StaLtaDialog(self.stream)
+        selected_traces = self.stream_viewer.selected_traces
+        dialog = staltadialog.StaLtaDialog(self.stream, trace_list=selected_traces)
         return_code = dialog.exec_()
         if return_code == QtGui.QDialog.Accepted:
             # Read settings
@@ -241,7 +242,8 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
     def doAMPA(self):
         """Performs event detection/picking by using AMPA method."""
-        dialog = ampadialog.AmpaDialog(self.stream)
+        selected_traces = self.stream_viewer.selected_traces
+        dialog = ampadialog.AmpaDialog(self.stream, trace_list=selected_traces)
         return_code = dialog.exec_()
         if return_code == QtGui.QDialog.Accepted:
             # Read settings
@@ -273,6 +275,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             # perform task
             selected_traces = self.stream_viewer.selected_traces
             selected_traces = selected_traces if selected_traces else self.stream_viewer.stream.traces
+            print selected_traces
             analysis_task = pickingtask.PickingStreamTask(self,
                                                           alg,
                                                           trace_list=selected_traces)

@@ -56,6 +56,8 @@ class EventListModel(QtCore.QAbstractTableModel):
          'format': "{:.6g}"},
         {'name': 'Mode', 'type': 'event', 'attribute_name': 'evaluation_mode', 'editable': True,
          'attribute_type': 'enum', 'value_list': op.core.event_header.EvaluationMode.keys()},
+        {'name': 'Phase hint', 'type': 'event', 'attribute_name': 'phase_hint', 'editable': True,
+         'attribute_type': 'enum', 'value_list': rc.PHASE_VALUES},
         {'name': 'Method', 'type': 'event', 'attribute_name': 'method', 'editable': False,
          'attribute_type': 'enum', 'value_list': rc.ALLOWED_METHODS},
         {'name': 'Status', 'type': 'event', 'attribute_name': 'evaluation_status', 'editable': True,
