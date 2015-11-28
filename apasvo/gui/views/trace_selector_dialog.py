@@ -296,6 +296,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         task.error.connect(error.display_error_dlg)
         self._thread.finished.connect(self._thread.deleteLater)
         self._thread.start()
+#        task.run()
 
     def on_analysis_finished(self):
         QtGui.QApplication.restoreOverrideCursor()

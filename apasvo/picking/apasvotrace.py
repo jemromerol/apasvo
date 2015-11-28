@@ -40,6 +40,7 @@ import csv
 import copy
 import os
 import uuid
+import gc
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -573,12 +574,6 @@ class ApasvoTrace(op.Trace):
             fig.axes[ax_idx].set_title("Signal Amplitude (%gHz)" % self.fs)
             fig.axes[ax_idx].set_ylabel('Amplitude')
 
-            #mean 0
-            self.signal= self.signal-np.ones(len(self.signal),1)*np.mean(self.signal)
-
-            #normalize
-            self.signal=self.signal/(np.ones(len(self.signal),1)*max(abs(self.signal)));
-
             fig.axes[ax_idx].plot(t, self.signal[i_from:i_to], color='black',
                                   label='Signal')
             #fig.axes[ax_idx].plot(t, signal_norm, color='black',
@@ -621,6 +616,12 @@ class ApasvoTrace(op.Trace):
             ax.set_xlim(t[0], t[-1])
         return fig
 
+    def add_event_from_copy(self, event):
+        event = copy.copy(event)
+        event.trace = self
+        event.aic = None
+        event.n0_aic = None
+        self.events.append(event)
 
 def _detect(parameters):
     alg = parameters[0]
@@ -640,10 +641,10 @@ class ApasvoStream(op.Stream):
         self.description = description
         self.filename = filename
 
-    def detect(self, alg, trace_list=None, allow_multiprocessing=False, **kwargs):
+    def detect(self, alg, trace_list=None, allow_multiprocessing=True, **kwargs):
         """
         """
-        trace_list = self.traces if trace_list is None else trace_list
+        trace_list = self.traces if trace_list is None else trace_list[:]
         n_traces = len(trace_list)
         if allow_multiprocessing and n_traces > 1:
             processes = min(mp.cpu_count(), n_traces)
@@ -655,10 +656,15 @@ class ApasvoStream(op.Stream):
             # Update existing traces w. new events and cf from  processed events
             for trace, processed_trace in zip(trace_list, processed_traces):
                 new_events = [event for event in processed_trace.events if event not in trace.events]
-                trace.events.extend(new_events)
-                trace.cf = processed_trace.cf
+                for event in new_events:
+                    trace.add_event_from_copy(event)
+                trace.cf = processed_trace.cf[:]
+            # Cleanup
+            del processed_traces
+            del trace_list
             p.close()
             p.join()
+            gc.collect(2)
         else:
             _detect((alg, trace_list, kwargs))
 

@@ -30,6 +30,7 @@ import traceback
 from apasvo._version import _application_name
 from apasvo._version import _organization
 from apasvo.gui.models import eventcommands as commands
+import sys
 
 
 class PickingTask(QtCore.QObject):

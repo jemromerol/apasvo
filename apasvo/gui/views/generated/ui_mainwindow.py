@@ -36,6 +36,9 @@ from PySide import QtCore, QtGui
 from apasvo.gui.views.generated import qrc_icons
 
 
+DEFAULT_UNDO_LIMIT = 10
+
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -115,6 +118,7 @@ class Ui_MainWindow(object):
         self.actionAMPA.setObjectName("actionAMPA")
         # create undo and redo actions
         self.command_stack = QtGui.QUndoStack(self)
+        self.command_stack.setUndoLimit(DEFAULT_UNDO_LIMIT)
         self.actionUndo = self.command_stack.createUndoAction(self)
         self.actionRedo = self.command_stack.createRedoAction(self)
         self.actionUndo.setIcon(QtGui.QIcon(":/undo.png"))
