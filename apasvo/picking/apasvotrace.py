@@ -39,6 +39,7 @@ from obspy.core.event import Event
 import csv
 import copy
 import os
+import uuid
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -331,6 +332,8 @@ class ApasvoTrace(op.Trace):
         self.label = label
         self.description = description
         self.filename = filename
+        # Get an uuid for each trace
+        self.uuid = unicode(uuid.uuid4())
 
     @property
     def fs(self):

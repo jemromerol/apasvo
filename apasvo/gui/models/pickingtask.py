@@ -85,6 +85,7 @@ class PickingStreamTask(QtCore.QObject):
         self.threshold = threshold
         settings = QtCore.QSettings(_organization, _application_name)
         self.takanami = int(settings.value('takanami_settings/takanami', False))
+        self.takanami_margin = float(settings.value('takanami_margin', 5.0))
 
     def run(self):
         try:

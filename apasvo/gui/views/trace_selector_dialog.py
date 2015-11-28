@@ -275,7 +275,6 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             # perform task
             selected_traces = self.stream_viewer.selected_traces
             selected_traces = selected_traces if selected_traces else self.stream_viewer.stream.traces
-            print selected_traces
             analysis_task = pickingtask.PickingStreamTask(self,
                                                           alg,
                                                           trace_list=selected_traces)

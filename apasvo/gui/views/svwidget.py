@@ -976,7 +976,7 @@ class SignalViewerWidget(QtGui.QWidget):
             self.set_cf_visible(cf_loaded)
 
     def create_events(self, new_events_set):
-        for event in new_events_set.get(id(self.document.record), []):
+        for event in new_events_set.get(self.document.record.uuid, []):
             self.create_event(event)
 
     def create_event(self, event):
@@ -988,7 +988,7 @@ class SignalViewerWidget(QtGui.QWidget):
             marker.right_clicked.connect(self.on_event_right_clicked)
 
     def delete_events(self, new_events_set):
-        for event in new_events_set.get(id(self.document.record), []):
+        for event in new_events_set.get(self.document.record.uuid, []):
             self.delete_event(event)
 
     def delete_event(self, event):

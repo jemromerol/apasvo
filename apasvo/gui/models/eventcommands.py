@@ -199,24 +199,24 @@ class DetectStreamEvents(QtGui.QUndoCommand):
         super(DetectStreamEvents, self).__init__('Apply %s' % alg.__class__.__name__.
                                            upper())
         self.trace_selector = trace_selector_widget
-        self.events_old = {id(trace): trace.events[:] for trace in self.trace_selector.stream.traces}
+        self.events_old = {trace.uuid: trace.events[:] for trace in self.trace_selector.stream.traces}
         self.trace_selector.stream.detect(alg, trace_list, **kwargs)
-        self.events = {id(trace): trace.events[:] for trace in self.trace_selector.stream.traces}
-        self.new_events = {id(trace): [event for event in self.events[id(trace)] if event not in self.events_old[id(trace)]] \
+        self.events = {trace.uuid: trace.events[:] for trace in self.trace_selector.stream.traces}
+        self.new_events = {trace.uuid: [event for event in self.events[trace.uuid] if event not in self.events_old[trace.uuid]] \
                            for trace in self.trace_selector.stream.traces}
         self.trace_selector.detection_performed.emit()
 
     def undo(self):
         for trace in self.trace_selector.stream.traces:
-            if id(trace) in self.events_old:
-                trace.events = self.events_old[id(trace)][:]
+            if trace.uuid in self.events_old:
+                trace.events = self.events_old[trace.uuid][:]
         # Update current model data
         self.trace_selector.events_deleted.emit(self.new_events)
 
     def redo(self):
         for trace in self.trace_selector.stream.traces:
-            if id(trace) in self.events_old:
-                trace.events = self.events[id(trace)][:]
+            if trace.uuid in self.events_old:
+                trace.events = self.events[trace.uuid][:]
         # Update current model data
         self.trace_selector.events_created.emit(self.new_events)
 
