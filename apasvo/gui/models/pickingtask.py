@@ -84,18 +84,19 @@ class PickingStreamTask(QtCore.QObject):
         self.alg = alg
         self.trace_list = self.trace_selector.stream.traces if trace_list is None else trace_list
         self.threshold = threshold
-        settings = QtCore.QSettings(_organization, _application_name)
-        self.takanami = int(settings.value('takanami_settings/takanami', False))
-        self.takanami_margin = float(settings.value('takanami_margin', 5.0))
 
     def run(self):
         try:
+            settings = QtCore.QSettings(_organization, _application_name)
+            takanami = int(settings.value('takanami_settings/takanami', False))
+            takanami_margin = float(settings.value('takanami_margin', 5.0))
+
             detect_command = commands.DetectStreamEvents(self.trace_selector,
                                                          self.alg,
                                                          self.trace_list,
                                                          threshold=self.threshold,
-                                                         takanami=self.takanami,
-                                                         takanami_margin=self.takanami_margin)
+                                                         takanami=takanami,
+                                                         takanami_margin=takanami_margin)
             self.trace_selector.main_window.command_stack.push(detect_command)
         except Exception, e:
             self.error.emit(str(e), traceback.format_exc())
