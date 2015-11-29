@@ -204,8 +204,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionNavigation_Toolbar.toggled.connect(self.toolBarNavigation.setVisible)
 
         # Connect trace selector to signal viewer
-        self.trace_selector.events_created.connect(self.signalViewer.create_events)
-        self.trace_selector.events_deleted.connect(self.signalViewer.delete_events)
         self.trace_selector.detection_performed.connect(self.signalViewer.update_cf)
 
         self.set_title()
@@ -390,6 +388,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             # connect trace selector to document
             self.trace_selector.events_created.connect(lambda x: self.document.updateList())
             self.trace_selector.events_deleted.connect(lambda x: self.document.updateList())
+            self.trace_selector.events_created.connect(self.signalViewer.create_events)
+            self.trace_selector.events_deleted.connect(self.signalViewer.delete_events)
             # connect document model to signalViewer
             self.document.eventCreated.connect(self.signalViewer.create_event)
             self.document.eventCreated.connect(self.trace_selector.update_events)

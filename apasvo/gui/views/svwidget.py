@@ -989,6 +989,7 @@ class SignalViewerWidget(QtGui.QWidget):
             cf_loaded = (self.cf.size != 0)
             self.CF_loaded.emit(cf_loaded)
             self.set_cf_visible(cf_loaded)
+            self.draw()
 
     def create_events(self, new_events_set):
         for event in new_events_set.get(self.document.record.uuid, []):
