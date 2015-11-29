@@ -905,6 +905,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.time = np.linspace(0, len(self.signal) / self.fs, num=len(self.signal), endpoint=False)
         self.xmax = self.time[-1]
         # Draw minimap
+        self.minimap.minimapSelector.set(visible=False)  # Hide minimap selector while loading
         self.minimap.set_record(self.document.record, step)
         # Plot signal
         step_samples = step * self.fs
@@ -957,6 +958,9 @@ class SignalViewerWidget(QtGui.QWidget):
         self.eventMarkers = {}
         for event in self.document.record.events:
             self.create_event(event)
+        # Now activate selector again on minimap
+        self.minimap.minimapSelector.set(visible=True)
+        self.minimap.draw()
 
     def unset_record(self):
         self.document = None
