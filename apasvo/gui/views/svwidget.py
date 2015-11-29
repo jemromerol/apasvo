@@ -919,9 +919,8 @@ class SignalViewerWidget(QtGui.QWidget):
                                                     color='red',
                                                     rasterized=True)[0]
         # Adjust y axis for signal plot
-        signal_abs = np.abs(self.signal)
-        signal_yaxis_max_value = max(np.max(signal_abs), np.max(self.envelope))
-        signal_yaxis_min_value = np.min(signal_abs)
+        signal_yaxis_max_value = max(np.max(self.signal), np.max(self.envelope))
+        signal_yaxis_min_value = np.min(self.signal)
         plotting.adjust_axes_height(self.signal_ax,
                                     max_value=signal_yaxis_max_value,
                                     min_value=signal_yaxis_min_value)
