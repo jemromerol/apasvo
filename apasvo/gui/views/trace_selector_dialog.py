@@ -26,7 +26,7 @@ from PySide import QtCore
 from PySide import QtGui
 import numpy as np
 
-from apasvo.gui.views import navigationtoolbar
+from apasvo.gui.views import processingdialog
 from apasvo.gui.views import tsvwidget
 from apasvo.gui.views import staltadialog
 from apasvo.gui.views import ampadialog
@@ -279,30 +279,12 @@ class TraceSelectorDialog(QtGui.QMainWindow):
                                                           alg,
                                                           trace_list=selected_traces)
             self.launch_analysis_task(analysis_task,
-                                      label="Applying %s..." % alg.__class__.__name__.upper())
+                                      label="Applying %s..." % alg.name)
 
     def launch_analysis_task(self, task, label=""):
-        QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        self.action_ampa.setEnabled(False)
-        self.action_sta_lta.setEnabled(False)
-        self.analysis_label.setText(label)
-        self.analysis_progress_bar.show()
-        thread = QtCore.QThread(self)
-        task.moveToThread(thread)
-        thread.started.connect(task.run)
-        task.finished.connect(thread.quit)
-        task.finished.connect(self.on_analysis_finished)
-        task.finished.connect(task.deleteLater)
-        task.error.connect(error.display_error_dlg)
-        thread.finished.connect(thread.deleteLater)
-        thread.start()
-
-    def on_analysis_finished(self):
-        QtGui.QApplication.restoreOverrideCursor()
-        self.action_ampa.setEnabled(True)
-        self.action_sta_lta.setEnabled(True)
-        self.analysis_progress_bar.hide()
-        self.analysis_label.setText("")
+        wait_dialog = processingdialog.ProcessingDialog(label_text=label)
+        wait_dialog.setWindowTitle("Event detection")
+        wait_dialog.run(task)
 
     def close_selected_traces(self):
         selected_traces_idx = [self.stream.traces.index(trace) for trace in self.stream_viewer.selected_traces]

@@ -170,3 +170,7 @@ class StaLta(object):
                          lta_length=self.lta_length,
                          peak_window=peak_window)
         return et, cf
+
+    @property
+    def name(self):
+        return self.__class__.__name__.upper()

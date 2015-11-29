@@ -33,7 +33,6 @@ matplotlib.rcParams['patch.antialiased'] = False
 matplotlib.rcParams['agg.path.chunksize'] = 80000
 
 import numpy as np
-import obspy as op
 import traceback
 import os
 
@@ -65,6 +64,7 @@ from apasvo.gui.views import staltadialog
 from apasvo.gui.views import ampadialog
 from apasvo.gui.views import playertoolbar
 from apasvo.gui.views import error
+from apasvo.gui.views import processingdialog
 
 
 format_csv = 'csv'
@@ -632,27 +632,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                                       label="Applying %s..." % alg.__class__.__name__.upper())
 
     def launch_analysis_task(self, task, label=""):
-        QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        self.actionAMPA.setEnabled(False)
-        self.actionSTA_LTA.setEnabled(False)
-        self.analysis_label.setText(label)
-        self.analysis_progress_bar.show()
-        thread = QtCore.QThread(self)
-        task.moveToThread(thread)
-        thread.started.connect(task.run)
-        task.finished.connect(thread.quit)
-        task.finished.connect(self.on_analysis_finished)
-        task.finished.connect(task.deleteLater)
-        task.error.connect(error.display_error_dlg)
-        thread.finished.connect(thread.deleteLater)
-        thread.start()
-
-    def on_analysis_finished(self):
-        QtGui.QApplication.restoreOverrideCursor()
-        self.actionAMPA.setEnabled(True)
-        self.actionSTA_LTA.setEnabled(True)
-        self.analysis_progress_bar.hide()
-        self.analysis_label.setText("")
+        wait_dialog = processingdialog.ProcessingDialog(label_text=label)
+        wait_dialog.setWindowTitle("Event detection")
+        wait_dialog.run(task)
 
     def doTakanami(self):
         xleft, xright = self.signalViewer.get_selector_limits()
