@@ -36,6 +36,9 @@ from PySide import QtCore, QtGui
 from apasvo.gui.views.generated import qrc_icons
 
 
+DEFAULT_UNDO_LIMIT = 10
+
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -115,6 +118,7 @@ class Ui_MainWindow(object):
         self.actionAMPA.setObjectName("actionAMPA")
         # create undo and redo actions
         self.command_stack = QtGui.QUndoStack(self)
+        self.command_stack.setUndoLimit(DEFAULT_UNDO_LIMIT)
         self.actionUndo = self.command_stack.createUndoAction(self)
         self.actionRedo = self.command_stack.createRedoAction(self)
         self.actionUndo.setIcon(QtGui.QIcon(":/undo.png"))
@@ -194,6 +198,11 @@ class Ui_MainWindow(object):
         self.actionSignal_MiniMap.setCheckable(True)
         self.actionSignal_MiniMap.setChecked(True)
         self.actionSignal_MiniMap.setObjectName("actionSignal_MiniMap")
+        self.action_show_trace_selector = QtGui.QAction(MainWindow)
+        self.action_show_trace_selector.setCheckable(True)
+        self.action_show_trace_selector.setChecked(False)
+        self.action_show_trace_selector.setEnabled(False)
+        self.action_show_trace_selector.setObjectName("action_show_trace_selector")
         self.actionDelete_Selected = QtGui.QAction(MainWindow)
         self.actionDelete_Selected.setEnabled(False)
         self.actionDelete_Selected.setObjectName("actionDelete_Selected")
@@ -230,6 +239,7 @@ class Ui_MainWindow(object):
         self.menuSignal_Inspector.addAction(self.actionEspectrogram)
         self.menuView.addAction(self.actionEvent_List)
         self.menuView.addAction(self.actionSignal_MiniMap)
+        self.menuView.addAction(self.action_show_trace_selector)
         self.menuView.addSeparator()
         self.menuView.addAction(self.menuSignal_Inspector.menuAction())
         self.menuView.addSeparator()
@@ -364,6 +374,8 @@ class Ui_MainWindow(object):
         self.actionAnalysis_Toolbar.setStatusTip("Show/Hide Analysis Toolbar")
         self.actionSignal_MiniMap.setText(QtGui.QApplication.translate("MainWindow", "Signal &Minimap", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSignal_MiniMap.setStatusTip("Show/Hide Signal Minimap")
+        self.action_show_trace_selector.setText(QtGui.QApplication.translate("MainWindow", "&Trace Selector", None, QtGui.QApplication.UnicodeUTF8))
+        self.action_show_trace_selector.setStatusTip("Show/Hide Trace Selector")
         self.actionDelete_Selected.setText(QtGui.QApplication.translate("MainWindow", "&Delete Selected Event(s)", None, QtGui.QApplication.UnicodeUTF8))
         self.actionDelete_Selected.setStatusTip("Delete selected events")
         self.actionClear_Event_List.setText(QtGui.QApplication.translate("MainWindow", "&Clear Event List", None, QtGui.QApplication.UnicodeUTF8))

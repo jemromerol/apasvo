@@ -27,6 +27,8 @@
 from PySide import QtCore
 from PySide import QtGui
 
+from apasvo.gui.models.eventlistmodel import EventListModel
+
 
 class AppendEvent(QtGui.QUndoCommand):
 
@@ -166,6 +168,7 @@ class DetectEvents(QtGui.QUndoCommand):
                                            upper())
         self.model = model
         self.n_events_before = len(self.model.record.events)
+        self.events_old = self.model.record.events[:]
         self.events = list(self.model.record.detect(alg, **kwargs))
         self.n_events_after = len(self.events)
         self.model.detectionPerformed.emit()
@@ -173,7 +176,7 @@ class DetectEvents(QtGui.QUndoCommand):
     def undo(self):
         self.model.beginRemoveRows(QtCore.QModelIndex(), self.n_events_before,
                                    self.n_events_after - 1)
-        self.model.record.events = self.model.record.events[:self.n_events_before]
+        self.model.record.events = self.events_old[:]
         for i in range(self.n_events_before, self.n_events_after):
             self.model.eventDeleted.emit(self.events[i])
         self.model.endRemoveRows()
@@ -181,7 +184,7 @@ class DetectEvents(QtGui.QUndoCommand):
     def redo(self):
         self.model.beginInsertRows(QtCore.QModelIndex(), self.n_events_before,
                                    self.n_events_after - 1)
-        self.model.record.events = list(self.events)
+        self.model.record.events = self.events[:]
         for i in range(self.n_events_before, self.n_events_after):
             self.model.eventCreated.emit(self.events[i])
         self.model.endInsertRows()
@@ -190,6 +193,115 @@ class DetectEvents(QtGui.QUndoCommand):
         return 6
 
 
+class DetectStreamEvents(QtGui.QUndoCommand):
+
+    def __init__(self, trace_selector_widget, alg, trace_list=None, **kwargs):
+        super(DetectStreamEvents, self).__init__('Apply %s' % alg.__class__.__name__.
+                                           upper())
+        self.trace_selector = trace_selector_widget
+        self.events_old = {trace.uuid: trace.events[:] for trace in self.trace_selector.stream.traces}
+        self.trace_selector.stream.detect(alg, trace_list, **kwargs)
+        self.events = {trace.uuid: trace.events[:] for trace in self.trace_selector.stream.traces}
+        self.new_events = {trace.uuid: [event for event in self.events[trace.uuid] if event not in self.events_old[trace.uuid]] \
+                           for trace in self.trace_selector.stream.traces}
+        self.trace_selector.detection_performed.emit()
+
+    def undo(self):
+        for trace in self.trace_selector.stream.traces:
+            if trace.uuid in self.events_old:
+                trace.events = self.events_old[trace.uuid][:]
+        # Update current model data
+        self.trace_selector.events_deleted.emit(self.new_events)
+
+    def redo(self):
+        for trace in self.trace_selector.stream.traces:
+            if trace.uuid in self.events_old:
+                trace.events = self.events[trace.uuid][:]
+        # Update current model data
+        self.trace_selector.events_created.emit(self.new_events)
+
+    def id(self):
+        return 7
+
+
+class OpenStream(QtGui.QUndoCommand):
+
+    def __init__(self, main_window, stream):
+        super(OpenStream, self).__init__('Open stream')
+        self.main_window = main_window
+        self.old_stream = self.main_window.stream[:]
+        self.old_document_list = self.main_window.document_list[:]
+        self.stream = stream[:] if self.main_window.stream is None \
+            else self.main_window.stream[:].extend(stream)
+        self.stream = self.main_window.stream[:]
+        self.document_list = self.main_window.document_list[:]
+        for trace in stream:
+            self.stream.append(trace)
+            self.document_list.append(EventListModel(trace, self.main_window.command_stack))
+
+    def undo(self):
+        self.main_window.stream = self.old_stream[:]
+        self.main_window.document_list = self.old_document_list[:]
+        self.main_window.trace_selector.set_stream(self.main_window.stream)
+        if self.main_window.stream:
+            if len(self.main_window.stream) < 2:
+                self.main_window.action_show_trace_selector.setEnabled(False)
+                self.main_window.action_show_trace_selector.setChecked(False)
+            if self.main_window.current_document_idx not in range(len(self.main_window.document_list)):
+                self.main_window.toogle_document(0)
+        else:
+            self.main_window.close()
+
+    def redo(self):
+        self.main_window.stream = self.stream[:]
+        self.main_window.document_list = self.document_list[:]
+        self.main_window.trace_selector.set_stream(self.main_window.stream)
+        if len(self.main_window.stream) > 1:
+            self.main_window.action_show_trace_selector.setEnabled(True)
+            self.main_window.action_show_trace_selector.setChecked(True)
+        if self.main_window.document is None:
+            self.main_window.toogle_document(0)
+
+    def id(self):
+        return 8
+
+
+class CloseTraces(QtGui.QUndoCommand):
+
+    def __init__(self, main_window, trace_idx_list):
+        super(CloseTraces, self).__init__('Close trace')
+        self.trace_idx_set = set(trace_idx_list)
+        self.main_window = main_window
+        self.removed_traces_list = {i: self.main_window.stream[i] for i in self.trace_idx_set}
+        self.removed_documents_list = {i: self.main_window.document_list[i] for i in self.trace_idx_set}
+
+    def undo(self):
+        for i in sorted(self.trace_idx_set):
+            self.main_window.stream.insert(i, self.removed_traces_list[i])
+            self.main_window.document_list.insert(i, self.removed_documents_list[i])
+        self.main_window.trace_selector.set_stream(self.main_window.stream)
+        if len(self.main_window.stream) > 1:
+            self.main_window.action_show_trace_selector.setEnabled(True)
+            self.main_window.action_show_trace_selector.setChecked(True)
+        elif len(self.main_window.stream) == 1:
+            self.main_window.toogle_document(0)
+
+    def redo(self):
+        for i in sorted(self.trace_idx_set, reverse=True):
+            self.main_window.stream.pop(i)
+            self.main_window.document_list.pop(i)
+        self.main_window.trace_selector.set_stream(self.main_window.stream)
+        if self.main_window.stream:
+            if len(self.main_window.stream) < 2:
+                self.main_window.action_show_trace_selector.setEnabled(False)
+                self.main_window.action_show_trace_selector.setChecked(False)
+            if self.main_window.current_document_idx in self.trace_idx_set:
+                self.main_window.toogle_document(0)
+        else:
+            self.main_window.close()
+
+    def id(self):
+        return 9
 
 
 
