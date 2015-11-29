@@ -67,7 +67,7 @@ class TracePlot(QtCore.QObject):
         self.ax.grid(True, which='both')
         # Set event markers
         self.marker_select_color = 'r'
-        self.marker_color = 'r'
+        self.marker_color = 'b'
         self.markers = {}
         self.update_markers()
         # Selection parameters
@@ -95,8 +95,8 @@ class TracePlot(QtCore.QObject):
 
     def create_marker(self, event, **kwargs):
         event_id = event.resource_id.uuid
-        position = event.time
-        marker = self.ax.axvline(position, color=self.marker_color, ls='--', lw=3)#, animated=True)
+        position = event.stime / self.trace.fs
+        marker = self.ax.axvline(position, color=self.marker_color, ls='--', lw=3, visible=False)#, animated=True)
         self.markers[event_id] = marker
         self.markers[event_id].set(**kwargs)
 
