@@ -129,9 +129,9 @@ def reduce_data(x, y, width, xmin=0, xmax=None):
     return x[indexes], y[indexes]
 
 
-def adjust_axes_height(ax, margin=0.1):
-    max_values = []
-    min_values = []
+def adjust_axes_height(ax, max_value=None, min_value=None, margin=0.1):
+    max_values = [max_value] if max_value else []
+    min_values = [min_value] if min_value else []
     for line in ax.lines:
         try:
             xdata = list(line.get_xdata())

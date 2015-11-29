@@ -907,25 +907,37 @@ class SignalViewerWidget(QtGui.QWidget):
         # Draw minimap
         self.minimap.set_record(self.document.record, step)
         # Plot signal
-        self._signal_data = self.signal_ax.plot(self.time,
-                                                  self.signal,
+        step_samples = step * self.fs
+        self._signal_data = self.signal_ax.plot(self.time[:step_samples],
+                                                  self.signal[:step_samples],
                                                   color='black',
                                                   rasterized=True)[0]
         # Plot envelope
-        self._envelope_data = self.signal_ax.plot(self.time,
-                                                    self.envelope,
+        self._envelope_data = self.signal_ax.plot(self.time[:step_samples],
+                                                    self.envelope[:step_samples],
                                                     color='red',
                                                     rasterized=True)[0]
-        plotting.adjust_axes_height(self.signal_ax)
+        # Adjust y axis for signal plot
+        signal_abs = np.abs(self.signal)
+        signal_yaxis_max_value = max(np.max(signal_abs), np.max(self.envelope))
+        signal_yaxis_min_value = np.min(signal_abs)
+        plotting.adjust_axes_height(self.signal_ax,
+                                    max_value=signal_yaxis_max_value,
+                                    min_value=signal_yaxis_min_value)
         # Plot CF
         cf_loaded = (self.cf.size != 0)
         self.set_cf_visible(cf_loaded)
         self.CF_loaded.emit(cf_loaded)
-        self._cf_data = self.cf_ax.plot(self.time[:len(self.cf)],
-                                              self.cf,
-                                              color='black', rasterized=True)[0]
+        cf_step_samples = min(step_samples,len(self.cf))
+        self._cf_data = self.cf_ax.plot(self.time[:cf_step_samples],
+                                        self.cf[:cf_step_samples],
+                                        color='black',
+                                        rasterized=True)[0]
+        # Adjust y axis for CF plot
         if cf_loaded:
-            plotting.adjust_axes_height(self.cf_ax)
+            plotting.adjust_axes_height(self.cf_ax,
+                                        max_value=np.max(self.cf),
+                                        min_value=np.min(self.cf))
         self.thresholdMarker = ThresholdMarker(self.cf_ax)
         # Plot espectrogram
         plotting.plot_specgram(self.specgram_ax, self.signal, self.fs,
