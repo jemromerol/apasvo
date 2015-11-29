@@ -34,7 +34,6 @@ from apasvo.picking import stalta
 from apasvo.picking import ampa
 from apasvo.gui.models import pickingtask
 from apasvo.gui.models import eventcommands as commands
-from apasvo.gui.views import error
 
 from apasvo._version import _application_name
 from apasvo._version import _organization

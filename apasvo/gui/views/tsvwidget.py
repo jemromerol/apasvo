@@ -257,6 +257,7 @@ class StreamViewerWidget(QtGui.QWidget):
 
     def set_stream(self, stream):
         self.stream = stream
+        self._selected_traces = set()
         # Clear canvas
         for plot in self.trace_plots:
             plot.remove()
