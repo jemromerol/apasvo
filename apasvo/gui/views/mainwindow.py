@@ -69,6 +69,8 @@ from apasvo.gui.views import processingdialog
 
 format_csv = 'csv'
 format_xml = 'xml'
+format_nlloc = 'hyp'
+format_json = 'json'
 format_other = 'other'
 
 binary_files_filter = 'Binary Files (*.bin)'
@@ -76,6 +78,8 @@ text_files_filter = 'Text Files (*.txt)'
 all_files_filter = 'All Files (*.*)'
 csv_files_filter = 'CSV Files (*.csv)'
 xml_files_filter = 'XML Files (*.xml)'
+nlloc_files_filter = 'NLLoc Files (*.hyp)'
+json_files_filter = 'JSON Files (*.json)'
 
 APASVO_URL = 'https://github.com/jemromerol/apasvo/wiki'
 
@@ -100,6 +104,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
                         text_files_filter: rawfile.format_text,
                         all_files_filter: format_other}
     _summary_file_filters = {xml_files_filter: format_xml,
+                             nlloc_files_filter: format_nlloc,
+                             json_files_filter: format_json,
                              text_files_filter: rawfile.format_text,
                              all_files_filter: format_other}
 

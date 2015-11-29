@@ -65,8 +65,8 @@ ALLOWED_METHODS = (
 )
 
 PHASE_VALUES = (
-    "P wave",
-    "S wave",
+    "P",
+    "S",
     "Other",
 )
 
