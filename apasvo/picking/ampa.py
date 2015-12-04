@@ -319,3 +319,10 @@ class Ampa(object):
             out[i + overlapped: i + size - tail] = cf[overlapped:]
         et = findpeaks.find_peaks(out, threshold, order=peak_window * fs)
         return et, out
+
+    @property
+    def name(self):
+        return self.__class__.__name__.upper()
+
+
+

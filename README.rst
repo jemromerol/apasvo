@@ -170,6 +170,10 @@ References
 Changelog
 =========
 
+* 0.0.5 (2015-11-30)
+    * Add a trace selector window to handle multitrace files (e.g. *.segy, ...). It also allows to open multiple
+      files and switch between them.
+    * Fix several bugs.
 * 0.0.4 (2015-11-09)
     * Refactor apasvo classes to use Obspy library. Thanks to Obspy, now the application supports multiple input
       formats (wav, sac, mseed, segy, ...) besides binary & text, multiple export event formats (NonLinLoc, QuakeML...)

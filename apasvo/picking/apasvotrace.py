@@ -26,6 +26,8 @@
 
 import numpy as np
 import obspy as op
+import multiprocessing as mp
+import itertools
 from obspy.core.utcdatetime import UTCDateTime
 from obspy.core.event import Pick
 from obspy.core.event import ResourceIdentifier
@@ -34,14 +36,16 @@ from obspy.core.event import WaveformStreamID
 from obspy.core.event import Comment
 from obspy.core.event import Catalog
 from obspy.core.event import Event
-from collections import defaultdict
 import csv
 import copy
 import os
+import uuid
+import gc
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
 from apasvo.utils.formats import rawfile
+from apasvo.utils import collections
 from apasvo.utils import clt
 
 method_other = 'other'
@@ -58,6 +62,12 @@ ALLOWED_METHODS = (
     method_stalta_takanami,
     method_ampa,
     method_ampa_takanami
+)
+
+PHASE_VALUES = (
+    "P",
+    "S",
+    "Other",
 )
 
 mode_manual = 'manual'
@@ -154,6 +164,7 @@ class ApasvoEvent(Pick):
                  name='',
                  comments='',
                  method=method_other,
+                 phase_hint=None,
                  aic=None,
                  n0_aic=None,
                  *args, **kwargs):
@@ -166,8 +177,10 @@ class ApasvoEvent(Pick):
         self.method = method
         self.aic = aic
         self.n0_aic = n0_aic
+        phase_hint = phase_hint if phase_hint in PHASE_VALUES else PHASE_VALUES[0]
         super(ApasvoEvent, self).__init__(time=self.time,
                                           method_id=ResourceIdentifier(method),
+                                          phase_hint=phase_hint,
                                           creation_info=CreationInfo(
                                               author=kwargs.get('author', ''),
                                               agency_id=kwargs.get('agency', ''),
@@ -301,7 +314,7 @@ class ApasvoTrace(op.Trace):
             Default: ''.
     """
 
-    def __init__(self, data=None, header=None, label='', description='', **kwargs):
+    def __init__(self, data=None, header=None, label='', description='', filename='', normalize=True, **kwargs):
         """Initializes a Record instance.
 
         Args:
@@ -313,9 +326,15 @@ class ApasvoTrace(op.Trace):
             data = np.ndarray((0,), dtype=DEFAULT_DTYPE)
         super(ApasvoTrace, self).__init__(data, header)
         self.cf = np.array([], dtype=DEFAULT_DTYPE)
+        if normalize:
+            self.data = self.data - np.mean(self.data)
+            #self.data = self.data/ np.max(np.abs(self.data))
         self.events = []
         self.label = label
         self.description = description
+        self.filename = filename
+        # Get an uuid for each trace
+        self.uuid = unicode(uuid.uuid4())
 
     @property
     def fs(self):
@@ -336,6 +355,14 @@ class ApasvoTrace(op.Trace):
     @property
     def endtime(self):
         return self.stats.endtime
+
+    @property
+    def short_name(self):
+        return "{0} | {1}".format(os.path.basename(self.filename), self.id)
+
+    @property
+    def name(self):
+        return "{0} | {1}".format(os.path.basename(self.filename), str(self))
 
     def detect(self, alg, threshold=None, peak_window=1.0,
                takanami=False, takanami_margin=5.0, action='append', debug=False, **kwargs):
@@ -546,8 +573,11 @@ class ApasvoTrace(op.Trace):
         if show_x:
             fig.axes[ax_idx].set_title("Signal Amplitude (%gHz)" % self.fs)
             fig.axes[ax_idx].set_ylabel('Amplitude')
+
             fig.axes[ax_idx].plot(t, self.signal[i_from:i_to], color='black',
                                   label='Signal')
+            #fig.axes[ax_idx].plot(t, signal_norm, color='black',
+                                  #label='Signal')
             # Draw signal envelope
             if show_envelope:
                 fig.axes[ax_idx].plot(t, env.envelope(self.signal[i_from:i_to]),
@@ -586,25 +616,64 @@ class ApasvoTrace(op.Trace):
             ax.set_xlim(t[0], t[-1])
         return fig
 
+    def add_event_from_copy(self, event):
+        event = copy.copy(event)
+        event.trace = self
+        event.aic = None
+        event.n0_aic = None
+        self.events.append(event)
+
+def _detect(parameters):
+    alg = parameters[0]
+    trace_list = parameters[1]
+    kwargs = parameters[2]
+    for trace in trace_list:
+        trace.detect(alg, **kwargs)
+    return trace_list
 
 class ApasvoStream(op.Stream):
     """
     A list of multiple ApasvoTrace objects
     """
 
-    def __init__(self, traces, description='', **kwargs):
+    def __init__(self, traces, description='', filename='', **kwargs):
         super(ApasvoStream, self).__init__(traces)
         self.description = description
+        self.filename = filename
 
-    def detect(self, alg, start_trace=None, end_trace=None, **kwargs):
-        for trace in self.traces[start_trace:end_trace]:
-            trace.detect(alg, **kwargs)
-
-    def export_picks(self, filename, start_trace=None, end_trace=None, format="NLLOC_OBS", debug=False, **kwargs):
+    def detect(self, alg, trace_list=None, allow_multiprocessing=True, **kwargs):
         """
         """
+        trace_list = self.traces if trace_list is None else trace_list[:]
+        n_traces = len(trace_list)
+        if allow_multiprocessing and n_traces > 1:
+            processes = min(mp.cpu_count(), n_traces)
+            p = mp.Pool(processes=processes)
+            processed_traces = p.map(_detect, itertools.izip(itertools.repeat(alg),
+                                               collections.chunkify(trace_list, n_traces / processes),
+                                               itertools.repeat(kwargs)))
+            processed_traces = collections.flatten_list(processed_traces)
+            # Update existing traces w. new events and cf from  processed events
+            for trace, processed_trace in zip(trace_list, processed_traces):
+                new_events = [event for event in processed_trace.events if event not in trace.events]
+                for event in new_events:
+                    trace.add_event_from_copy(event)
+                trace.cf = processed_trace.cf[:]
+            # Cleanup
+            del processed_traces
+            del trace_list
+            p.close()
+            p.join()
+            gc.collect(2)
+        else:
+            _detect((alg, trace_list, kwargs))
+
+    def export_picks(self, filename, trace_list=None, format="NLLOC_OBS", debug=False, **kwargs):
+        """
+        """
+        trace_list = self.traces if trace_list is None else trace_list
         event_list = []
-        for trace in self.traces[start_trace:end_trace]:
+        for trace in trace_list:
             event_list.extend([Event(picks=[pick]) for pick in trace.events])
         # Export to desired format
         if format == 'NLLOC_OBS':
@@ -626,6 +695,7 @@ def read(filename,
          dtype='float64',
          byteorder='native',
          description='',
+         normalize=True,
          *args, **kwargs):
     """
     Read signal files into an ApasvoStream object
@@ -640,7 +710,7 @@ def read(filename,
     """
     # Try to read using obspy core functionality
     try:
-        traces = [ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats)) \
+        traces = [ApasvoTrace(copy.deepcopy(trace.data), copy.deepcopy(trace.stats), filename=filename, normalize=normalize) \
                   for trace in op.read(filename, format=format, *args, **kwargs).traces]
     # Otherwise try to read as a binary or text file
     except Exception as e:
@@ -648,9 +718,9 @@ def read(filename,
                                             format=format,
                                             dtype=dtype,
                                             byteorder=byteorder)
-        trace = ApasvoTrace(fhandler.read().astype(DEFAULT_DTYPE, casting='safe'))
+        trace = ApasvoTrace(fhandler.read().astype(DEFAULT_DTYPE, casting='safe'), filename=filename)
         sample_fs = kwargs.get('fs')
         trace.stats.delta = DEFAULT_DELTA if sample_fs is None else 1. / sample_fs
         traces = [trace]
     # Convert Obspy traces to apasvo traces
-    return ApasvoStream(traces, description=description)
+    return ApasvoStream(traces, description=description, filename=filename)

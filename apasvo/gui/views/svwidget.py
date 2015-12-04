@@ -82,7 +82,7 @@ class SpanSelector(QtCore.QObject):
         self.active = False
         self.enabled = True
 
-        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.5, picker=5)
+        self.selectors = [ax.axvspan(0, 1, fc='LightCoral', ec='r', alpha=0.7, picker=5)
                           for ax in self.fig.axes]
         for s in self.selectors:
             s.set_visible(False)
@@ -277,7 +277,7 @@ class EventMarker(QtCore.QObject):
             marker.set(color=self.color, ls='--', lw=2, picker=5)
             self.markers.append(marker)
         # draw minimap marker
-        self.minimap.create_marker(id(event), pos, color=self.color, ls='-', lw=1)
+        self.minimap.create_marker(event.resource_id.uuid, pos, color=self.color, ls='-', lw=1)
         # draw label
         bbox = dict(boxstyle="round", fc="LightCoral", ec="r", alpha=0.8)
         self.position_label = self.fig.text(0, 0,
@@ -361,12 +361,12 @@ class EventMarker(QtCore.QObject):
                 self.position_label.set_text("Time: %s seconds.\nCF value: %.6g" %
                                              (clt.float_secs_2_string_date(time_in_seconds,
                                                                            starttime=self.event.trace.starttime), cf_value))
-                self.minimap.set_marker_position(id(self.event), time_in_seconds)
+                self.minimap.set_marker_position(self.event.resource_id.uuid, time_in_seconds)
 
     def remove(self):
         for ax, marker in zip(self.fig.axes, self.markers):
             ax.lines.remove(marker)
-        self.minimap.delete_marker(id(self.event))
+        self.minimap.delete_marker(self.event.resource_id.uuid)
         self.draw()
 
     def set_selected(self, value):
@@ -375,7 +375,7 @@ class EventMarker(QtCore.QObject):
             color = self.selected_color if self.selected else self.color
             for marker in self.markers:
                 marker.set(color=color)
-            self.minimap.set_marker(id(self.event), color=color)
+            self.minimap.set_marker(self.event.resource_id.uuid, color=color)
 
     def update(self):
         if self.event.stime != self.position:
@@ -664,7 +664,14 @@ class MiniMap(QtGui.QWidget):
         formatter = FuncFormatter(lambda x, pos: str(datetime.timedelta(seconds=x)))
         ax.xaxis.set_major_formatter(formatter)
         ax.grid(True, which='both')
-        ax.plot(self.xrange, self.record.signal, color='black', rasterized=True)
+        # Set dataseries to plot
+        xmin = self.xmin * self.record.fs
+        xmax = self.xmax * self.record.fs
+        pixel_width = np.ceil(self.minimapFig.get_figwidth() * self.minimapFig.get_dpi())
+        x_data, y_data = plotting.reduce_data(self.xrange, self.record.signal, pixel_width, xmin, xmax)
+        # self._plot_data.set_xdata(x_data)
+        # self._plot_data.set_ydata(y_data)
+        ax.plot(x_data, y_data, color='black', rasterized=True)
         ax.set_xlim(self.xmin, self.xmax)
         plotting.adjust_axes_height(ax)
         # Set the playback marker
@@ -868,7 +875,8 @@ class SignalViewerWidget(QtGui.QWidget):
             ax.grid(True, which='both')
         self.specgram_ax.callbacks.connect('ylim_changed', self.on_ylim_change)
         self.specgram_ax.set_xlabel('Time (seconds)')
-        self.signal_ax.set_ylabel('Signal Amp.')
+        plt.setp(self.signal_ax.get_yticklabels(), visible=False)
+        #self.signal_ax.set_ylabel('Signal Amp.')
         self.cf_ax.set_ylabel('CF Amp.')
         self.specgram_ax.set_ylabel('Frequency (Hz)')
 
@@ -897,26 +905,39 @@ class SignalViewerWidget(QtGui.QWidget):
         self.time = np.linspace(0, len(self.signal) / self.fs, num=len(self.signal), endpoint=False)
         self.xmax = self.time[-1]
         # Draw minimap
+        self.minimap.minimapSelector.set(visible=False)  # Hide minimap selector while loading
         self.minimap.set_record(self.document.record, step)
         # Plot signal
-        self._signal_data = self.signal_ax.plot(self.time,
-                                                  self.signal,
+        step_samples = step * self.fs
+        self._signal_data = self.signal_ax.plot(self.time[:step_samples],
+                                                  self.signal[:step_samples],
                                                   color='black',
                                                   rasterized=True)[0]
         # Plot envelope
-        self._envelope_data = self.signal_ax.plot(self.time,
-                                                    self.envelope,
+        self._envelope_data = self.signal_ax.plot(self.time[:step_samples],
+                                                    self.envelope[:step_samples],
                                                     color='red',
                                                     rasterized=True)[0]
-        plotting.adjust_axes_height(self.signal_ax)
+        # Adjust y axis for signal plot
+        signal_yaxis_max_value = max(np.max(self.signal), np.max(self.envelope))
+        signal_yaxis_min_value = np.min(self.signal)
+        plotting.adjust_axes_height(self.signal_ax,
+                                    max_value=signal_yaxis_max_value,
+                                    min_value=signal_yaxis_min_value)
         # Plot CF
         cf_loaded = (self.cf.size != 0)
         self.set_cf_visible(cf_loaded)
         self.CF_loaded.emit(cf_loaded)
-        self._cf_data = self.cf_ax.plot(self.time[:len(self.cf)],
-                                              self.cf,
-                                              color='black', rasterized=True)[0]
-        plotting.adjust_axes_height(self.signal_ax)
+        cf_step_samples = min(step_samples,len(self.cf))
+        self._cf_data = self.cf_ax.plot(self.time[:cf_step_samples],
+                                        self.cf[:cf_step_samples],
+                                        color='black',
+                                        rasterized=True)[0]
+        # Adjust y axis for CF plot
+        if cf_loaded:
+            plotting.adjust_axes_height(self.cf_ax,
+                                        max_value=np.max(self.cf),
+                                        min_value=np.min(self.cf))
         self.thresholdMarker = ThresholdMarker(self.cf_ax)
         # Plot espectrogram
         plotting.plot_specgram(self.specgram_ax, self.signal, self.fs,
@@ -932,6 +953,13 @@ class SignalViewerWidget(QtGui.QWidget):
         # Set the initial xlimits
         self.set_xlim(0, step)
         self.subplots_adjust()
+        # Set event markers
+        self.eventMarkers = {}
+        for event in self.document.record.events:
+            self.create_event(event)
+        # Now activate selector again on minimap
+        self.minimap.minimapSelector.set(visible=True)
+        self.minimap.draw()
 
     def unset_record(self):
         self.document = None
@@ -943,6 +971,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self._envelope_data = None
         self._cf_data = None
         self.xmin, self.xmax = 0.0, 0.0
+        self.eventMarkers = {}
         # Clear axes
         self.signal_ax.lines = []
         self.cf_ax.lines = []
@@ -960,22 +989,31 @@ class SignalViewerWidget(QtGui.QWidget):
             cf_loaded = (self.cf.size != 0)
             self.CF_loaded.emit(cf_loaded)
             self.set_cf_visible(cf_loaded)
+            self.draw()
+
+    def create_events(self, new_events_set):
+        for event in new_events_set.get(self.document.record.uuid, []):
+            self.create_event(event)
 
     def create_event(self, event):
-        event_id = id(event)
+        event_id = event.resource_id.uuid
         if event_id not in self.eventMarkers:
             marker = EventMarker(self.fig, self.minimap, self.document, event)
             self.eventMarkers[event_id] = marker
             marker.event_selected.connect(self.event_selected.emit)
             marker.right_clicked.connect(self.on_event_right_clicked)
 
+    def delete_events(self, new_events_set):
+        for event in new_events_set.get(self.document.record.uuid, []):
+            self.delete_event(event)
+
     def delete_event(self, event):
-        event_id = id(event)
+        event_id = event.resource_id.uuid
         self.eventMarkers[event_id].remove()
         self.eventMarkers.pop(event_id)
 
     def update_event(self, event):
-        self.eventMarkers[id(event)].update()
+        self.eventMarkers[event.resource_id.uuid].update()
 
     def set_xlim(self, l, r):
         xmin = max(0, l)
@@ -1039,7 +1077,7 @@ class SignalViewerWidget(QtGui.QWidget):
                     ax.set_ylim(ymin, nyquist_freq)
 
     def set_event_selection(self, events):
-        event_id_list = [id(event) for event in events]
+        event_id_list = [event.resource_id.uuid for event in events]
         for event_id in self.eventMarkers:
             self.eventMarkers[event_id].set_selected(event_id in event_id_list)
         self.draw()
@@ -1057,7 +1095,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.set_xlim(l, r)
 
     def goto_event(self, event):
-        if id(event) in self.eventMarkers:
+        if event.resource_id.uuid in self.eventMarkers:
             self.set_position(event.stime / self.fs)
 
     def showEvent(self, event):

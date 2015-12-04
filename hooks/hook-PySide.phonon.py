@@ -10,7 +10,7 @@
 
 hiddenimports = ['sip', 'PySide.QtGui']
 
-from PyInstaller.hooks.hookutils import exec_statement
+from PyInstaller.utils.hooks import exec_statement
 
 def qt4_phonon_plugins_dir():
     import os
