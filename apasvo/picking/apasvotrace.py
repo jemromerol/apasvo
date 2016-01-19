@@ -165,6 +165,7 @@ class ApasvoEvent(Pick):
                  comments='',
                  method=method_other,
                  phase_hint=None,
+                 polarity='undecidable',
                  aic=None,
                  n0_aic=None,
                  *args, **kwargs):
@@ -181,6 +182,7 @@ class ApasvoEvent(Pick):
         super(ApasvoEvent, self).__init__(time=self.time,
                                           method_id=ResourceIdentifier(method),
                                           phase_hint=phase_hint,
+                                          polarity=polarity,
                                           creation_info=CreationInfo(
                                               author=kwargs.get('author', ''),
                                               agency_id=kwargs.get('agency', ''),
