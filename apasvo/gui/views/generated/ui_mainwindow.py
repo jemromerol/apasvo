@@ -169,6 +169,12 @@ class Ui_MainWindow(object):
         self.actionTakanami.setIcon(QtGui.QIcon(":/takanami.png"))
         self.actionTakanami.setEnabled(False)
         self.actionTakanami.setObjectName("actionTakanami")
+        #######################################################################
+        self.actionFilterDesing = QtGui.QAction(MainWindow)
+        self.actionFilterDesing.setIcon(QtGui.QIcon(":/takanami.png"))
+        self.actionFilterDesing.setEnabled(False)
+        self.actionFilterDesing.setObjectName("actionFilterDesing")
+        ########################################################################
         self.actionSignal_Amplitude = QtGui.QAction(MainWindow)
         self.actionSignal_Amplitude.setCheckable(True)
         self.actionSignal_Amplitude.setChecked(True)
@@ -249,6 +255,9 @@ class Ui_MainWindow(object):
         self.menuAnalysis.addAction(self.actionSTA_LTA)
         self.menuAnalysis.addAction(self.actionAMPA)
         self.menuAnalysis.addAction(self.actionTakanami)
+        ####################################################################
+        self.menuAnalysis.addAction(self.actionFilterDesing)
+        ####################################################################
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
@@ -284,6 +293,9 @@ class Ui_MainWindow(object):
         self.toolBarAnalysis.addWidget(self.thresholdSpinBox)
         self.toolBarAnalysis.addSeparator()
         self.toolBarAnalysis.addAction(self.actionTakanami)
+        ##############################################################
+        self.toolBarAnalysis.addAction(self.actionFilterDesing)
+        #############################################################
         # set up status bar
         self.statusbar = QtGui.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -360,6 +372,12 @@ class Ui_MainWindow(object):
         self.actionTakanami.setToolTip("Apply Takanami")
         self.actionTakanami.setStatusTip("Apply Takanami algorithm to selection")
         self.actionTakanami.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+T", None, QtGui.QApplication.UnicodeUTF8))
+        ########################################################################################################################
+        self.actionFilterDesing.setText(QtGui.QApplication.translate("MainWindow", "&Filter Diseng on selection...", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionFilterDesing.setToolTip("Apply FilterDesing")
+        self.actionFilterDesing.setStatusTip("Apply filter algorithm")
+        self.actionFilterDesing.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+F", None, QtGui.QApplication.UnicodeUTF8))
+        ########################################################################################################################
         self.actionSignal_Amplitude.setText(QtGui.QApplication.translate("MainWindow", "Signal &Amplitude", None, QtGui.QApplication.UnicodeUTF8))
         self.actionSignal_Amplitude.setStatusTip("Show/Hide signal amplitude")
         self.actionSignal_Envelope.setText(QtGui.QApplication.translate("MainWindow", "Signal &Envelope", None, QtGui.QApplication.UnicodeUTF8))

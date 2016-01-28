@@ -59,6 +59,7 @@ from apasvo.gui.views import savedialog
 from apasvo.gui.views import save_events_dialog
 from apasvo.gui.views import settingsdialog
 from apasvo.gui.views import takanamidialog
+from apasvo.gui.views import FilterDesing
 from apasvo.gui.views import trace_selector_dialog
 from apasvo.gui.views import staltadialog
 from apasvo.gui.views import ampadialog
@@ -144,6 +145,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionSTA_LTA.triggered.connect(self.doSTALTA)
         self.actionAMPA.triggered.connect(self.doAMPA)
         self.actionTakanami.triggered.connect(self.doTakanami)
+        self.actionFilterDesing.triggered.connect(self.doFilterDesing)
         self.actionClear_Event_List.triggered.connect(self.clear_events)
         self.actionDelete_Selected.triggered.connect(self.delete_selected_events)
         self.actionAbout.triggered.connect(self.show_about)
@@ -419,6 +421,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.actionClear_Event_List.setEnabled(True)
             self.actionSTA_LTA.setEnabled(True)
             self.actionAMPA.setEnabled(True)
+            self.actionFilterDesing.setEnabled(True)
             self.toolBarNavigation.setEnabled(True)
             self.toolBarAnalysis.setEnabled(True)
             self.toolBarMedia.set_enabled(True)
@@ -645,6 +648,20 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def doTakanami(self):
         xleft, xright = self.signalViewer.get_selector_limits()
         takanamidialog.TakanamiDialog(self.document, xleft, xright).exec_()
+
+    def doFilterDesing(self):
+        """Performs event filtering using bandpass filter ."""
+        #xleft, xright = self.signalViewer.get_selector_limits()
+        dialog = FilterDesing.FilterDesingDialog(self.stream, self.document, trace_list=[self.document.record])
+        return_code = dialog.exec_()
+        if return_code == QtGui.QDialog.Accepted:
+            # Read settings
+            settings = QtCore.QSettings(_organization, _application_name)
+            settings.beginGroup('filter_settings')
+            freq_1 = float(settings.value('freq_1', 0.0))
+            freq_2 = float(settings.value('freq_2', 25))
+            coefficients = float(settings.value('coefficients', 3))
+            settings.endGroup()
 
     def clear_events(self):
         if self.document is not None:
