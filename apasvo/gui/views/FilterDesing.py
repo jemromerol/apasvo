@@ -117,6 +117,7 @@ class FilterDesingDialog(QtGui.QDialog):
         self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
         self.position_label = QtGui.QLabel("Frequency Response")
         self.group_box = QtGui.QGroupBox(self)
+        self.group_box2 = QtGui.QGroupBox(self)
         self.group_box.setTitle("Limits")
         self.start_point_label = QtGui.QLabel("Start Frequency (Hz): ")
         self.start_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
