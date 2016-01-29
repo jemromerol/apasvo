@@ -254,6 +254,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         if action:
             self.load(action.data())
 
+
     def save_events(self):
         """Saves event list to file.
 
