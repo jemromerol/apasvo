@@ -41,6 +41,7 @@ import copy
 import os
 import uuid
 import gc
+from copy import deepcopy
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -331,6 +332,7 @@ class ApasvoTrace(op.Trace):
         if normalize:
             self.data = self.data - np.mean(self.data)
             #self.data = self.data/ np.max(np.abs(self.data))
+        self.filtered_signal = deepcopy(self.data)
         self.events = []
         self.label = label
         self.description = description
@@ -473,6 +475,10 @@ class ApasvoTrace(op.Trace):
             else:
                 event.method = method_takanami
         return events
+
+    def signal_filter(self, *args, **kwargs):
+        self.filtered_signal = self.filter(*args, **kwargs)
+        return self.filtered_signal
 
     def save_cf(self, fname, fmt=rawfile.format_text,
                 dtype=rawfile.datatype_float64,

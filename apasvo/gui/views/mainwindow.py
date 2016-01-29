@@ -607,7 +607,9 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         dialog = ampadialog.AmpaDialog(self.stream,
                                        trace_list=[self.document.record])
         return_code = dialog.exec_()
+
         if return_code == QtGui.QDialog.Accepted:
+
             # Read settings
             settings = QtCore.QSettings(_organization, _application_name)
             settings.beginGroup('ampa_settings')
@@ -652,16 +654,22 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def doFilterDesing(self):
         """Performs event filtering using bandpass filter ."""
         #xleft, xright = self.signalViewer.get_selector_limits()
-        dialog = FilterDesing.FilterDesingDialog(self.stream, self.document, trace_list=[self.document.record])
+        dialog = FilterDesing.FilterDesignDialog(self.stream, self.document, trace_list=[self.document.record])
         return_code = dialog.exec_()
         if return_code == QtGui.QDialog.Accepted:
             # Read settings
             settings = QtCore.QSettings(_organization, _application_name)
-            settings.beginGroup('filter_settings')
-            freq_1 = float(settings.value('freq_1', 0.0))
-            freq_2 = float(settings.value('freq_2', 25))
-            coefficients = float(settings.value('coefficients', 3))
+            settings.beginGroup('filterdesign_settings')
+            freq_1 = float(settings.value('freq_min', 0.0))
+            freq_2 = float(settings.value('freq_max', 25))
+            coefficients = float(settings.value('coef_number', 3))
+            zero_phase= (settings.value('zero_phase',True))
+            #a_values = np.array(settings.value('a_values')).astype(float)
+            #b_values = np.array(settings.value('b_values')).astype(float)
             settings.endGroup()
+            self.document.record.signal_filter('bandpass', freqmin=freq_1, freqmax=freq_2, corners=coefficients, zerophase=zero_phase)
+
+
 
     def clear_events(self):
         if self.document is not None:
