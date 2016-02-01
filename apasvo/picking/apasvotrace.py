@@ -317,7 +317,15 @@ class ApasvoTrace(op.Trace):
             Default: ''.
     """
 
-    def __init__(self, data=None, header=None, label='', description='', filename='', normalize=True, **kwargs):
+    def __init__(self,
+                 data=None,
+                 header=None,
+                 label='',
+                 description='',
+                 filename='',
+                 normalize=True,
+                 use_filtered=False,
+                 **kwargs):
         """Initializes a Record instance.
 
         Args:
@@ -337,6 +345,7 @@ class ApasvoTrace(op.Trace):
         self.label = label
         self.description = description
         self.filename = filename
+        self.use_filtered = False
         # Get an uuid for each trace
         self.uuid = unicode(uuid.uuid4())
 
@@ -350,7 +359,7 @@ class ApasvoTrace(op.Trace):
 
     @property
     def signal(self):
-        return self.data
+        return self.data if not self.use_filtered else self.filtered_signal
 
     @property
     def starttime(self):
@@ -477,7 +486,7 @@ class ApasvoTrace(op.Trace):
         return events
 
     def signal_filter(self, *args, **kwargs):
-        self.filtered_signal = self.filter(*args, **kwargs)
+        self.filtered_signal = self.copy().filter(*args, **kwargs).data
         return self.filtered_signal
 
     def save_cf(self, fname, fmt=rawfile.format_text,

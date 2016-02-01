@@ -156,6 +156,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.action_show_trace_selector.toggled.connect(self.trace_selector.setVisible)
         self.trace_selector.closed.connect(lambda: self.action_show_trace_selector.setChecked(False))
         self.trace_selector.selection_changed.connect(self.toogle_document)
+        self.viewFilteredCheckBox.toggled.connect(self.toggle_filtered)
 
         # add navigation toolbar
         self.signalViewer = svwidget.SignalViewerWidget(self.splitter)
@@ -442,6 +443,11 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.document.detectionPerformed.disconnect(self.toolBarNavigation.update)
             model = self.EventsTableView.selectionModel()
             model.selectionChanged.disconnect(self.on_event_selection)
+
+    def toggle_filtered(self, value):
+        if self.document is not None:
+            self.document.record.use_filtered = value
+            self.toogle_document(self.current_document_idx)
 
     def edit_settings(self):
         """Opens settings dialog."""

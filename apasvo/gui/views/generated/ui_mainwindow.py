@@ -175,7 +175,7 @@ class Ui_MainWindow(object):
         self.actionFilterDesing.setEnabled(False)
         self.actionFilterDesing.setObjectName("actionFilterDesing")
         self.viewFilteredCheckBox = QtGui.QCheckBox("View filtered signal")
-        self.viewFilteredCheckBox.setChecked(True)
+        self.viewFilteredCheckBox.setChecked(False)
         ########################################################################
         self.actionSignal_Amplitude = QtGui.QAction(MainWindow)
         self.actionSignal_Amplitude.setCheckable(True)
