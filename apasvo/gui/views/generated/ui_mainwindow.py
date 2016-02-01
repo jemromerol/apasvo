@@ -174,6 +174,8 @@ class Ui_MainWindow(object):
         self.actionFilterDesing.setIcon(QtGui.QIcon(":/takanami.png"))
         self.actionFilterDesing.setEnabled(False)
         self.actionFilterDesing.setObjectName("actionFilterDesing")
+        self.viewFilteredCheckBox = QtGui.QCheckBox("View filtered signal")
+        self.viewFilteredCheckBox.setChecked(True)
         ########################################################################
         self.actionSignal_Amplitude = QtGui.QAction(MainWindow)
         self.actionSignal_Amplitude.setCheckable(True)
@@ -295,6 +297,8 @@ class Ui_MainWindow(object):
         self.toolBarAnalysis.addAction(self.actionTakanami)
         ##############################################################
         self.toolBarAnalysis.addAction(self.actionFilterDesing)
+        self.toolBarAnalysis.addWidget(self.viewFilteredCheckBox)
+        #self.toolBarAnalysis.addAction(self.viewFilteredCheckBox)
         #############################################################
         # set up status bar
         self.statusbar = QtGui.QStatusBar(MainWindow)
@@ -373,8 +377,8 @@ class Ui_MainWindow(object):
         self.actionTakanami.setStatusTip("Apply Takanami algorithm to selection")
         self.actionTakanami.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+T", None, QtGui.QApplication.UnicodeUTF8))
         ########################################################################################################################
-        self.actionFilterDesing.setText(QtGui.QApplication.translate("MainWindow", "&Filter Diseng on selection...", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionFilterDesing.setToolTip("Apply FilterDesing")
+        self.actionFilterDesing.setText(QtGui.QApplication.translate("MainWindow", "&Filter Design", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionFilterDesing.setToolTip("Apply filter algorithm")
         self.actionFilterDesing.setStatusTip("Apply filter algorithm")
         self.actionFilterDesing.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+F", None, QtGui.QApplication.UnicodeUTF8))
         ########################################################################################################################

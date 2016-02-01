@@ -32,6 +32,7 @@ from apasvo.gui.views import staltadialog
 from apasvo.gui.views import ampadialog
 from apasvo.picking import stalta
 from apasvo.picking import ampa
+from apasvo.gui.views import FilterDesing
 from apasvo.gui.models import pickingtask
 from apasvo.gui.models import eventcommands as commands
 
@@ -123,8 +124,18 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.action_ampa.setIcon(QtGui.QIcon(":/ampa.png"))
         self.action_ampa.setEnabled(False)
         self.action_ampa.setToolTip("Apply AMPA algorithm")
+        ##############################################################################
+        self.action_filter_design = QtGui.QAction(self)
+        self.action_filter_design.setIcon(QtGui.QIcon(":/ampa.png"))
+        self.action_filter_design.setEnabled(False)
+        self.action_filter_design.setToolTip("Filter design")
+        self.viewFilteredCheckBox = QtGui.QCheckBox("View filtered signal")
+        self.viewFilteredCheckBox.setChecked(True)
+        ###############################################################################
         self.tool_bar_analysis.addAction(self.action_sta_lta)
         self.tool_bar_analysis.addAction(self.action_ampa)
+        self.tool_bar_analysis.addAction(self.action_filter_design)
+        self.tool_bar_analysis.addWidget(self.viewFilteredCheckBox)
         # self.tool_bar_analysis.addSeparator()
         # self.action_activate_threshold = QtGui.QAction(self)
         # self.action_activate_threshold.setIcon(QtGui.QIcon(":/threshold.png"))
@@ -153,6 +164,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         # Connect actions
         self.action_sta_lta.triggered.connect(self.doSTALTA)
         self.action_ampa.triggered.connect(self.doAMPA)
+        self.action_filter_design.triggered.connect(self.doFilterDesing)
         self.action_close.triggered.connect(self.close_selected_traces)
         self.action_previous_view.triggered.connect(self.on_previous_view)
         self.action_next_view.triggered.connect(self.on_next_view)
@@ -206,6 +218,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.centralwidget.setVisible(stream_has_any_trace)
         self.action_sta_lta.setEnabled(stream_has_any_trace)
         self.action_ampa.setEnabled(stream_has_any_trace)
+        self.action_filter_design.setEnabled(stream_has_any_trace)
         self.set_title()
 
     def update_events(self, *args, **kwargs):
@@ -279,6 +292,28 @@ class TraceSelectorDialog(QtGui.QMainWindow):
                                                           trace_list=selected_traces)
             self.launch_analysis_task(analysis_task,
                                       label="Applying %s..." % alg.name)
+
+
+    def doFilterDesing(self):
+        """Performs event filtering using bandpass filter ."""
+        #xleft, xright = self.signalViewer.get_selector_limits()
+        selected_traces = self.stream_viewer.selected_traces
+        dialog = FilterDesing.FilterDesignDialog(self.stream, trace_list= selected_traces)
+        return_code = dialog.exec_()
+        if return_code == QtGui.QDialog.Accepted:
+            # Read settings
+            settings = QtCore.QSettings(_organization, _application_name)
+            settings.beginGroup('filterdesign_settings')
+            freq_1 = float(settings.value('freq_min', 0.0))
+            freq_2 = float(settings.value('freq_max', 25))
+            coefficients = float(settings.value('coef_number', 3))
+            zero_phase= (settings.value('zero_phase',True))
+
+            settings.endGroup()
+
+            for trace in selected_traces:
+                trace.signal_filter('bandpass', freqmin=freq_1, freqmax=freq_2, corners=coefficients, zerophase=zero_phase)
+
 
     def launch_analysis_task(self, task, label=""):
         wait_dialog = processingdialog.ProcessingDialog(label_text=label)

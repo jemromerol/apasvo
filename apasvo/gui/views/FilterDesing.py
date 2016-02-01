@@ -85,7 +85,7 @@ class FilterDesignDialog(QtGui.QDialog):
             by using the estimated arrival time after clicking on 'Accept'
     """
 
-    def __init__(self, stream, document,trace_list=None,seismic_event=None, parent=None):
+    def __init__(self, stream,trace_list=None,seismic_event=None, parent=None):
         super(FilterDesignDialog, self).__init__(parent)
 
 
@@ -93,12 +93,10 @@ class FilterDesignDialog(QtGui.QDialog):
 
         self.nyquist_freq = max([trace.fs for trace in traces]) / 2.0
 
-        self.document = document
+        #self.document = document
 
-        self.record = self.document.record
+        #self.record = self.document.record
         #self.nyquist_freq = self.record.fs/2.0;
-        self.a=0
-        self.b=0
 
         #self.load_settings()
 
@@ -111,8 +109,6 @@ class FilterDesignDialog(QtGui.QDialog):
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.button_box.clicked.connect(self.on_click)
-        #self.start_point_spinbox.timeChanged.connect(self.on_start_point_changed)
-        #self.end_point_spinbox.timeChanged.connect(self.on_end_point_changed)
 
     def _init_ui(self):
         self.setWindowTitle("Filter Design (Butterworth-Bandpass Filter)")
@@ -207,8 +203,6 @@ class FilterDesignDialog(QtGui.QDialog):
         settings.setValue('freq_max', self.end_point_spinbox.value())
         settings.setValue('coef_number', self.number_coefficient_spinbox.value())
         settings.setValue('zero_phase', self.zeroPhaseCheckBox.isChecked())
-        settings.setValue('a_values', self.a)
-        settings.setValue('b_values', self.b)
         settings.endGroup()
 
     def butter_bandpass(self,lowcut, highcut, fs, order=5):
@@ -226,33 +220,13 @@ class FilterDesignDialog(QtGui.QDialog):
 
     def do_filter_response(self):
 
-        b, a = signal.iirfilter(int(self.number_coefficient_spinbox.value()), [float(self.start_point_spinbox.value())/self.nyquist_freq,float(self.end_point_spinbox.value())/self.nyquist_freq], rs=None, btype='bandpass',analog=False, ftype='butter')
-        w, h = signal.freqs(b, a)
-        #self.fig = plt.figure()
-        #ax = self.fig.add_subplot(111)
+        b, a = self.butter_bandpass(self.start_point_spinbox.value(), self.end_point_spinbox.value(), self.nyquist_freq, order=self.number_coefficient_spinbox.value())
+        w, h = freqz(b, a)
         ax = self.fig.axes[0]
-        ax.semilogx(w, 20 * np.log10(abs(h)))
-        ax.set_title('Butterworth-Bandpass filter frequency response')
-        ax.set_xlabel('Frequency [radians / second]')
+        ax.cla()
+        ax.plot((self.nyquist_freq * 0.5 / np.pi) * w, abs(h),rasterized=True)[0]
+        ax.set_title('Butterworth-Bandpass filter')
+        ax.set_xlabel('Frequency [Hz]')
         ax.set_ylabel('Amplitude [dB]')
-        ax.axis((10, 1000, -100, 10))
         ax.grid(which='both', axis='both')
         self.canvas.draw_idle()
-        #w, h = freqz(b, a, worN=2000)
-        #plt.plot((fs * 0.5 / np.pi) * w, abs(h), label="order = %d" % order)
-
-        #plt.plot([0, 0.5 * fs], [np.sqrt(0.5), np.sqrt(0.5)],
-        #     '--', label='sqrt(0.5)')
-        #plt.xlabel('Frequency (Hz)')
-        #plt.ylabel('Gain')
-        #plt.grid(True)
-
-
-
-
-        #plt.show()
-
-        #.filter('highpass', freq=1.0, corners=1, zerophase=True)
-        #tr_filt=self.record.
-        #tr_filt = tr.copy()
-        #tr_filt.filter('lowpass', freq=1.0, corners=2, zerophase=True)

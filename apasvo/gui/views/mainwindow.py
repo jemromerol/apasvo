@@ -655,7 +655,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
     def doFilterDesing(self):
         """Performs event filtering using bandpass filter ."""
         #xleft, xright = self.signalViewer.get_selector_limits()
-        dialog = FilterDesing.FilterDesignDialog(self.stream, self.document, trace_list=[self.document.record])
+        dialog = FilterDesing.FilterDesignDialog(self.stream, trace_list=[self.document.record])
         return_code = dialog.exec_()
         if return_code == QtGui.QDialog.Accepted:
             # Read settings
@@ -669,7 +669,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             #b_values = np.array(settings.value('b_values')).astype(float)
             settings.endGroup()
             self.document.record.signal_filter('bandpass', freqmin=freq_1, freqmax=freq_2, corners=coefficients, zerophase=zero_phase)
-
+            #if ():
 
 
     def clear_events(self):
