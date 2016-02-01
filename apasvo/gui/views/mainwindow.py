@@ -372,62 +372,61 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         """
         self.current_document_idx = document_idx
         document = self.document_list[document_idx]
-        if document != self.document:
-            self.disconnect_document()
-            # Load and visualize the opened record
-            self.document = document
-            self.document.emptyList.connect(self.set_modified)
-            ########
-            self.EventsTableView.setModel(self.document)
-            model = self.EventsTableView.selectionModel()
-            model.selectionChanged.connect(self.on_event_selection)
-            # Connect Delegates
-            for i, attribute in enumerate(self.document.attributes):
-                if attribute.get('attribute_type') == 'enum' and attribute.get('editable', False):
-                    delegate = cbdelegate.ComboBoxDelegate(self.EventsTableView,
-                                                           attribute.get('value_list', []))
-                    self.EventsTableView.setItemDelegateForColumn(i, delegate)
-                else:
-                    self.EventsTableView.setItemDelegateForColumn(i, None)
-            # connect trace selector to document
-            self.trace_selector.events_created.connect(lambda x: self.document.updateList())
-            self.trace_selector.events_deleted.connect(lambda x: self.document.updateList())
-            self.trace_selector.events_created.connect(self.signalViewer.create_events)
-            self.trace_selector.events_deleted.connect(self.signalViewer.delete_events)
-            # connect document model to signalViewer
-            self.document.eventCreated.connect(self.signalViewer.create_event)
-            self.document.eventCreated.connect(self.trace_selector.update_events)
-            self.document.eventDeleted.connect(self.signalViewer.delete_event)
-            self.document.eventDeleted.connect(self.trace_selector.update_events)
-            self.document.eventModified.connect(self.signalViewer.update_event)
-            self.document.eventModified.connect(self.trace_selector.update_events)
-            self.document.detectionPerformed.connect(self.signalViewer.update_cf)
-            self.document.detectionPerformed.connect(self.toolBarNavigation.update)
-            # load document data into signal viewer
-            self.signalViewer.unset_record()
-            self.signalViewer.set_record(self.document)
-            self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
-            self.signalViewer.set_signal_amplitude_visible(self.actionSignal_Amplitude.isChecked())
-            self.signalViewer.set_signal_envelope_visible(self.actionSignal_Envelope.isChecked())
-            self.signalViewer.set_cf_visible(self.actionCharacteristic_Function.isChecked())
-            self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
-            self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
-            self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
-            self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
-            self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
-            self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
-            self.toolBarMedia.connect_path()
-            # Update GUI
-            self.centralwidget.setVisible(True)
-            self.actionClose.setEnabled(True)
-            self.actionClear_Event_List.setEnabled(True)
-            self.actionSTA_LTA.setEnabled(True)
-            self.actionAMPA.setEnabled(True)
-            self.actionFilterDesing.setEnabled(True)
-            self.toolBarNavigation.setEnabled(True)
-            self.toolBarAnalysis.setEnabled(True)
-            self.toolBarMedia.set_enabled(True)
-            self.set_title()
+        self.disconnect_document()
+        # Load and visualize the opened record
+        self.document = document
+        self.document.emptyList.connect(self.set_modified)
+        ########
+        self.EventsTableView.setModel(self.document)
+        model = self.EventsTableView.selectionModel()
+        model.selectionChanged.connect(self.on_event_selection)
+        # Connect Delegates
+        for i, attribute in enumerate(self.document.attributes):
+            if attribute.get('attribute_type') == 'enum' and attribute.get('editable', False):
+                delegate = cbdelegate.ComboBoxDelegate(self.EventsTableView,
+                                                       attribute.get('value_list', []))
+                self.EventsTableView.setItemDelegateForColumn(i, delegate)
+            else:
+                self.EventsTableView.setItemDelegateForColumn(i, None)
+        # connect trace selector to document
+        self.trace_selector.events_created.connect(lambda x: self.document.updateList())
+        self.trace_selector.events_deleted.connect(lambda x: self.document.updateList())
+        self.trace_selector.events_created.connect(self.signalViewer.create_events)
+        self.trace_selector.events_deleted.connect(self.signalViewer.delete_events)
+        # connect document model to signalViewer
+        self.document.eventCreated.connect(self.signalViewer.create_event)
+        self.document.eventCreated.connect(self.trace_selector.update_events)
+        self.document.eventDeleted.connect(self.signalViewer.delete_event)
+        self.document.eventDeleted.connect(self.trace_selector.update_events)
+        self.document.eventModified.connect(self.signalViewer.update_event)
+        self.document.eventModified.connect(self.trace_selector.update_events)
+        self.document.detectionPerformed.connect(self.signalViewer.update_cf)
+        self.document.detectionPerformed.connect(self.toolBarNavigation.update)
+        # load document data into signal viewer
+        self.signalViewer.unset_record()
+        self.signalViewer.set_record(self.document)
+        self.signalViewer.thresholdMarker.thresholdChanged.connect(self.thresholdSpinBox.setValue)
+        self.signalViewer.set_signal_amplitude_visible(self.actionSignal_Amplitude.isChecked())
+        self.signalViewer.set_signal_envelope_visible(self.actionSignal_Envelope.isChecked())
+        self.signalViewer.set_cf_visible(self.actionCharacteristic_Function.isChecked())
+        self.signalViewer.set_espectrogram_visible(self.actionEspectrogram.isChecked())
+        self.signalViewer.set_minimap_visible(self.actionSignal_MiniMap.isChecked())
+        self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
+        self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
+        self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
+        self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
+        self.toolBarMedia.connect_path()
+        # Update GUI
+        self.centralwidget.setVisible(True)
+        self.actionClose.setEnabled(True)
+        self.actionClear_Event_List.setEnabled(True)
+        self.actionSTA_LTA.setEnabled(True)
+        self.actionAMPA.setEnabled(True)
+        self.actionFilterDesing.setEnabled(True)
+        self.toolBarNavigation.setEnabled(True)
+        self.toolBarAnalysis.setEnabled(True)
+        self.toolBarMedia.set_enabled(True)
+        self.set_title()
 
     def disconnect_document(self):
         if self.document is not None:
