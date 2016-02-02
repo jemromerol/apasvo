@@ -673,7 +673,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             #a_values = np.array(settings.value('a_values')).astype(float)
             #b_values = np.array(settings.value('b_values')).astype(float)
             settings.endGroup()
-            self.document.record.signal_filter('bandpass', freqmin=freq_1, freqmax=freq_2, corners=coefficients, zerophase=zero_phase)
+            self.document.record.bandpass_filter(freq_1, freq_2, corners=coefficients, zerophase=zero_phase)
             #if ():
 
 

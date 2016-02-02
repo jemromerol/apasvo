@@ -36,6 +36,7 @@ from obspy.core.event import WaveformStreamID
 from obspy.core.event import Comment
 from obspy.core.event import Catalog
 from obspy.core.event import Event
+from obspy.signal import filter
 import csv
 import copy
 import os
@@ -485,8 +486,8 @@ class ApasvoTrace(op.Trace):
                 event.method = method_takanami
         return events
 
-    def signal_filter(self, *args, **kwargs):
-        self.filtered_signal = self.copy().filter(*args, **kwargs).data
+    def bandpass_filter(self, freqmin, freqmax, *args, **kwargs):
+        self.filtered_signal = filter.bandpass(self.data, freqmin, freqmax, self.fs, *args, **kwargs)
         return self.filtered_signal
 
     def save_cf(self, fname, fmt=rawfile.format_text,

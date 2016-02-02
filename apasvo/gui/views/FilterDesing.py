@@ -85,27 +85,23 @@ class FilterDesignDialog(QtGui.QDialog):
             by using the estimated arrival time after clicking on 'Accept'
     """
 
-    def __init__(self, stream,trace_list=None,seismic_event=None, parent=None):
+    def __init__(self, stream, trace_list=None, parent=None):
         super(FilterDesignDialog, self).__init__(parent)
 
-
+        # Calc max. frequency
         traces = stream.traces if not trace_list else trace_list
-
-        self.nyquist_freq = max([trace.fs for trace in traces]) / 2.0
-
-        #self.document = document
-
-        #self.record = self.document.record
-        #self.nyquist_freq = self.record.fs/2.0;
-
-        #self.load_settings()
-
-        #self.seismic_event = seismic_event
-
-
+        self.max_freq = max([trace.fs for trace in traces])
 
         self._init_ui()
+        self.load_settings()
+        # Initial draw
+        w, h_db, angles = self._retrieve_filter_plot_data()
+        self._module_data = self.module_axes.plot(w, h_db, 'b')[0]
+        self._phase_data = self.phase_axes.plot(w, angles, 'g')[0]
+        self.canvas.draw_idle()
 
+        self.start_point_spinbox.valueChanged.connect(self.on_freq_min_changed)
+        self.end_point_spinbox.valueChanged.connect(self.on_freq_max_changed)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.button_box.clicked.connect(self.on_click)
@@ -113,12 +109,20 @@ class FilterDesignDialog(QtGui.QDialog):
     def _init_ui(self):
         self.setWindowTitle("Filter Design (Butterworth-Bandpass Filter)")
         self.fig, _ = plt.subplots(1, 1, sharex=True)
+        # Set up filter axes
+        self.module_axes = self.fig.axes[0]
+        self.phase_axes = self.module_axes.twinx()
+        self.module_axes.set_title('Digital filter frequency response (Butterworth-Bandpass filter)')
+        self.module_axes.set_xlabel('Frequency [rad/sample]')
+        self.module_axes.set_ylabel('Amplitude [dB]', color='b')
+        self.module_axes.axis('tight')
+        self.module_axes.grid(which='both', axis='both')
+        self.phase_axes.set_ylabel('Angle (radians)', color='g')
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setMinimumSize(self.canvas.size())
         self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
                                                     QtGui.QSizePolicy.Policy.Expanding))
         self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
-        self.position_label = QtGui.QLabel("Frequency Response")
         self.group_box = QtGui.QGroupBox(self)
         self.group_box2 = QtGui.QGroupBox(self)
         self.group_box3 = QtGui.QGroupBox(self)
@@ -130,18 +134,18 @@ class FilterDesignDialog(QtGui.QDialog):
                                                                QtGui.QSizePolicy.Policy.Preferred))
 
         self.start_point_spinbox = QtGui.QDoubleSpinBox(self.group_box)
-        self.start_point_spinbox.setMinimum(0.0)
+        self.start_point_spinbox.setMinimum(1.0)
         self.start_point_spinbox.setSingleStep(1.00)
         self.start_point_spinbox.setAccelerated(True)
-        self.start_point_spinbox.setMaximum(self.nyquist_freq-5)
+        self.start_point_spinbox.setMaximum(self.max_freq * 0.5)
         self.end_point_label = QtGui.QLabel("Max. Frequency (Hz):")
         self.end_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
                                                                QtGui.QSizePolicy.Policy.Preferred))
         self.end_point_spinbox = QtGui.QDoubleSpinBox(self.group_box)
-        self.end_point_spinbox.setMinimum(0.0)
+        self.end_point_spinbox.setMinimum(1.0)
         self.end_point_spinbox.setSingleStep(1.00)
         self.end_point_spinbox.setAccelerated(True)
-        self.end_point_spinbox.setMaximum(self.nyquist_freq)
+        self.end_point_spinbox.setMaximum(self.max_freq * 0.5)
         self.end_point_spinbox.setValue(5.0)
         #######################################################################
 
@@ -151,10 +155,10 @@ class FilterDesignDialog(QtGui.QDialog):
                                                                QtGui.QSizePolicy.Policy.Preferred))
         self.number_coefficient_label2.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
                                                                QtGui.QSizePolicy.Policy.Preferred))
-        self.number_coefficient_spinbox = QtGui.QDoubleSpinBox(self.group_box2)
+        self.number_coefficient_spinbox = QtGui.QSpinBox(self.group_box2)
         self.number_coefficient_spinbox.adjustSize()
-        self.number_coefficient_spinbox.setMinimum(1.0)
-        self.number_coefficient_spinbox.setSingleStep(1.00)
+        self.number_coefficient_spinbox.setMinimum(1)
+        self.number_coefficient_spinbox.setSingleStep(1)
         self.number_coefficient_spinbox.setAccelerated(True)
         self.zeroPhaseCheckBox = QtGui.QCheckBox("Apply Zero Phase on results", self.group_box2)
         self.zeroPhaseCheckBox.setChecked(True)
@@ -191,21 +195,25 @@ class FilterDesignDialog(QtGui.QDialog):
         self.layout.setSpacing(6)
         self.layout.addWidget(self.toolBarNavigation)
         self.layout.addWidget(self.canvas)
-        self.layout.addWidget(self.position_label)
         self.layout.addWidget(self.group_box3)
         self.layout.addWidget(self.group_box)
         self.layout.addWidget(self.group_box2)
         self.layout.addWidget(self.button_box)
 
+    def on_freq_min_changed(self, value):
+        self.end_point_spinbox.setMinimum(value + 1.0)
+
+    def on_freq_max_changed(self, value):
+        self.start_point_spinbox.setMaximum(value - 1.0)
+
     def on_click(self, button):
         if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Ok:
-            self.load_settings()
+            self.save_settings()
         if self.button_box.standardButton(button) == QtGui.QDialogButtonBox.Apply:
-            self.do_filter_response()
+            self._draw_filter_response()
 
-
-    def load_settings(self):
-        """Loads settings from persistent storage."""
+    def save_settings(self):
+        """Save settings to persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("filterdesign_settings")
         #self.default_margin = int(float(settings.value('filterdesign_margin', 5.0)) *
@@ -216,34 +224,33 @@ class FilterDesignDialog(QtGui.QDialog):
         settings.setValue('zero_phase', self.zeroPhaseCheckBox.isChecked())
         settings.endGroup()
 
-    def butter_bandpass(self,lowcut, highcut, fs, order=5):
-        nyq = 0.5 * self.nyquist_freq
+    def load_settings(self):
+        """Loads settings from persistent storage."""
+        settings = QtCore.QSettings(_organization, _application_name)
+        settings.beginGroup("filterdesign_settings")
+        self.start_point_spinbox.setValue(float(settings.value('freq_min', 0.0)))
+        self.end_point_spinbox.setValue(float(settings.value('freq_max', self.max_freq * 0.5)))
+        self.number_coefficient_spinbox.setValue(int(settings.value('coef_number', 1)))
+        self.zeroPhaseCheckBox.setChecked(bool(settings.value('zero_phase', True)))
+        settings.endGroup()
+
+    def _butter_bandpass(self, lowcut, highcut, fs, order=5):
+        nyq = 0.5 * fs
         low = lowcut / nyq
         high = highcut / nyq
         b, a = butter(order, [low, high], btype='band')
         return b, a
 
-
-    def butter_bandpass_filter(self,data, lowcut, highcut, fs, order=5):
-        b, a = self.butter_bandpass(lowcut, highcut, fs, order=order)
-        y = lfilter(b, a, data)
-        return y
-
-    def do_filter_response(self):
-
-        b, a = self.butter_bandpass(self.start_point_spinbox.value(), self.end_point_spinbox.value(), self.nyquist_freq, order=self.number_coefficient_spinbox.value())
+    def _retrieve_filter_plot_data(self):
+        b, a = self._butter_bandpass(self.start_point_spinbox.value(), self.end_point_spinbox.value(), self.max_freq, order=self.number_coefficient_spinbox.value())
         w, h = freqz(b, a)
-        ax = self.fig.axes[0]
-        ax2 = ax.twinx()
-        ax.cla()
-        ax2.cla()
-        ax.plot(w, 20*np.log10(abs(h)),'b',rasterized=True)[0]
-        ax.set_title('Digital filter frequency response (Butterworth-Bandpass filter)')
-        ax.set_xlabel('Frequency [rad/sample]')
-        ax.set_ylabel('Amplitude [dB]', color='b')
         angles = np.unwrap(np.angle(h))
-        ax.axis('tight')
-        ax.grid(which='both', axis='both')
-        ax2.plot(w, angles, 'g')
-        ax2.set_ylabel('Angle (radians)', color='g')
+        return w, 20 * np.log10(abs(h)), angles
+
+    def _draw_filter_response(self):
+        w, h_db, angles = self._retrieve_filter_plot_data()
+        self._module_data.set_xdata(w)
+        self._module_data.set_ydata(h_db)
+        self._phase_data.set_xdata(w)
+        self._phase_data.set_ydata(angles)
         self.canvas.draw_idle()
