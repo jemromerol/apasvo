@@ -121,8 +121,10 @@ class FilterDesignDialog(QtGui.QDialog):
         self.position_label = QtGui.QLabel("Frequency Response")
         self.group_box = QtGui.QGroupBox(self)
         self.group_box2 = QtGui.QGroupBox(self)
-        self.group_box.setTitle("Parameters")
+        self.group_box3 = QtGui.QGroupBox(self)
+        self.group_box.setTitle("")
         self.group_box2.setTitle("")
+        self.group_box3.setTitle("Parameters")
         self.start_point_label = QtGui.QLabel("Min. Frequency (Hz): ")
         self.start_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
                                                                QtGui.QSizePolicy.Policy.Preferred))
@@ -143,10 +145,14 @@ class FilterDesignDialog(QtGui.QDialog):
         self.end_point_spinbox.setValue(5.0)
         #######################################################################
 
-        self.number_coefficient_label = QtGui.QLabel("Number of coefficients: ")
+        self.number_coefficient_label = QtGui.QLabel("Order: ")
+        self.number_coefficient_label2 = QtGui.QLabel("")
         self.number_coefficient_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
                                                                QtGui.QSizePolicy.Policy.Preferred))
+        self.number_coefficient_label2.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
+                                                               QtGui.QSizePolicy.Policy.Preferred))
         self.number_coefficient_spinbox = QtGui.QDoubleSpinBox(self.group_box2)
+        self.number_coefficient_spinbox.adjustSize()
         self.number_coefficient_spinbox.setMinimum(1.0)
         self.number_coefficient_spinbox.setSingleStep(1.00)
         self.number_coefficient_spinbox.setAccelerated(True)
@@ -154,7 +160,6 @@ class FilterDesignDialog(QtGui.QDialog):
         self.zeroPhaseCheckBox.setChecked(True)
 
         #######################################################################
-
 
         self.group_box_layout = QtGui.QHBoxLayout(self.group_box)
         self.group_box_layout.setContentsMargins(9, 9, 9, 9)
@@ -167,9 +172,14 @@ class FilterDesignDialog(QtGui.QDialog):
         self.group_box2_layout = QtGui.QHBoxLayout(self.group_box2)
         self.group_box2_layout.setContentsMargins(9, 9, 9, 9)
         self.group_box2_layout.setSpacing(12)
-        self.group_box2_layout.addWidget(self.number_coefficient_label)
-        self.group_box2_layout.addWidget(self.number_coefficient_spinbox)
         self.group_box2_layout.addWidget(self.zeroPhaseCheckBox)
+        ###################################################################
+        self.group_box3_layout = QtGui.QHBoxLayout(self.group_box3)
+        self.group_box3_layout.setContentsMargins(9, 9, 9, 9)
+        self.group_box3_layout.setSpacing(12)
+        self.group_box3_layout.addWidget(self.number_coefficient_label)
+        self.group_box3_layout.addWidget(self.number_coefficient_spinbox)
+        self.group_box3_layout.addWidget(self.number_coefficient_label2)
         #####################################################################
         self.button_box = QtGui.QDialogButtonBox(self)
         self.button_box.setOrientation(QtCore.Qt.Horizontal)
@@ -182,6 +192,7 @@ class FilterDesignDialog(QtGui.QDialog):
         self.layout.addWidget(self.toolBarNavigation)
         self.layout.addWidget(self.canvas)
         self.layout.addWidget(self.position_label)
+        self.layout.addWidget(self.group_box3)
         self.layout.addWidget(self.group_box)
         self.layout.addWidget(self.group_box2)
         self.layout.addWidget(self.button_box)
@@ -223,10 +234,16 @@ class FilterDesignDialog(QtGui.QDialog):
         b, a = self.butter_bandpass(self.start_point_spinbox.value(), self.end_point_spinbox.value(), self.nyquist_freq, order=self.number_coefficient_spinbox.value())
         w, h = freqz(b, a)
         ax = self.fig.axes[0]
+        ax2 = ax.twinx()
         ax.cla()
-        ax.plot((self.nyquist_freq * 0.5 / np.pi) * w, abs(h),rasterized=True)[0]
-        ax.set_title('Butterworth-Bandpass filter')
-        ax.set_xlabel('Frequency [Hz]')
-        ax.set_ylabel('Amplitude [dB]')
+        ax2.cla()
+        ax.plot(w, 20*np.log10(abs(h)),'b',rasterized=True)[0]
+        ax.set_title('Digital filter frequency response (Butterworth-Bandpass filter)')
+        ax.set_xlabel('Frequency [rad/sample]')
+        ax.set_ylabel('Amplitude [dB]', color='b')
+        angles = np.unwrap(np.angle(h))
+        ax.axis('tight')
         ax.grid(which='both', axis='both')
+        ax2.plot(w, angles, 'g')
+        ax2.set_ylabel('Angle (radians)', color='g')
         self.canvas.draw_idle()
