@@ -113,7 +113,7 @@ class FilterDesignDialog(QtGui.QDialog):
         self.module_axes = self.fig.axes[0]
         self.phase_axes = self.module_axes.twinx()
         self.module_axes.set_title('Digital filter frequency response (Butterworth-Bandpass filter)')
-        self.module_axes.set_xlabel('Frequency [rad/sample]')
+        self.module_axes.set_xlabel('Frequency [Hz]')
         self.module_axes.set_ylabel('Amplitude [dB]', color='b')
         self.module_axes.axis('tight')
         self.module_axes.grid(which='both', axis='both')
@@ -129,7 +129,7 @@ class FilterDesignDialog(QtGui.QDialog):
         self.group_box.setTitle("")
         self.group_box2.setTitle("")
         self.group_box3.setTitle("Parameters")
-        self.start_point_label = QtGui.QLabel("Min. Frequency (Hz): ")
+        self.start_point_label = QtGui.QLabel("Lower cutoff frequency (Hz): ")
         self.start_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
                                                                QtGui.QSizePolicy.Policy.Preferred))
 
@@ -138,7 +138,7 @@ class FilterDesignDialog(QtGui.QDialog):
         self.start_point_spinbox.setSingleStep(1.00)
         self.start_point_spinbox.setAccelerated(True)
         self.start_point_spinbox.setMaximum(self.max_freq * 0.5)
-        self.end_point_label = QtGui.QLabel("Max. Frequency (Hz):")
+        self.end_point_label = QtGui.QLabel("Higher cutoff frequency (Hz):")
         self.end_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
                                                                QtGui.QSizePolicy.Policy.Preferred))
         self.end_point_spinbox = QtGui.QDoubleSpinBox(self.group_box)
@@ -160,7 +160,7 @@ class FilterDesignDialog(QtGui.QDialog):
         self.number_coefficient_spinbox.setMinimum(1)
         self.number_coefficient_spinbox.setSingleStep(1)
         self.number_coefficient_spinbox.setAccelerated(True)
-        self.zeroPhaseCheckBox = QtGui.QCheckBox("Apply Zero Phase on results", self.group_box2)
+        self.zeroPhaseCheckBox = QtGui.QCheckBox("Zero phase filtering", self.group_box2)
         self.zeroPhaseCheckBox.setChecked(True)
 
         #######################################################################
@@ -245,7 +245,7 @@ class FilterDesignDialog(QtGui.QDialog):
         b, a = self._butter_bandpass(self.start_point_spinbox.value(), self.end_point_spinbox.value(), self.max_freq, order=self.number_coefficient_spinbox.value())
         w, h = freqz(b, a)
         angles = np.unwrap(np.angle(h))
-        return w, 20 * np.log10(abs(h)), angles
+        return (self.max_freq * 0.5 / np.pi) * w, 20 * np.log10(abs(h)), angles
 
     def _draw_filter_response(self):
         w, h_db, angles = self._retrieve_filter_plot_data()
