@@ -378,8 +378,8 @@ class Ui_MainWindow(object):
         self.actionTakanami.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+T", None, QtGui.QApplication.UnicodeUTF8))
         ########################################################################################################################
         self.actionFilterDesing.setText(QtGui.QApplication.translate("MainWindow", "&Filter Design", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionFilterDesing.setToolTip("Apply filter algorithm")
-        self.actionFilterDesing.setStatusTip("Apply filter algorithm")
+        self.actionFilterDesing.setToolTip("Filter Design")
+        self.actionFilterDesing.setStatusTip("Filter Design")
         self.actionFilterDesing.setShortcut(QtGui.QApplication.translate("MainWindow", "Ctrl+F", None, QtGui.QApplication.UnicodeUTF8))
         ########################################################################################################################
         self.actionSignal_Amplitude.setText(QtGui.QApplication.translate("MainWindow", "Signal &Amplitude", None, QtGui.QApplication.UnicodeUTF8))
