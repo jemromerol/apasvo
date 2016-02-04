@@ -171,7 +171,7 @@ class Ui_MainWindow(object):
         self.actionTakanami.setObjectName("actionTakanami")
         #######################################################################
         self.actionFilterDesing = QtGui.QAction(MainWindow)
-        self.actionFilterDesing.setIcon(QtGui.QIcon(":/takanami.png"))
+        self.actionFilterDesing.setIcon(QtGui.QIcon(":/filter.png"))
         self.actionFilterDesing.setEnabled(False)
         self.actionFilterDesing.setObjectName("actionFilterDesing")
         self.viewFilteredCheckBox = QtGui.QCheckBox("View filtered signal")

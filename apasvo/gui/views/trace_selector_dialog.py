@@ -126,7 +126,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.action_ampa.setToolTip("Apply AMPA algorithm")
         ##############################################################################
         self.action_filter_design = QtGui.QAction(self)
-        self.action_filter_design.setIcon(QtGui.QIcon(":/ampa.png"))
+        self.action_filter_design.setIcon(QtGui.QIcon(":/filter.png"))
         self.action_filter_design.setEnabled(False)
         self.action_filter_design.setToolTip("Filter design")
         self.viewFilteredCheckBox = QtGui.QCheckBox("View filtered signal")

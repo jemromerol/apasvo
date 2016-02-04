@@ -98,6 +98,8 @@ class FilterDesignDialog(QtGui.QDialog):
         w, h_db, angles = self._retrieve_filter_plot_data()
         self._module_data = self.module_axes.plot(w, h_db, 'b')[0]
         self._phase_data = self.phase_axes.plot(w, angles, 'g')[0]
+        self.module_axes.set_ylim([-60,10])
+        self.phase_axes.set_ylim([min(angles), max(angles)])
         self.canvas.draw_idle()
 
         self.start_point_spinbox.valueChanged.connect(self.on_freq_min_changed)
@@ -126,6 +128,7 @@ class FilterDesignDialog(QtGui.QDialog):
         self.group_box = QtGui.QGroupBox(self)
         self.group_box2 = QtGui.QGroupBox(self)
         self.group_box3 = QtGui.QGroupBox(self)
+        self.group_box4 = QtGui.QGroupBox(self)
         self.group_box.setTitle("")
         self.group_box2.setTitle("")
         self.group_box3.setTitle("Parameters")
@@ -141,7 +144,7 @@ class FilterDesignDialog(QtGui.QDialog):
         self.end_point_label = QtGui.QLabel("Higher cutoff frequency (Hz):")
         self.end_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
                                                                QtGui.QSizePolicy.Policy.Preferred))
-        self.end_point_spinbox = QtGui.QDoubleSpinBox(self.group_box)
+        self.end_point_spinbox = QtGui.QDoubleSpinBox(self.group_box4)
         self.end_point_spinbox.setMinimum(1.0)
         self.end_point_spinbox.setSingleStep(1.00)
         self.end_point_spinbox.setAccelerated(True)
@@ -155,7 +158,7 @@ class FilterDesignDialog(QtGui.QDialog):
                                                                QtGui.QSizePolicy.Policy.Preferred))
         self.number_coefficient_label2.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
                                                                QtGui.QSizePolicy.Policy.Preferred))
-        self.number_coefficient_spinbox = QtGui.QSpinBox(self.group_box2)
+        self.number_coefficient_spinbox = QtGui.QSpinBox(self.group_box3)
         self.number_coefficient_spinbox.adjustSize()
         self.number_coefficient_spinbox.setMinimum(1)
         self.number_coefficient_spinbox.setSingleStep(1)
@@ -170,8 +173,11 @@ class FilterDesignDialog(QtGui.QDialog):
         self.group_box_layout.setSpacing(12)
         self.group_box_layout.addWidget(self.start_point_label)
         self.group_box_layout.addWidget(self.start_point_spinbox)
-        self.group_box_layout.addWidget(self.end_point_label)
-        self.group_box_layout.addWidget(self.end_point_spinbox)
+        self.group_box4_layout = QtGui.QHBoxLayout(self.group_box4)
+        self.group_box4_layout.setContentsMargins(9, 9, 9, 9)
+        self.group_box4_layout.setSpacing(12)
+        self.group_box4_layout.addWidget(self.end_point_label)
+        self.group_box4_layout.addWidget(self.end_point_spinbox)
         #####################################################################
         self.group_box2_layout = QtGui.QHBoxLayout(self.group_box2)
         self.group_box2_layout.setContentsMargins(9, 9, 9, 9)
@@ -197,7 +203,9 @@ class FilterDesignDialog(QtGui.QDialog):
         self.layout.addWidget(self.canvas)
         self.layout.addWidget(self.group_box3)
         self.layout.addWidget(self.group_box)
-        self.layout.addWidget(self.group_box2)
+        self.layout.addWidget(self.group_box4)
+        #self.layout.addWidget(self.group_box2)
+        self.layout.addWidget(self.zeroPhaseCheckBox)
         self.layout.addWidget(self.button_box)
 
     def on_freq_min_changed(self, value):
@@ -243,9 +251,12 @@ class FilterDesignDialog(QtGui.QDialog):
 
     def _retrieve_filter_plot_data(self):
         b, a = self._butter_bandpass(self.start_point_spinbox.value(), self.end_point_spinbox.value(), self.max_freq, order=self.number_coefficient_spinbox.value())
-        w, h = freqz(b, a)
+        #w, h = freqz(b, a)
+        w, h = freqz(b, a,1024)
         angles = np.unwrap(np.angle(h))
-        return (self.max_freq * 0.5 / np.pi) * w, 20 * np.log10(abs(h)), angles
+        #return (self.max_freq * 0.5 / np.pi) * w, 20 * np.log10(abs(h)), angles
+        f= (self.max_freq/2)*(w/np.pi)
+        return f, 20 * np.log10(abs(h)), angles
 
     def _draw_filter_response(self):
         w, h_db, angles = self._retrieve_filter_plot_data()
@@ -253,4 +264,5 @@ class FilterDesignDialog(QtGui.QDialog):
         self._module_data.set_ydata(h_db)
         self._phase_data.set_xdata(w)
         self._phase_data.set_ydata(angles)
+        self.phase_axes.set_ylim([min(angles), max(angles)])
         self.canvas.draw_idle()

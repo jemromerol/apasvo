@@ -28,5 +28,6 @@
         <file alias="go-next-view.png">images/go-next-view.png</file>
         <file alias="go-previous-view.png">images/go-previous-view.png</file>
         <file alias="marker.png">images/marker.png</file>
+	<file alias="filter.png">images/filter.png</file>
     </qresource>
 </RCC>
