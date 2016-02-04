@@ -375,6 +375,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.disconnect_document()
         # Load and visualize the opened record
         self.document = document
+        self.apply_filter()
+        self.document.record.use_filtered = self.viewFilteredCheckBox.isChecked()
         self.document.emptyList.connect(self.set_modified)
         ########
         self.EventsTableView.setModel(self.document)
@@ -659,23 +661,21 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
 
     def doFilterDesing(self):
         """Performs event filtering using bandpass filter ."""
-        #xleft, xright = self.signalViewer.get_selector_limits()
         dialog = FilterDesing.FilterDesignDialog(self.stream, trace_list=[self.document.record])
         return_code = dialog.exec_()
         if return_code == QtGui.QDialog.Accepted:
-            # Read settings
+            self.apply_filter()
+
+    def apply_filter(self):
+        if self.document is not None:
             settings = QtCore.QSettings(_organization, _application_name)
             settings.beginGroup('filterdesign_settings')
             freq_1 = float(settings.value('freq_min', 0.0))
             freq_2 = float(settings.value('freq_max', 25))
             coefficients = float(settings.value('coef_number', 3))
-            zero_phase= (settings.value('zero_phase',True))
-            #a_values = np.array(settings.value('a_values')).astype(float)
-            #b_values = np.array(settings.value('b_values')).astype(float)
+            zero_phase = settings.value('zero_phase', True)
             settings.endGroup()
             self.document.record.bandpass_filter(freq_1, freq_2, corners=coefficients, zerophase=zero_phase)
-            #if ():
-
 
     def clear_events(self):
         if self.document is not None:
