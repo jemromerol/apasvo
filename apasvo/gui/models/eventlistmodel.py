@@ -60,6 +60,8 @@ class EventListModel(QtCore.QAbstractTableModel):
          'attribute_type': 'enum', 'value_list': rc.PHASE_VALUES},
         {'name': 'Method', 'type': 'event', 'attribute_name': 'method', 'editable': False,
          'attribute_type': 'enum', 'value_list': rc.ALLOWED_METHODS},
+        {'name': 'Polarity', 'type': 'event', 'attribute_name': 'polarity', 'editable': True,
+         'attribute_type': 'enum', 'value_list': op.core.event_header.PickPolarity.keys()},
         {'name': 'Status', 'type': 'event', 'attribute_name': 'evaluation_status', 'editable': True,
          'attribute_type': 'enum', 'value_list': op.core.event_header.EvaluationStatus.keys()},
         {'name': 'Comments', 'type': 'event', 'attribute_name': 'comments', 'editable': True},

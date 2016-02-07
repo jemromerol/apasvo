@@ -82,16 +82,22 @@ class TracePlot(QtCore.QObject):
         xmin, xmax = ax.get_xlim()
         if self.xmin <= xmin <= xmax <= self.xmax:
             # Update data
-            xmin = int(max(0, self.xmin) * self.trace.fs)
-            xmax = int(min(self.xmax, xmax) * self.trace.fs)
-            pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
-            x_data, y_data = plotting.reduce_data(self.time, self.signal, pixel_width, xmin, xmax)
-            self._plot_data.set_xdata(x_data)
-            self._plot_data.set_ydata(y_data)
+            self.update_data(ax)
         else:
             xmin = max(self.xmin, xmin)
             xmax = min(self.xmax, xmax)
             ax.set_xlim(xmin, xmax)
+
+    def update_data(self, ax=None):
+        ax = self.ax if ax is None else ax
+        xmin, xmax = self.ax.get_xlim()
+        xmin = int(max(0, self.xmin) * self.trace.fs)
+        xmax = int(min(self.xmax, xmax) * self.trace.fs)
+        pixel_width = np.ceil(self.fig.get_figwidth() * self.fig.get_dpi())
+        x_data, y_data = plotting.reduce_data(self.time, self.trace.signal, pixel_width, xmin, xmax)
+        self._plot_data.set_xdata(x_data)
+        self._plot_data.set_ydata(y_data)
+        self.parent.draw()
 
     def create_marker(self, event, **kwargs):
         event_id = event.resource_id.uuid
@@ -270,6 +276,10 @@ class StreamViewerWidget(QtGui.QWidget):
         self.canvas.draw()
         self.background = self.canvas.copy_from_bbox(self.fig.bbox)
         self.draw()
+
+    def refresh_stream_data(self):
+        for plot in self.trace_plots:
+            plot.update_data()
 
     def draw(self):
         self.canvas.draw()

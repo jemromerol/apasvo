@@ -262,6 +262,7 @@ class AmpaDialog(QtGui.QDialog):
         settings.endGroup()
 
     def save_settings(self):
+
         """Saves settings to persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("ampa_settings")
@@ -281,7 +282,7 @@ class AmpaDialog(QtGui.QDialog):
         settings.setValue('takanami', self.takanamiCheckBox.checkState())
         settings.setValue('takanami_margin', self.takanamiMarginSpinBox.value())
         settings.endGroup()
-
+        
     def onclick(self, button):
 
         if self.buttonBox.standardButton(button) == QtGui.QDialogButtonBox.RestoreDefaults:

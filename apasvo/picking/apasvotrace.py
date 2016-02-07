@@ -36,11 +36,13 @@ from obspy.core.event import WaveformStreamID
 from obspy.core.event import Comment
 from obspy.core.event import Catalog
 from obspy.core.event import Event
+from obspy.signal import filter
 import csv
 import copy
 import os
 import uuid
 import gc
+from copy import deepcopy
 
 from apasvo.picking import takanami
 from apasvo.picking import envelope as env
@@ -165,6 +167,7 @@ class ApasvoEvent(Pick):
                  comments='',
                  method=method_other,
                  phase_hint=None,
+                 polarity='undecidable',
                  aic=None,
                  n0_aic=None,
                  *args, **kwargs):
@@ -181,6 +184,7 @@ class ApasvoEvent(Pick):
         super(ApasvoEvent, self).__init__(time=self.time,
                                           method_id=ResourceIdentifier(method),
                                           phase_hint=phase_hint,
+                                          polarity=polarity,
                                           creation_info=CreationInfo(
                                               author=kwargs.get('author', ''),
                                               agency_id=kwargs.get('agency', ''),
@@ -314,7 +318,15 @@ class ApasvoTrace(op.Trace):
             Default: ''.
     """
 
-    def __init__(self, data=None, header=None, label='', description='', filename='', normalize=True, **kwargs):
+    def __init__(self,
+                 data=None,
+                 header=None,
+                 label='',
+                 description='',
+                 filename='',
+                 normalize=True,
+                 use_filtered=False,
+                 **kwargs):
         """Initializes a Record instance.
 
         Args:
@@ -329,10 +341,12 @@ class ApasvoTrace(op.Trace):
         if normalize:
             self.data = self.data - np.mean(self.data)
             #self.data = self.data/ np.max(np.abs(self.data))
+        self.filtered_signal = deepcopy(self.data)
         self.events = []
         self.label = label
         self.description = description
         self.filename = filename
+        self.use_filtered = False
         # Get an uuid for each trace
         self.uuid = unicode(uuid.uuid4())
 
@@ -346,7 +360,7 @@ class ApasvoTrace(op.Trace):
 
     @property
     def signal(self):
-        return self.data
+        return self.data if not self.use_filtered else self.filtered_signal
 
     @property
     def starttime(self):
@@ -471,6 +485,10 @@ class ApasvoTrace(op.Trace):
             else:
                 event.method = method_takanami
         return events
+
+    def bandpass_filter(self, freqmin, freqmax, *args, **kwargs):
+        self.filtered_signal = filter.bandpass(self.data, freqmin, freqmax, self.fs, *args, **kwargs)
+        return self.filtered_signal
 
     def save_cf(self, fname, fmt=rawfile.format_text,
                 dtype=rawfile.datatype_float64,
