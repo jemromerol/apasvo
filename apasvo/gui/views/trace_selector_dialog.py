@@ -188,6 +188,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
         self.events_deleted.connect(self.stream_viewer.update_markers)
         self.stream_viewer.trace_selected.connect(lambda x: self.selection_changed.emit(x))
         self.stream_viewer.selection_made.connect(self.action_close.setEnabled)
+        self.viewFilteredCheckBox.toggled.connect(self.toggle_filtered)
 
     def closeEvent(self, event):
         settings = QtCore.QSettings(_organization, _application_name)
@@ -236,11 +237,6 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             sta_length = float(settings.value('sta_window_len', 5.0))
             lta_length = float(settings.value('lta_window_len', 100.0))
             settings.endGroup()
-            # # Get threshold value
-            # if self.actionActivateThreshold.isChecked():
-            #     threshold = self.thresholdSpinBox.value()
-            # else:
-            #     threshold = None
             # # Create an STA-LTA algorithm instance with selected settings
             alg = stalta.StaLta(sta_length, lta_length)
             # perform task
@@ -275,11 +271,6 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             overlap = float(settings.value('overlap', 1.0))
             settings.endGroup()
             settings.endGroup()
-            # Get threshold value
-            # if self.actionActivateThreshold.isChecked():
-            #     threshold = self.thresholdSpinBox.value()
-            # else:
-            #     threshold = None
             # Create an AMPA algorithm instance with selected settings
             alg = ampa.Ampa(wlen, wstep, filters, noise_thr=nthres,
                             bandwidth=bandwidth, overlap=overlap,
@@ -296,8 +287,8 @@ class TraceSelectorDialog(QtGui.QMainWindow):
 
     def doFilterDesing(self):
         """Performs event filtering using bandpass filter ."""
-        #xleft, xright = self.signalViewer.get_selector_limits()
         selected_traces = self.stream_viewer.selected_traces
+        selected_traces = selected_traces if selected_traces else self.stream_viewer.stream.traces
         dialog = FilterDesing.FilterDesignDialog(self.stream, trace_list= selected_traces)
         return_code = dialog.exec_()
         if return_code == QtGui.QDialog.Accepted:
@@ -307,18 +298,24 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             freq_1 = float(settings.value('freq_min', 0.0))
             freq_2 = float(settings.value('freq_max', 25))
             coefficients = float(settings.value('coef_number', 3))
-            zero_phase= (settings.value('zero_phase',True))
+            zero_phase = (settings.value('zero_phase', True))
 
             settings.endGroup()
 
             for trace in selected_traces:
-                trace.signal_filter('bandpass', freqmin=freq_1, freqmax=freq_2, corners=coefficients, zerophase=zero_phase)
+                trace.bandpass_filter(freq_1, freq_2, corners=coefficients, zerophase=zero_phase)
+            self.stream_viewer.refresh_stream_data()
 
 
     def launch_analysis_task(self, task, label=""):
         wait_dialog = processingdialog.ProcessingDialog(label_text=label)
         wait_dialog.setWindowTitle("Event detection")
         wait_dialog.run(task)
+
+    def toggle_filtered(self, value):
+        for trace in self.stream.traces:
+            trace.use_filtered = value
+        self.stream_viewer.refresh_stream_data()
 
     def close_selected_traces(self):
         selected_traces_idx = [self.stream.traces.index(trace) for trace in self.stream_viewer.selected_traces]

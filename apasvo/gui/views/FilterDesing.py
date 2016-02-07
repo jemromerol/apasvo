@@ -104,6 +104,10 @@ class FilterDesignDialog(QtGui.QDialog):
 
         self.start_point_spinbox.valueChanged.connect(self.on_freq_min_changed)
         self.end_point_spinbox.valueChanged.connect(self.on_freq_max_changed)
+        self.start_point_spinbox.valueChanged.connect(self._draw_filter_response)
+        self.end_point_spinbox.valueChanged.connect(self._draw_filter_response)
+        self.number_coefficient_spinbox.valueChanged.connect(self._draw_filter_response)
+        self.zeroPhaseCheckBox.toggled.connect(self._draw_filter_response)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.button_box.clicked.connect(self.on_click)
@@ -258,7 +262,7 @@ class FilterDesignDialog(QtGui.QDialog):
         f= (self.max_freq/2)*(w/np.pi)
         return f, 20 * np.log10(abs(h)), angles
 
-    def _draw_filter_response(self):
+    def _draw_filter_response(self, *args, **kwargs):
         w, h_db, angles = self._retrieve_filter_plot_data()
         self._module_data.set_xdata(w)
         self._module_data.set_ydata(h_db)

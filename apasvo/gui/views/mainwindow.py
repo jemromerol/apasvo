@@ -375,7 +375,6 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.disconnect_document()
         # Load and visualize the opened record
         self.document = document
-        self.apply_filter()
         self.document.record.use_filtered = self.viewFilteredCheckBox.isChecked()
         self.document.emptyList.connect(self.set_modified)
         ########
@@ -676,6 +675,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             zero_phase = settings.value('zero_phase', True)
             settings.endGroup()
             self.document.record.bandpass_filter(freq_1, freq_2, corners=coefficients, zerophase=zero_phase)
+            self.toogle_document(self.current_document_idx)
 
     def clear_events(self):
         if self.document is not None:
