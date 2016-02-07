@@ -173,7 +173,7 @@ Changelog
 * 0.0.6 (2016-02-07)
     * Add bandpass filtering options
 * 0.0.5 (2015-11-30)
-    * Add a trace selector window to handle multitrace files (e.g. *.segy, ...). It also allows to open multiple
+    * Add a trace selector window to handle multitrace files. It also allows to open multiple
       files and switch between them.
     * Fix several bugs.
 * 0.0.4 (2015-11-09)
