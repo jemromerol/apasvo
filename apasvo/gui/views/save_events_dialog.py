@@ -24,7 +24,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtGui
+from PyQt4 import QtGui
 from apasvo.gui.views.generated import ui_save_events_dialog
 
 

@@ -24,7 +24,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtGui, QtCore
+from PyQt4 import QtGui, QtCore
 
 
 class DoubleSpinBoxDelegate(QtGui.QStyledItemDelegate):

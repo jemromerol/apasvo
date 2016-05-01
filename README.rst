@@ -76,7 +76,7 @@ Installation of required dependencies
 
 APASVO depends on a list of Python packages, which you can check in the project's  `requirements.txt`_ file. These packages are automatically installed when APASVO is installed from Python repositories by using ``pip`` or from source code via `setuptools`_.
 
-However, some of these packages, namely Matplotlib and PySide, require installation of a number of additional dependencies. If you're on a Debian / Ubuntu system, you can install these dependencies using the command:
+However, some of these packages, namely Matplotlib and PyQt4, require installation of a number of additional dependencies. If you're on a Debian / Ubuntu system, you can install these dependencies using the command:
 
 ::
 

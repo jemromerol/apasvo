@@ -24,7 +24,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore
+from PyQt4 import QtCore
 
 import traceback
 from apasvo._version import _application_name
@@ -41,8 +41,8 @@ class PickingTask(QtCore.QObject):
 
     """
 
-    finished = QtCore.Signal()
-    error = QtCore.Signal(str, str)
+    finished = QtCore.pyqtSignal()
+    error = QtCore.pyqtSignal(str, str)
 
     def __init__(self, document, alg, threshold=None):
         super(PickingTask, self).__init__()
@@ -75,8 +75,8 @@ class PickingStreamTask(QtCore.QObject):
 
     """
 
-    finished = QtCore.Signal()
-    error = QtCore.Signal(str, str)
+    finished = QtCore.pyqtSignal()
+    error = QtCore.pyqtSignal(str, str)
 
     def __init__(self, trace_selector_widget, alg, trace_list=None, threshold=None):
         super(PickingStreamTask, self).__init__()

@@ -24,9 +24,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore
+from PyQt4 import QtCore
 import matplotlib
-matplotlib.rcParams['backend.qt4'] = 'PySide'
+matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 
 navigation_bar_items = ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save', '')
@@ -34,7 +34,7 @@ navigation_bar_items = ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save', '')
 
 class NavigationToolBar(NavigationToolbar2QT):
 
-    view_restored = QtCore.Signal()
+    view_restored = QtCore.pyqtSignal()
 
     def __init__(self, canvas, parent=None):
         super(NavigationToolBar, self).__init__(canvas, parent)

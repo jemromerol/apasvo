@@ -24,8 +24,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore
-from PySide import QtGui
+from PyQt4 import QtCore
+from PyQt4 import QtGui
 import obspy as op
 import eventcommands as commands
 from apasvo.gui.views.settingsdialog import COLOR_KEYS
@@ -41,11 +41,11 @@ class EventListModel(QtCore.QAbstractTableModel):
     """A Table Model class to handle a list of seismic events.
     """
 
-    emptyList = QtCore.Signal(bool)
-    eventCreated = QtCore.Signal(rc.ApasvoEvent)
-    eventDeleted = QtCore.Signal(rc.ApasvoEvent)
-    eventModified = QtCore.Signal(rc.ApasvoEvent)
-    detectionPerformed = QtCore.Signal()
+    emptyList = QtCore.pyqtSignal(bool)
+    eventCreated = QtCore.pyqtSignal(rc.ApasvoEvent)
+    eventDeleted = QtCore.pyqtSignal(rc.ApasvoEvent)
+    eventModified = QtCore.pyqtSignal(rc.ApasvoEvent)
+    detectionPerformed = QtCore.pyqtSignal()
 
     DEFAULT_ATTRIBUTES = [
         {'name': 'Label', 'type': 'event', 'attribute_name': 'name', 'editable': True},

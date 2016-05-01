@@ -24,8 +24,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtGui
-from PySide import QtCore
+from PyQt4 import QtGui
+from PyQt4 import QtCore
 # TEMPORARY DEACTIVATE MEDIA TOOLBAR TO AVOID CROSS-PLATFORM COMPATIBILITY PROBLEMS
 #from apasvo.gui.views import playertoolbar
 from apasvo.picking import apasvotrace as rc
@@ -65,7 +65,7 @@ class SettingsDialog(QtGui.QDialog):
     """A dialog window to edit application settings.
     """
 
-    saved = QtCore.Signal()
+    saved = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super(SettingsDialog, self).__init__(parent)

@@ -22,8 +22,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore
-from PySide import QtGui
+from PyQt4 import QtCore
+from PyQt4 import QtGui
 import numpy as np
 
 from apasvo.gui.views import processingdialog
@@ -51,11 +51,11 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             by using the estimated arrival time after clicking on 'Accept'
     """
 
-    closed = QtCore.Signal()
-    selection_changed = QtCore.Signal(int)
-    events_created = QtCore.Signal(dict)
-    events_deleted = QtCore.Signal(dict)
-    detection_performed = QtCore.Signal()
+    closed = QtCore.pyqtSignal()
+    selection_changed = QtCore.pyqtSignal(int)
+    events_created = QtCore.pyqtSignal(dict)
+    events_deleted = QtCore.pyqtSignal(dict)
+    detection_performed = QtCore.pyqtSignal()
 
     def __init__(self, stream, parent):
         super(TraceSelectorDialog, self).__init__(parent)

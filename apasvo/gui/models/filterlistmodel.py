@@ -24,14 +24,14 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore
+from PyQt4 import QtCore
 
 
 class FilterListModel(QtCore.QAbstractTableModel):
     """A Table Model class to handle a list of length values.
     """
 
-    sizeChanged = QtCore.Signal(int)
+    sizeChanged = QtCore.pyqtSignal(int)
 
     def __init__(self, listobj, header=None):
         QtCore.QAbstractTableModel.__init__(self)
