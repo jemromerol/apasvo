@@ -28,6 +28,7 @@ import numpy as np
 import obspy as op
 import multiprocessing as mp
 import itertools
+from obspy.signal.filter import bandpass
 from obspy.core.utcdatetime import UTCDateTime
 from obspy.core.event import Pick
 from obspy.core.event import ResourceIdentifier
@@ -36,7 +37,6 @@ from obspy.core.event import WaveformStreamID
 from obspy.core.event import Comment
 from obspy.core.event import Catalog
 from obspy.core.event import Event
-from obspy.signal import filter
 import csv
 import copy
 import os
@@ -487,7 +487,7 @@ class ApasvoTrace(op.Trace):
         return events
 
     def bandpass_filter(self, freqmin, freqmax, *args, **kwargs):
-        self.filtered_signal = filter.bandpass(self.data, freqmin, freqmax, self.fs, *args, **kwargs)
+        self.filtered_signal = bandpass(self.data, freqmin, freqmax, self.fs, *args, **kwargs)
         return self.filtered_signal
 
     def save_cf(self, fname, fmt=rawfile.format_text,

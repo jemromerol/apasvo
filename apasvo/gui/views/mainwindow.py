@@ -63,7 +63,8 @@ from apasvo.gui.views import FilterDesing
 from apasvo.gui.views import trace_selector_dialog
 from apasvo.gui.views import staltadialog
 from apasvo.gui.views import ampadialog
-from apasvo.gui.views import playertoolbar
+# TEMPORARY DEACTIVATE MEDIA TOOLBAR TO AVOID CROSS-PLATFORM COMPATIBILITY PROBLEMS
+#from apasvo.gui.views import playertoolbar
 from apasvo.gui.views import error
 from apasvo.gui.views import processingdialog
 
@@ -170,22 +171,23 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarAnalysis)
         self.addToolBarBreak()
         # add media toolbar
-        settings = QtCore.QSettings(_organization, _application_name)
-        settings.beginGroup('player_settings')
-        fs = int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ))
-        bd = settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH)
-        settings.endGroup()
-        self.toolBarMedia = playertoolbar.PlayerToolBar(self, sample_freq=fs, bd=bd)
-        self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarMedia)
-        self.toolBarMedia.intervalChanged.connect(self.signalViewer.set_selector_limits)
-        self.toolBarMedia.intervalSelected.connect(self.signalViewer.selector.set_active)
-        self.toolBarMedia.tick.connect(self.signalViewer.set_playback_position)
-        self.toolBarMedia.playingStateChanged.connect(lambda x: self.signalViewer.set_selection_enabled(not x))
-        self.toolBarMedia.playingStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(True))
-        self.toolBarMedia.stoppedStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(False))
-        self.signalViewer.selector.toggled.connect(self.toolBarMedia.toggle_interval_selected)
-        self.signalViewer.selector.valueChanged.connect(self.toolBarMedia.set_limits)
-        self.addToolBarBreak()
+        # TEMPORARY DEACTIVATE MEDIA TOOLBAR TO AVOID CROSS-PLATFORM COMPATIBILITY PROBLEMS
+        # settings = QtCore.QSettings(_organization, _application_name)
+        # settings.beginGroup('player_settings')
+        # fs = int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ))
+        # bd = settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH)
+        # settings.endGroup()
+        # self.toolBarMedia = playertoolbar.PlayerToolBar(self, sample_freq=fs, bd=bd)
+        # self.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBarMedia)
+        # self.toolBarMedia.intervalChanged.connect(self.signalViewer.set_selector_limits)
+        # self.toolBarMedia.intervalSelected.connect(self.signalViewer.selector.set_active)
+        # self.toolBarMedia.tick.connect(self.signalViewer.set_playback_position)
+        # self.toolBarMedia.playingStateChanged.connect(lambda x: self.signalViewer.set_selection_enabled(not x))
+        # self.toolBarMedia.playingStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(True))
+        # self.toolBarMedia.stoppedStateSelected.connect(lambda: self.signalViewer.set_playback_marker_visible(False))
+        # self.signalViewer.selector.toggled.connect(self.toolBarMedia.toggle_interval_selected)
+        # self.signalViewer.selector.valueChanged.connect(self.toolBarMedia.set_limits)
+        # self.addToolBarBreak()
 
         self.actionEvent_List.toggled.connect(self.EventsTableView.setVisible)
 
@@ -202,7 +204,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionActivateThreshold.toggled.connect(self.toggle_threshold)
 
         self.actionMain_Toolbar.toggled.connect(self.toolBarMain.setVisible)
-        self.actionMedia_Toolbar.toggled.connect(self.toolBarMedia.setVisible)
+        # TEMPORARY DEACTIVATE MEDIA TOOLBAR TO AVOID CROSS-PLATFORM COMPATIBILITY PROBLEMS
+        # self.actionMedia_Toolbar.toggled.connect(self.toolBarMedia.setVisible)
         self.actionAnalysis_Toolbar.toggled.connect(self.toolBarAnalysis.setVisible)
         self.actionNavigation_Toolbar.toggled.connect(self.toolBarNavigation.setVisible)
 
@@ -352,7 +355,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
             self.saved_filename = None
             self.saved_event_format = None
             self.signalViewer.unset_record()
-            self.toolBarMedia.disconnect_path()
+            # self.toolBarMedia.disconnect_path()
             # Update GUI
             self.centralwidget.setVisible(False)
             self.actionClose.setEnabled(False)
@@ -415,8 +418,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.signalViewer.set_threshold_visible(self.actionActivateThreshold.isChecked())
         self.signalViewer.thresholdMarker.set_threshold(self.thresholdSpinBox.value())
         self.thresholdSpinBox.valueChanged.connect(self.signalViewer.thresholdMarker.set_threshold)
-        self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
-        self.toolBarMedia.connect_path()
+        # self.toolBarMedia.load_data(self.document.record.signal, self.document.record.fs)
+        # self.toolBarMedia.connect_path()
         # Update GUI
         self.centralwidget.setVisible(True)
         self.actionClose.setEnabled(True)
@@ -426,7 +429,7 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         self.actionFilterDesing.setEnabled(True)
         self.toolBarNavigation.setEnabled(True)
         self.toolBarAnalysis.setEnabled(True)
-        self.toolBarMedia.set_enabled(True)
+        # self.toolBarMedia.set_enabled(True)
         self.set_title()
 
     def disconnect_document(self):
@@ -459,11 +462,11 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         QtGui.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
         settings = QtCore.QSettings(_organization, _application_name)
         # update player settings
-        settings.beginGroup('player_settings')
-        fs = int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ))
-        bd = settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH)
-        settings.endGroup()
-        self.toolBarMedia.set_audio_format(fs, bd)
+        # settings.beginGroup('player_settings')
+        # fs = int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ))
+        # bd = settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH)
+        # settings.endGroup()
+        # self.toolBarMedia.set_audio_format(fs, bd)
         # update event colors
         if self.document is not None:
             self.document.loadColorMap()
@@ -554,8 +557,8 @@ class MainWindow(QtGui.QMainWindow, ui_mainwindow.Ui_MainWindow):
         """Current window's close event"""
         if self.maybeSave():
             # prevent toolBarMedia firing signals if it's on playing or paused state
-            self.toolBarMedia.blockSignals(True)
-            self.toolBarMedia.disconnect_path()
+            # self.toolBarMedia.blockSignals(True)
+            # self.toolBarMedia.disconnect_path()
             event.accept()
         else:
             event.ignore()
