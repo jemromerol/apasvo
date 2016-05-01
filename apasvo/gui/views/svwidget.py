@@ -24,12 +24,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtGui
-from PySide import QtCore
+from PyQt4 import QtGui
+from PyQt4 import QtCore
 
 import matplotlib
 matplotlib.rcParams['backend'] = 'qt4agg'
-matplotlib.rcParams['backend.qt4'] = 'PySide'
+matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 matplotlib.rcParams['patch.antialiased'] = False
 matplotlib.rcParams['figure.dpi'] = 65
 matplotlib.rcParams['agg.path.chunksize'] = 80000
@@ -67,9 +67,9 @@ class SpanSelector(QtCore.QObject):
         valueChanged: 'xleft', 'xright' values changes.
     """
 
-    toggled = QtCore.Signal(bool)
-    valueChanged = QtCore.Signal(float, float)
-    right_clicked = QtCore.Signal()
+    toggled = QtCore.pyqtSignal(bool)
+    valueChanged = QtCore.pyqtSignal(float, float)
+    right_clicked = QtCore.pyqtSignal()
 
     def __init__(self, fig, fs=50.0, xmin=0.0, xmax=0.0):
         super(SpanSelector, self).__init__()
@@ -254,8 +254,8 @@ class EventMarker(QtCore.QObject):
         valueChanged: 'event' arrival time changed.
     """
 
-    event_selected = QtCore.Signal(rc.ApasvoEvent)
-    right_clicked = QtCore.Signal(rc.ApasvoEvent)
+    event_selected = QtCore.pyqtSignal(rc.ApasvoEvent)
+    right_clicked = QtCore.pyqtSignal(rc.ApasvoEvent)
 
     def __init__(self, fig, minimap, document, event, color='b', selected_color='r'):
         super(EventMarker, self).__init__()
@@ -422,7 +422,7 @@ class ThresholdMarker(QtCore.QObject):
         thresholdChanged: 'threshold' value changed.
     """
 
-    thresholdChanged = QtCore.Signal(float)
+    thresholdChanged = QtCore.pyqtSignal(float)
 
     def __init__(self, ax, threshold=0.0):
         super(ThresholdMarker, self).__init__()
@@ -799,8 +799,8 @@ class SignalViewerWidget(QtGui.QWidget):
 
     """
 
-    CF_loaded = QtCore.Signal(bool)
-    event_selected = QtCore.Signal(rc.ApasvoEvent)
+    CF_loaded = QtCore.pyqtSignal(bool)
+    event_selected = QtCore.pyqtSignal(rc.ApasvoEvent)
 
     def __init__(self, parent, document=None):
         super(SignalViewerWidget, self).__init__(parent)

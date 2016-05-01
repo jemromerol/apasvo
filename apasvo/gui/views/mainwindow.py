@@ -28,7 +28,7 @@
 
 import matplotlib
 matplotlib.rcParams['backend'] = 'qt4agg'
-matplotlib.rcParams['backend.qt4'] = 'PySide'
+matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 matplotlib.rcParams['patch.antialiased'] = False
 matplotlib.rcParams['agg.path.chunksize'] = 80000
 
@@ -40,7 +40,7 @@ from apasvo.picking import stalta
 from apasvo.picking import ampa
 from apasvo.picking import apasvotrace as rc
 
-from PySide import QtGui, QtCore
+from PyQt4 import QtGui, QtCore
 
 from apasvo._version import __version__
 from apasvo._version import _application_name

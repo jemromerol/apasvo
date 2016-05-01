@@ -24,13 +24,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtGui
-from PySide import QtCore
+from PyQt4 import QtGui
+from PyQt4 import QtCore
 
 import numpy as np
 import matplotlib
 matplotlib.rcParams['backend'] = 'qt4agg'
-matplotlib.rcParams['backend.qt4'] = 'PySide'
+matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 matplotlib.rcParams['patch.antialiased'] = False
 matplotlib.rcParams['figure.dpi'] = 65
 matplotlib.rcParams['agg.path.chunksize'] = 80000
@@ -158,8 +158,8 @@ class StreamViewerWidget(QtGui.QWidget):
         step: Selector length (measured in h-axis units).
     """
 
-    trace_selected = QtCore.Signal(int)
-    selection_made = QtCore.Signal(bool)
+    trace_selected = QtCore.pyqtSignal(int)
+    selection_made = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent, stream=None):
         super(StreamViewerWidget, self).__init__(parent)

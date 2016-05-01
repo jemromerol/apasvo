@@ -24,12 +24,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore
-from PySide import QtGui
+from PyQt4 import QtCore
+from PyQt4 import QtGui
 
 import matplotlib
 matplotlib.rcParams['backend'] = 'qt4agg'
-matplotlib.rcParams['backend.qt4'] = 'PySide'
+matplotlib.rcParams['backend.qt4'] = 'PyQt4'
 matplotlib.rcParams['patch.antialiased'] = False
 matplotlib.rcParams['agg.path.chunksize'] = 80000
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
@@ -63,9 +63,9 @@ class TakanamiTask(QtCore.QObject):
         position_estimated: Return values of Takanami method are ready.
     """
 
-    finished = QtCore.Signal()
-    error = QtCore.Signal(str, str)
-    position_estimated = QtCore.Signal(int, np.ndarray, int)
+    finished = QtCore.pyqtSignal()
+    error = QtCore.pyqtSignal(str, str)
+    position_estimated = QtCore.pyqtSignal(int, np.ndarray, int)
 
     def __init__(self, record, start, end):
         super(TakanamiTask, self).__init__()

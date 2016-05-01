@@ -3,7 +3,7 @@
 # Form implementation generated from reading ui file 'SaveDialog.ui'
 #
 # Created: Fri Aug 16 16:54:54 2013
-#      by: pyside-uic 0.2.14 running on PySide 1.1.2
+#      by: pyside-uic 0.2.14 running on PyQt4 1.1.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -32,7 +32,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 
 
 class Ui_SaveEventsDialog(object):

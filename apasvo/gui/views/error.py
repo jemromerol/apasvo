@@ -24,7 +24,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtGui
+from PyQt4 import QtGui
 
 
 def display_error_dlg(msg, additional_info=None, parent=None):

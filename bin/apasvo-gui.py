@@ -27,7 +27,7 @@
 '''
 
 import sys
-from PySide import QtGui, QtCore
+from PyQt4 import QtGui, QtCore
 
 from apasvo._version import _application_name
 from apasvo.gui.views import mainwindow
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     splash.showMessage("Loading libraries...")
     import matplotlib
     matplotlib.rcParams['backend'] = 'qt4agg'
-    matplotlib.rcParams['backend.qt4'] = 'PySide'
+    matplotlib.rcParams['backend.qt4'] = 'PyQt4'
     matplotlib.rcParams['patch.antialiased'] = False
     matplotlib.rcParams['agg.path.chunksize'] = 80000
 

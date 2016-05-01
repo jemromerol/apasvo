@@ -29,7 +29,7 @@ import os
 
 PATHEX = [os.path.join('.', 'apasvo')]
 
-HIDDEN_IMPORTS = ['scipy.special._ufuncs_cxx', 'PySide.phonon']
+HIDDEN_IMPORTS = ['scipy.special._ufuncs_cxx', 'PyQt4.phonon']
 
 HOOKS_PATH = ['hooks']
 

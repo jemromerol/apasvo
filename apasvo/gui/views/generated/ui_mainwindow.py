@@ -3,7 +3,7 @@
 # Form implementation generated from reading ui file 'MainWindow.ui'
 #
 # Created: Thu Aug 15 22:30:31 2013
-#      by: pyside-uic 0.2.14 running on PySide 1.1.2
+#      by: pyside-uic 0.2.14 running on PyQt4 1.1.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -32,7 +32,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 from apasvo.gui.views.generated import qrc_icons
 
 

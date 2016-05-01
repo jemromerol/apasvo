@@ -25,9 +25,9 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-from PySide import QtCore
-from PySide import QtGui
-from PySide.phonon import Phonon
+from PyQt4 import QtCore
+from PyQt4 import QtGui
+from PyQt4.phonon import Phonon
 from apasvo.gui.views.generated import qrc_icons
 from scipy import interpolate
 import numpy as np
@@ -62,13 +62,13 @@ class PlayerToolBar(QtGui.QToolBar):
             played at a given interval.
     """
 
-    tick = QtCore.Signal(float)
-    intervalChanged = QtCore.Signal(float, float)
-    intervalSelected = QtCore.Signal(bool)
-    playingStateSelected = QtCore.Signal()
-    stoppedStateSelected = QtCore.Signal()
-    pausedStateSelected = QtCore.Signal()
-    playingStateChanged = QtCore.Signal(bool)
+    tick = QtCore.pyqtSignal(float)
+    intervalChanged = QtCore.pyqtSignal(float, float)
+    intervalSelected = QtCore.pyqtSignal(bool)
+    playingStateSelected = QtCore.pyqtSignal()
+    stoppedStateSelected = QtCore.pyqtSignal()
+    pausedStateSelected = QtCore.pyqtSignal()
+    playingStateChanged = QtCore.pyqtSignal(bool)
 
     def __init__(self, parent=None, data=None, data_fs=None, sample_freq=None,
                  bd='float32', tick_interval=200):
