@@ -302,7 +302,7 @@ class SettingsDialog(QtGui.QDialog):
         self.horizontalLayout = QtGui.QHBoxLayout(self.settings_frame)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.addWidget(self.treeWidget)
-        self.horizontalLayout.addWidget(self.playerGroupBox)
+        # self.horizontalLayout.addWidget(self.playerGroupBox)
         self.horizontalLayout.addWidget(self.colorsGroupBox)
         self.horizontalLayout.addWidget(self.specgramGroupBox)
 

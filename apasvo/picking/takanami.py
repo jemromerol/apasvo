@@ -101,6 +101,7 @@ def _takanami_aic(x, n0, l, k=5, p=1):
         raise ValueError("n0 should be greater than k")
     if l <= 0:
         raise ValueError("l should be a positive value")
+    p, k, n0, l = int(p), int(k), int(n0), int(l)
     aic_0_l = np.zeros(l + 1)
     sigma2 = np.zeros(k + 1)
     aic_i = np.zeros(k + 1)

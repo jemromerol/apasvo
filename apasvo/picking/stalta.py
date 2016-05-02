@@ -89,8 +89,8 @@ def sta_lta(x, fs, threshold=None, sta_length=5., lta_length=100.,
         raise ValueError("method not supported")
 
     fs = float(fs)
-    sta = min(len(x), sta_length * fs + 1)
-    lta = min(len(x), lta_length * fs + 1)
+    sta = int(min(len(x), sta_length * fs + 1))
+    lta = int(min(len(x), lta_length * fs + 1))
     peak_window = int(peak_window * fs / 2.)
     x_norm = np.abs(x - np.mean(x))
     cf = np.zeros(len(x))

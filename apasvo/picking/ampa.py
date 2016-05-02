@@ -221,7 +221,7 @@ def ampa(x, fs, threshold=None, L=None, L_coef=3.,
         Zt = signal.fftconvolve(lztot, B)[:len(x)]  # Same as signal.lfilter(B, 1, lztot)
         Zt = Zt * (Zt > 0)
         Ztot[i, :-l] = np.roll(Zt, -l)[:-l]
-    ZTOT = np.prod(Ztot, 0)[:-(np.max(L) * fs)]
+    ZTOT = np.prod(Ztot, 0)[:-int(np.max(L) * fs)]
     ZTOT = U + np.log10(np.abs(ZTOT) + (10 ** -U))
     event_t = findpeaks.find_peaks(ZTOT, threshold, order=peak_window * fs)
     return event_t, ZTOT
@@ -271,7 +271,7 @@ class Ampa(object):
         if self.L is None:
             self.L = [30., 20., 10., 5., 2.5]
         self.L_coef = L_coef
-        self.noise_thr = noise_thr
+        self.noise_thr = int(noise_thr)
         self.bandwidth = bandwidth
         self.overlap = overlap
         self.f_start = f_start
@@ -306,9 +306,9 @@ class Ampa(object):
         tail = int(np.max(self.L) * fs)
         out = np.zeros(len(x) - tail)
         step = int(self.step * fs)
-        overlapped = max(0, int((self.window - self.step) * fs) - tail)
+        overlapped = int(max(0, int((self.window - self.step) * fs) - tail))
         for i in xrange(0, len(out), step):
-            size = min(self.window * fs, len(x) - i)
+            size = int(min(self.window * fs, len(x) - i))
             _, cf = ampa(x[i:i + size], fs, L=self.L,
                          L_coef=self.L_coef, noise_thr=self.noise_thr,
                          bandwidth=self.bandwidth, overlap=self.overlap,
