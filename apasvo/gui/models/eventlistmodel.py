@@ -145,6 +145,7 @@ class EventListModel(QtCore.QAbstractTableModel):
             key = self.attributes[index.column()]['attribute_name']
             event = self.record.events[index.row()]
             if event.__getattribute__(key) != value:
+                print key, value
                 self.command_stack.push(commands.EditEvent(self, event,
                                                            **{key: value}))
             return True
