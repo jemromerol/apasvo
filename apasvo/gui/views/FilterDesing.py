@@ -240,10 +240,10 @@ class FilterDesignDialog(QtGui.QDialog):
         """Loads settings from persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("filterdesign_settings")
-        self.start_point_spinbox.setValue(float(settings.value('freq_min', 0.0)))
-        self.end_point_spinbox.setValue(float(settings.value('freq_max', self.max_freq * 0.5)))
-        self.number_coefficient_spinbox.setValue(int(settings.value('coef_number', 1)))
-        self.zeroPhaseCheckBox.setChecked(bool(settings.value('zero_phase', True)))
+        self.start_point_spinbox.setValue(float(settings.value('freq_min', 0.0).toPyObject()))
+        self.end_point_spinbox.setValue(float(settings.value('freq_max', self.max_freq * 0.5).toPyObject()))
+        self.number_coefficient_spinbox.setValue(int(settings.value('coef_number', 1).toPyObject()))
+        self.zeroPhaseCheckBox.setChecked(bool(settings.value('zero_phase', True).toPyObject()))
         settings.endGroup()
 
     def _butter_bandpass(self, lowcut, highcut, fs, order=5):

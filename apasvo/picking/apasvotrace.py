@@ -223,6 +223,7 @@ class ApasvoEvent(Pick):
         elif key == 'comments':
             self.__dict__['comments'] = Comment(text=value)
         else:
+            print key, value
             super(ApasvoEvent, self).__setattr__(key, value)
 
     def __getattribute__(self, item):

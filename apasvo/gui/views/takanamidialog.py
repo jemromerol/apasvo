@@ -246,8 +246,7 @@ class TakanamiDialog(QtGui.QDialog):
         """Loads settings from persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("takanami_settings")
-        self.default_margin = int(float(settings.value('takanami_margin', 5.0)) *
-                             self.record.fs)
+        self.default_margin = int(float(settings.value('takanami_margin', 5.0)) * self.record.fs)
         settings.endGroup()
 
     def save_event(self):

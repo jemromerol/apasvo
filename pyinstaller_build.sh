@@ -1,3 +1,5 @@
+#!/bin/bash
+
 dist_dir="dist"
 output="apasvo"
 spec_dir="installer"
