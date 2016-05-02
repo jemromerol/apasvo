@@ -163,7 +163,7 @@ class SettingsDialog(QtGui.QDialog):
         self.colorsGroupBox.setAlignment(QtCore.Qt.AlignLeading |
                                          QtCore.Qt.AlignLeft |
                                          QtCore.Qt.AlignVCenter)
-        self.colorsGroupBox.setVisible(False)
+        self.colorsGroupBox.setVisible(True)
         self.colorsLayout = QtGui.QVBoxLayout(self.colorsGroupBox)
 
         self.colorKeyWidget = QtGui.QWidget(self.colorsGroupBox)
@@ -323,8 +323,8 @@ class SettingsDialog(QtGui.QDialog):
 
         self._settingsMenus = {}
         # self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.playerGroupBox
-        self._settingsMenus[self.treeWidget.topLevelItem(1).text(0)] = self.colorsGroupBox
-        self._settingsMenus[self.treeWidget.topLevelItem(2).text(0)] = self.specgramGroupBox
+        self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.colorsGroupBox
+        self._settingsMenus[self.treeWidget.topLevelItem(1).text(0)] = self.specgramGroupBox
         self.treeWidget.setCurrentItem(self.treeWidget.topLevelItem(0))
         self.currentMenu = self.colorsGroupBox
 

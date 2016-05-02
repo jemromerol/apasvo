@@ -103,7 +103,7 @@ def reduce_data(x, y, width, xmin=0, xmax=None):
     xmin = max(0, xmin if xmin < length else length - 1)
     if xmin > xmax:
         raise ValueError("xmax must be greater or equal than xmin")
-    n_points = 2 * width
+    n_points = int(2 * width)
     data_size = xmax - xmin
 
     # If the length of the datasets is too small returns the datasets
