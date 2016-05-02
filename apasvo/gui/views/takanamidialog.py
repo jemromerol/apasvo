@@ -159,20 +159,20 @@ class TakanamiDialog(QtGui.QDialog):
         self.fig, _ = plt.subplots(2, 1, sharex=True)
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setMinimumSize(self.canvas.size())
-        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
-                                                    QtGui.QSizePolicy.Policy.Expanding))
+        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                                    QtGui.QSizePolicy.Expanding))
         self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
         self.position_label = QtGui.QLabel("Estimated Arrival Time: 00 h 00 m 00.000 s")
         self.group_box = QtGui.QGroupBox(self)
         self.group_box.setTitle("Limits")
         self.start_point_label = QtGui.QLabel("Start point:")
-        self.start_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
-                                                               QtGui.QSizePolicy.Policy.Preferred))
+        self.start_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,
+                                                               QtGui.QSizePolicy.Preferred))
         self.start_point_spinbox = QtGui.QTimeEdit(self.group_box)
         self.start_point_spinbox.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
         self.end_point_label = QtGui.QLabel("End point:")
-        self.end_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
-                                                               QtGui.QSizePolicy.Policy.Preferred))
+        self.end_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,
+                                                               QtGui.QSizePolicy.Preferred))
         self.end_point_spinbox = QtGui.QTimeEdit(self.group_box)
         self.end_point_spinbox.setDisplayFormat("hh 'h' mm 'm' ss.zzz 's'")
         self.group_box_layout = QtGui.QHBoxLayout(self.group_box)

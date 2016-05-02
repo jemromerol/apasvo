@@ -128,12 +128,12 @@ class StaLtaDialog(QtGui.QDialog):
         # Read settings
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup('stalta_settings')
-        self.staSpinBox.setValue(float(settings.value('sta_window_len', 5.0)))
-        self.ltaSpinBox.setValue(float(settings.value('lta_window_len', 100.0)))
+        self.staSpinBox.setValue(float(settings.value('sta_window_len', 5.0).toPyObject()))
+        self.ltaSpinBox.setValue(float(settings.value('lta_window_len', 100.0).toPyObject()))
         settings.endGroup()
         settings.beginGroup("takanami_settings")
-        self.takanamiCheckBox.setChecked(int(settings.value('takanami', True)))
-        self.takanamiMarginSpinBox.setValue(float(settings.value('takanami_margin', 5.0)))
+        self.takanamiCheckBox.setChecked(int(settings.value('takanami', True).toPyObject()))
+        self.takanamiMarginSpinBox.setValue(float(settings.value('takanami_margin', 5.0).toPyObject()))
         settings.endGroup()
 
     def save_settings(self):

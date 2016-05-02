@@ -201,7 +201,7 @@ class TraceSelectorDialog(QtGui.QMainWindow):
     def showEvent(self, event):
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("geometry")
-        self.restoreGeometry(settings.value("trace_selector"))
+        self.restoreGeometry(settings.value("trace_selector").toPyObject())
         settings.endGroup()
         super(TraceSelectorDialog, self).showEvent(event)
 
@@ -234,8 +234,8 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             # Read settings
             settings = QtCore.QSettings(_organization, _application_name)
             settings.beginGroup('stalta_settings')
-            sta_length = float(settings.value('sta_window_len', 5.0))
-            lta_length = float(settings.value('lta_window_len', 100.0))
+            sta_length = float(settings.value('sta_window_len', 5.0).toPyObject())
+            lta_length = float(settings.value('lta_window_len', 100.0).toPyObject())
             settings.endGroup()
             # # Create an STA-LTA algorithm instance with selected settings
             alg = stalta.StaLta(sta_length, lta_length)
@@ -257,18 +257,15 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             # Read settings
             settings = QtCore.QSettings(_organization, _application_name)
             settings.beginGroup('ampa_settings')
-            wlen = float(settings.value('window_len', 100.0))
-            wstep = float(settings.value('step', 50.0))
-            nthres = float(settings.value('noise_threshold', 90))
-            filters = settings.value('filters', [30.0, 20.0, 10.0,
-                                                               5.0, 2.5])
-            filters = list(filters) if isinstance(filters, list) else [filters]
-            filters = np.array(filters).astype(float)
+            wlen = float(settings.value('window_len', 100.0).toPyObject())
+            wstep = float(settings.value('step', 50.0).toPyObject())
+            nthres = float(settings.value('noise_threshold', 90).toPyObject())
+            filters = [float(f) for f in settings.value('filters', [30.0, 20.0, 10.0, 5.0, 2.5]).toPyObject()]
             settings.beginGroup('filter_bank_settings')
-            startf = float(settings.value('startf', 2.0))
-            endf = float(settings.value('endf', 12.0))
-            bandwidth = float(settings.value('bandwidth', 3.0))
-            overlap = float(settings.value('overlap', 1.0))
+            startf = float(settings.value('startf', 2.0).toPyObject())
+            endf = float(settings.value('endf', 12.0).toPyObject())
+            bandwidth = float(settings.value('bandwidth', 3.0).toPyObject())
+            overlap = float(settings.value('overlap', 1.0).toPyObject())
             settings.endGroup()
             settings.endGroup()
             # Create an AMPA algorithm instance with selected settings
@@ -295,10 +292,10 @@ class TraceSelectorDialog(QtGui.QMainWindow):
             # Read settings
             settings = QtCore.QSettings(_organization, _application_name)
             settings.beginGroup('filterdesign_settings')
-            freq_1 = float(settings.value('freq_min', 0.0))
-            freq_2 = float(settings.value('freq_max', 25))
-            coefficients = float(settings.value('coef_number', 3))
-            zero_phase = (settings.value('zero_phase', True))
+            freq_1 = float(settings.value('freq_min', 0.0).toPyObject())
+            freq_2 = float(settings.value('freq_max', 25).toPyObject())
+            coefficients = float(settings.value('coef_number', 3).toPyObject())
+            zero_phase = bool((settings.value('zero_phase', True).toPyObject()))
 
             settings.endGroup()
 

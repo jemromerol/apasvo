@@ -828,8 +828,8 @@ class SignalViewerWidget(QtGui.QWidget):
         self.specgram_ax = self.fig.axes[2]
 
         self.canvas = FigureCanvas(self.fig)
-        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
-                                                    QtGui.QSizePolicy.Policy.Expanding))
+        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                                    QtGui.QSizePolicy.Expanding))
         self.canvas.setMinimumHeight(320)
         self.graphArea = QtGui.QScrollArea(self)
         self.graphArea.setWidget(self.canvas)
@@ -1260,9 +1260,9 @@ class SignalViewerWidget(QtGui.QWidget):
         settings = QtCore.QSettings(_organization, _application_name)
 
         settings.beginGroup("specgram_settings")
-        self.specgram_windowlen = int(settings.value('window_len', settingsdialog.SPECGRAM_WINDOW_LENGTHS[4]))
-        self.specgram_noverlap = int(settings.value('noverlap', self.specgram_windowlen / 2))
-        self.specgram_window = settings.value('window', plotting.SPECGRAM_WINDOWS[2])
+        self.specgram_windowlen = int(settings.value('window_len', settingsdialog.SPECGRAM_WINDOW_LENGTHS[4]).toPyObject())
+        self.specgram_noverlap = int(settings.value('noverlap', self.specgram_windowlen / 2).toPyObject())
+        self.specgram_window = str(settings.value('window', plotting.SPECGRAM_WINDOWS[2]).toPyObject())
         settings.endGroup()
 
         if self.data_loaded:

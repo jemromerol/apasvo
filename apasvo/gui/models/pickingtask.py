@@ -52,8 +52,8 @@ class PickingTask(QtCore.QObject):
 
     def run(self):
         settings = QtCore.QSettings(_organization, _application_name)
-        takanami = int(settings.value('takanami_settings/takanami', False))
-        takanami_margin = float(settings.value('takanami_margin', 5.0))
+        takanami = int(settings.value('takanami_settings/takanami', False).toPyObject())
+        takanami_margin = float(settings.value('takanami_margin', 5.0).toPyObject())
         try:
             self.document.detectEvents(self.alg, threshold=self.threshold,
                                takanami=takanami,

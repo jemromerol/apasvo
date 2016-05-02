@@ -243,22 +243,22 @@ class AmpaDialog(QtGui.QDialog):
         # Read settings
         settings = QtCore.QSettings(_organization, _application_name)
         settings.beginGroup("ampa_settings")
-        self.ampawindowSpinBox.setValue(float(settings.value('window_len', 100.0)))
-        self.ampawindowstepSpinBox.setValue(float(settings.value('overlap', 50.0)))
-        self.ampanoisethresholdSpinBox.setValue(int(settings.value('noise_threshold', 90)))
+        self.ampawindowSpinBox.setValue(float(settings.value('window_len', 100.0).toPyObject()))
+        self.ampawindowstepSpinBox.setValue(float(settings.value('overlap', 50.0).toPyObject()))
+        self.ampanoisethresholdSpinBox.setValue(int(settings.value('noise_threshold', 90).toPyObject()))
         self._filters.clearFilters()
         for value in self._load_filters():
             self.addFilter(float(value))
         settings.beginGroup("filter_bank_settings")
-        self.startfSpinBox.setValue(float(settings.value('startf', 2.0)))
-        self.endfSpinBox.setValue(float(settings.value('endf', 12.0)))
-        self.bandwidthSpinBox.setValue(float(settings.value('bandwidth', 3.0)))
-        self.overlapSpinBox.setValue(float(settings.value('overlap', 1.0)))
+        self.startfSpinBox.setValue(float(settings.value('startf', 2.0).toPyObject()))
+        self.endfSpinBox.setValue(float(settings.value('endf', 12.0).toPyObject()))
+        self.bandwidthSpinBox.setValue(float(settings.value('bandwidth', 3.0).toPyObject()))
+        self.overlapSpinBox.setValue(float(settings.value('overlap', 1.0).toPyObject()))
         settings.endGroup()
         settings.endGroup()
         settings.beginGroup("takanami_settings")
-        self.takanamiCheckBox.setChecked(int(settings.value('takanami', True)))
-        self.takanamiMarginSpinBox.setValue(float(settings.value('takanami_margin', 5.0)))
+        self.takanamiCheckBox.setChecked(int(settings.value('takanami', True).toPyObject()))
+        self.takanamiMarginSpinBox.setValue(float(settings.value('takanami_margin', 5.0).toPyObject()))
         settings.endGroup()
 
     def save_settings(self):
@@ -303,16 +303,9 @@ class AmpaDialog(QtGui.QDialog):
         if default is None:
             default = [30.0, 20.0, 10.0, 5.0, 2.5]
         settings = QtCore.QSettings(_organization, _application_name)
-        filters = settings.value('ampa_settings/filters', default)
-        if filters:
-            if isinstance(filters, list):
-                filter_list = list(filters)
-            else:
-                filter_list = [filters]
-        else:
-            filter_list = default
         # Drop filter lengths larger than max_value
-        return [float(f) for f in filter_list if 0 < float(f) < self.max_value]
+        return [float(f) for f in settings.value('ampa_settings/filters', default).toPyObject() \
+                if 0 < float(f) < self.max_value]
 
     def _on_filter_selected(self, s, d):
         self.actionRemoveFilter.setEnabled(len(self.filtersTable.selectionModel()

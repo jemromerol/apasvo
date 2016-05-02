@@ -126,8 +126,8 @@ class FilterDesignDialog(QtGui.QDialog):
         self.phase_axes.set_ylabel('Angle (radians)', color='g')
         self.canvas = FigureCanvas(self.fig)
         self.canvas.setMinimumSize(self.canvas.size())
-        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
-                                                    QtGui.QSizePolicy.Policy.Expanding))
+        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                                    QtGui.QSizePolicy.Expanding))
         self.toolBarNavigation = navigationtoolbar.NavigationToolBar(self.canvas, self)
         self.group_box = QtGui.QGroupBox(self)
         self.group_box2 = QtGui.QGroupBox(self)
@@ -137,8 +137,8 @@ class FilterDesignDialog(QtGui.QDialog):
         self.group_box2.setTitle("")
         self.group_box3.setTitle("Parameters")
         self.start_point_label = QtGui.QLabel("Lower cutoff frequency (Hz): ")
-        self.start_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
-                                                               QtGui.QSizePolicy.Policy.Preferred))
+        self.start_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,
+                                                               QtGui.QSizePolicy.Preferred))
 
         self.start_point_spinbox = QtGui.QDoubleSpinBox(self.group_box)
         self.start_point_spinbox.setMinimum(1.0)
@@ -146,8 +146,8 @@ class FilterDesignDialog(QtGui.QDialog):
         self.start_point_spinbox.setAccelerated(True)
         self.start_point_spinbox.setMaximum(self.max_freq * 0.5)
         self.end_point_label = QtGui.QLabel("Higher cutoff frequency (Hz):")
-        self.end_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
-                                                               QtGui.QSizePolicy.Policy.Preferred))
+        self.end_point_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,
+                                                               QtGui.QSizePolicy.Preferred))
         self.end_point_spinbox = QtGui.QDoubleSpinBox(self.group_box4)
         self.end_point_spinbox.setMinimum(1.0)
         self.end_point_spinbox.setSingleStep(1.00)
@@ -158,10 +158,10 @@ class FilterDesignDialog(QtGui.QDialog):
 
         self.number_coefficient_label = QtGui.QLabel("Order: ")
         self.number_coefficient_label2 = QtGui.QLabel("")
-        self.number_coefficient_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
-                                                               QtGui.QSizePolicy.Policy.Preferred))
-        self.number_coefficient_label2.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Maximum,
-                                                               QtGui.QSizePolicy.Policy.Preferred))
+        self.number_coefficient_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,
+                                                               QtGui.QSizePolicy.Preferred))
+        self.number_coefficient_label2.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,
+                                                               QtGui.QSizePolicy.Preferred))
         self.number_coefficient_spinbox = QtGui.QSpinBox(self.group_box3)
         self.number_coefficient_spinbox.adjustSize()
         self.number_coefficient_spinbox.setMinimum(1)

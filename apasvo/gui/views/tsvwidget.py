@@ -166,8 +166,8 @@ class StreamViewerWidget(QtGui.QWidget):
 
         self.fig = plt.figure()
         self.canvas = FigureCanvas(self.fig)
-        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
-                                                    QtGui.QSizePolicy.Policy.Expanding))
+        self.canvas.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                                    QtGui.QSizePolicy.Expanding))
         self.canvas.setMinimumHeight(320)
         self.canvas.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.canvas.setFocus()

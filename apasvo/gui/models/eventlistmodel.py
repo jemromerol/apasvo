@@ -120,9 +120,9 @@ class EventListModel(QtCore.QAbstractTableModel):
             settings.beginGroup("color_settings")
             for key in settings.childKeys():
                 if key == 'color_key':
-                    self.color_key = COLOR_KEYS[int(settings.value(key))]
+                    self.color_key = COLOR_KEYS[int(settings.value(key).toPyObject())]
                 else:
-                    self.color_map[key] = QtGui.QColor(settings.value(key))
+                    self.color_map[key] = QtGui.QColor(str(settings.value(key).toPyObject()))
             settings.endGroup()
         # load default color scheme otherwise
         else:

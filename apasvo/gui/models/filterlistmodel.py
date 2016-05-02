@@ -35,7 +35,7 @@ class FilterListModel(QtCore.QAbstractTableModel):
 
     def __init__(self, listobj, header=None):
         QtCore.QAbstractTableModel.__init__(self)
-        self._list = listobj
+        self._list = listobj if type(listobj) is list else [listobj]
         if header is None:
             header = ['Length (in seconds)']
         self._header = header

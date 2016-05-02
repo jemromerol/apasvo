@@ -90,7 +90,7 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
 
     def on_format_change(self, idx):
         """Updates UI after toggling the format value."""
-        fmt = FORMATS[self.FileFormatComboBox.currentText()]
+        fmt = FORMATS[str(self.FileFormatComboBox.currentText())]
         if fmt == rawfile.format_binary:
             self.DataTypeComboBox.setVisible(True)
             self.DataTypeLabel.setVisible(True)
@@ -140,7 +140,7 @@ class LoadDialog(QtGui.QDialog, ui_loaddialog.Ui_LoadDialog):
 
     def get_values(self):
         """Gets selected parameters."""
-        return {'fmt': FORMATS[self.FileFormatComboBox.currentText()],
+        return {'fmt': FORMATS[str(self.FileFormatComboBox.currentText())],
                 'dtype': DTYPES[self.DataTypeComboBox.currentIndex()],
                 'byteorder': BYTEORDERS[self.ByteOrderComboBox.currentIndex()],
                 'fs': float(self.SampleFrequencySpinBox.value())}
