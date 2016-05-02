@@ -311,22 +311,22 @@ class SettingsDialog(QtGui.QDialog):
         self.verticalLayout.addWidget(self.buttonBox)
         self.setLayout(self.verticalLayout)
 
-        self.item_player = QtGui.QTreeWidgetItem(self.treeWidget)
+        # self.item_player = QtGui.QTreeWidgetItem(self.treeWidget)
         self.item_colors = QtGui.QTreeWidgetItem(self.treeWidget)
         self.item_specgram = QtGui.QTreeWidgetItem(self.treeWidget)
-        self.item_player.setText(0, self.playerGroupBox.title())
+        # self.item_player.setText(0, self.playerGroupBox.title())
         self.item_colors.setText(0, self.colorsGroupBox.title())
         self.item_specgram.setText(0, self.specgramGroupBox.title())
 
-        self.treeWidget.addTopLevelItem(self.item_player)
+        # self.treeWidget.addTopLevelItem(self.item_player)
         self.treeWidget.setSortingEnabled(False)
 
         self._settingsMenus = {}
-        self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.playerGroupBox
+        # self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.playerGroupBox
         self._settingsMenus[self.treeWidget.topLevelItem(1).text(0)] = self.colorsGroupBox
         self._settingsMenus[self.treeWidget.topLevelItem(2).text(0)] = self.specgramGroupBox
         self.treeWidget.setCurrentItem(self.treeWidget.topLevelItem(0))
-        self.currentMenu = self.playerGroupBox
+        self.currentMenu = self.colorsGroupBox
 
     def loadSettings(self):
         """Loads settings from persistent storage."""
