@@ -26,8 +26,8 @@
 
 from PySide import QtGui
 from PySide import QtCore
-
-from apasvo.gui.views import playertoolbar
+# TEMPORARY DEACTIVATE MEDIA TOOLBAR TO AVOID CROSS-PLATFORM COMPATIBILITY PROBLEMS
+#from apasvo.gui.views import playertoolbar
 from apasvo.picking import apasvotrace as rc
 from apasvo.utils import plotting
 
@@ -112,45 +112,46 @@ class SettingsDialog(QtGui.QDialog):
         self.treeWidget.setHeaderHidden(True)
 
         # Set Player Group Box
-        self.playerGroupBox = QtGui.QGroupBox("Audio Player", self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
-                                       QtGui.QSizePolicy.Expanding)
-        sizePolicy.setHeightForWidth(self.playerGroupBox.sizePolicy().
-                                     hasHeightForWidth())
-        self.playerGroupBox.setSizePolicy(sizePolicy)
-        self.playerGroupBox.setAlignment(QtCore.Qt.AlignLeading |
-                                         QtCore.Qt.AlignLeft |
-                                         QtCore.Qt.AlignVCenter)
-        self.playerGroupBox.setVisible(True)
-        self.formLayout = QtGui.QFormLayout(self.playerGroupBox)
-        self.formLayout.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
-        self.formLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
-        self.formLayout.setRowWrapPolicy(QtGui.QFormLayout.DontWrapRows)
-        self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight |
-                                          QtCore.Qt.AlignTrailing |
-                                          QtCore.Qt.AlignVCenter)
-        self.formLayout.setFormAlignment(QtCore.Qt.AlignLeading |
-                                         QtCore.Qt.AlignLeft |
-                                         QtCore.Qt.AlignTop)
-        self.formLayout.setContentsMargins(24, 24, 24, 24)
-        self.formLayout.setHorizontalSpacing(24)
-        self.formLayout.setVerticalSpacing(24)
-        self.playbackfreqLabel = QtGui.QLabel("Playback frequency (Hz):",
-                                            self.playerGroupBox)
-        self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole,
-                                  self.playbackfreqLabel)
-        self.playbackrateSpinBox = QtGui.QSpinBox(self.playerGroupBox)
-        self.playbackrateSpinBox.setMinimum(100)
-        self.playbackrateSpinBox.setMaximum(16000)
-        self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole,
-                                  self.playbackrateSpinBox)
-        self.bitdepthLabel = QtGui.QLabel("Sample Format:", self.playerGroupBox)
-        self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole,
-                                  self.bitdepthLabel)
-        self.bitdepthComboBox = QtGui.QComboBox(self.playerGroupBox)
-        self.bitdepthComboBox.addItems(playertoolbar.bit_depths.keys())
-        self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole,
-                                  self.bitdepthComboBox)
+        # TEMPORARY DEACTIVATE MEDIA TOOLBAR TO AVOID CROSS-PLATFORM COMPATIBILITY PROBLEMS
+        # self.playerGroupBox = QtGui.QGroupBox("Audio Player", self)
+        # sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+        #                                QtGui.QSizePolicy.Expanding)
+        # sizePolicy.setHeightForWidth(self.playerGroupBox.sizePolicy().
+        #                              hasHeightForWidth())
+        # self.playerGroupBox.setSizePolicy(sizePolicy)
+        # self.playerGroupBox.setAlignment(QtCore.Qt.AlignLeading |
+        #                                  QtCore.Qt.AlignLeft |
+        #                                  QtCore.Qt.AlignVCenter)
+        # self.playerGroupBox.setVisible(True)
+        # self.formLayout = QtGui.QFormLayout(self.playerGroupBox)
+        # self.formLayout.setSizeConstraint(QtGui.QLayout.SetDefaultConstraint)
+        # self.formLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
+        # self.formLayout.setRowWrapPolicy(QtGui.QFormLayout.DontWrapRows)
+        # self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight |
+        #                                   QtCore.Qt.AlignTrailing |
+        #                                   QtCore.Qt.AlignVCenter)
+        # self.formLayout.setFormAlignment(QtCore.Qt.AlignLeading |
+        #                                  QtCore.Qt.AlignLeft |
+        #                                  QtCore.Qt.AlignTop)
+        # self.formLayout.setContentsMargins(24, 24, 24, 24)
+        # self.formLayout.setHorizontalSpacing(24)
+        # self.formLayout.setVerticalSpacing(24)
+        # self.playbackfreqLabel = QtGui.QLabel("Playback frequency (Hz):",
+        #                                     self.playerGroupBox)
+        # self.formLayout.setWidget(0, QtGui.QFormLayout.LabelRole,
+        #                           self.playbackfreqLabel)
+        # self.playbackrateSpinBox = QtGui.QSpinBox(self.playerGroupBox)
+        # self.playbackrateSpinBox.setMinimum(100)
+        # self.playbackrateSpinBox.setMaximum(16000)
+        # self.formLayout.setWidget(0, QtGui.QFormLayout.FieldRole,
+        #                           self.playbackrateSpinBox)
+        # self.bitdepthLabel = QtGui.QLabel("Sample Format:", self.playerGroupBox)
+        # self.formLayout.setWidget(1, QtGui.QFormLayout.LabelRole,
+        #                           self.bitdepthLabel)
+        # self.bitdepthComboBox = QtGui.QComboBox(self.playerGroupBox)
+        # self.bitdepthComboBox.addItems(playertoolbar.bit_depths.keys())
+        # self.formLayout.setWidget(1, QtGui.QFormLayout.FieldRole,
+        #                           self.bitdepthComboBox)
 
         # set colors group box
         self.colorsGroupBox = QtGui.QGroupBox("Colors", self)
@@ -162,7 +163,7 @@ class SettingsDialog(QtGui.QDialog):
         self.colorsGroupBox.setAlignment(QtCore.Qt.AlignLeading |
                                          QtCore.Qt.AlignLeft |
                                          QtCore.Qt.AlignVCenter)
-        self.colorsGroupBox.setVisible(False)
+        self.colorsGroupBox.setVisible(True)
         self.colorsLayout = QtGui.QVBoxLayout(self.colorsGroupBox)
 
         self.colorKeyWidget = QtGui.QWidget(self.colorsGroupBox)
@@ -301,7 +302,7 @@ class SettingsDialog(QtGui.QDialog):
         self.horizontalLayout = QtGui.QHBoxLayout(self.settings_frame)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.addWidget(self.treeWidget)
-        self.horizontalLayout.addWidget(self.playerGroupBox)
+        # self.horizontalLayout.addWidget(self.playerGroupBox)
         self.horizontalLayout.addWidget(self.colorsGroupBox)
         self.horizontalLayout.addWidget(self.specgramGroupBox)
 
@@ -310,32 +311,33 @@ class SettingsDialog(QtGui.QDialog):
         self.verticalLayout.addWidget(self.buttonBox)
         self.setLayout(self.verticalLayout)
 
-        self.item_player = QtGui.QTreeWidgetItem(self.treeWidget)
+        # self.item_player = QtGui.QTreeWidgetItem(self.treeWidget)
         self.item_colors = QtGui.QTreeWidgetItem(self.treeWidget)
         self.item_specgram = QtGui.QTreeWidgetItem(self.treeWidget)
-        self.item_player.setText(0, self.playerGroupBox.title())
+        # self.item_player.setText(0, self.playerGroupBox.title())
         self.item_colors.setText(0, self.colorsGroupBox.title())
         self.item_specgram.setText(0, self.specgramGroupBox.title())
 
-        self.treeWidget.addTopLevelItem(self.item_player)
+        # self.treeWidget.addTopLevelItem(self.item_player)
         self.treeWidget.setSortingEnabled(False)
 
         self._settingsMenus = {}
-        self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.playerGroupBox
-        self._settingsMenus[self.treeWidget.topLevelItem(1).text(0)] = self.colorsGroupBox
-        self._settingsMenus[self.treeWidget.topLevelItem(2).text(0)] = self.specgramGroupBox
+        # self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.playerGroupBox
+        self._settingsMenus[self.treeWidget.topLevelItem(0).text(0)] = self.colorsGroupBox
+        self._settingsMenus[self.treeWidget.topLevelItem(1).text(0)] = self.specgramGroupBox
         self.treeWidget.setCurrentItem(self.treeWidget.topLevelItem(0))
-        self.currentMenu = self.playerGroupBox
+        self.currentMenu = self.colorsGroupBox
 
     def loadSettings(self):
         """Loads settings from persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
 
-        settings.beginGroup("player_settings")
-        self.playbackrateSpinBox.setValue(int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ)))
-        bit_depth_index = playertoolbar.bit_depths.values().index(settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH))
-        self.bitdepthComboBox.setCurrentIndex(bit_depth_index)
-        settings.endGroup()
+        # TEMPORARY DEACTIVATE MEDIA TOOLBAR TO AVOID CROSS-PLATFORM COMPATIBILITY PROBLEMS
+        # settings.beginGroup("player_settings")
+        # self.playbackrateSpinBox.setValue(int(settings.value('playback_freq', playertoolbar.DEFAULT_REAL_FREQ)))
+        # bit_depth_index = playertoolbar.bit_depths.values().index(settings.value('bit_depth', playertoolbar.DEFAULT_BIT_DEPTH))
+        # self.bitdepthComboBox.setCurrentIndex(bit_depth_index)
+        # settings.endGroup()
 
         settings.beginGroup("color_settings")
         key = int(settings.value('color_key', COLOR_KEYS.index(DEFAULT_COLOR_KEY)))
@@ -382,11 +384,12 @@ class SettingsDialog(QtGui.QDialog):
         """Saves settings to persistent storage."""
         settings = QtCore.QSettings(_organization, _application_name)
 
-        settings.beginGroup("player_settings")
-        settings.setValue('playback_freq', self.playbackrateSpinBox.value())
-        settings.setValue('bit_depth',
-                          playertoolbar.bit_depths[self.bitdepthComboBox.currentText()])
-        settings.endGroup()
+        # TEMPORARY DEACTIVATE MEDIA TOOLBAR TO AVOID CROSS-PLATFORM COMPATIBILITY PROBLEMS
+        # settings.beginGroup("player_settings")
+        # settings.setValue('playback_freq', self.playbackrateSpinBox.value())
+        # settings.setValue('bit_depth',
+        #                   playertoolbar.bit_depths[self.bitdepthComboBox.currentText()])
+        # settings.endGroup()
 
         settings.beginGroup("color_settings")
         settings.setValue('color_key', self.colorKeyComboBox.currentIndex())

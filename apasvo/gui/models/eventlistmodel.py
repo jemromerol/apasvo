@@ -55,15 +55,15 @@ class EventListModel(QtCore.QAbstractTableModel):
         {'name': 'CF Value', 'type': 'event', 'attribute_name': 'cf_value', 'editable': False,
          'format': "{:.6g}"},
         {'name': 'Mode', 'type': 'event', 'attribute_name': 'evaluation_mode', 'editable': True,
-         'attribute_type': 'enum', 'value_list': op.core.event_header.EvaluationMode.keys()},
+         'attribute_type': 'enum', 'value_list': op.core.event.header.EvaluationMode.keys()},
         {'name': 'Phase hint', 'type': 'event', 'attribute_name': 'phase_hint', 'editable': True,
          'attribute_type': 'enum', 'value_list': rc.PHASE_VALUES},
         {'name': 'Method', 'type': 'event', 'attribute_name': 'method', 'editable': False,
          'attribute_type': 'enum', 'value_list': rc.ALLOWED_METHODS},
         {'name': 'Polarity', 'type': 'event', 'attribute_name': 'polarity', 'editable': True,
-         'attribute_type': 'enum', 'value_list': op.core.event_header.PickPolarity.keys()},
+         'attribute_type': 'enum', 'value_list': op.core.event.header.PickPolarity.keys()},
         {'name': 'Status', 'type': 'event', 'attribute_name': 'evaluation_status', 'editable': True,
-         'attribute_type': 'enum', 'value_list': op.core.event_header.EvaluationStatus.keys()},
+         'attribute_type': 'enum', 'value_list': op.core.event.header.EvaluationStatus.keys()},
         {'name': 'Comments', 'type': 'event', 'attribute_name': 'comments', 'editable': True},
     ]
 

@@ -27,19 +27,19 @@
 from PySide import QtCore
 import matplotlib
 matplotlib.rcParams['backend.qt4'] = 'PySide'
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 
 navigation_bar_items = ('Home', 'Back', 'Forward', 'Pan', 'Zoom', 'Save', '')
 
 
-class NavigationToolBar(NavigationToolbar2QTAgg):
+class NavigationToolBar(NavigationToolbar2QT):
 
     view_restored = QtCore.Signal()
 
     def __init__(self, canvas, parent=None):
         super(NavigationToolBar, self).__init__(canvas, parent)
         # remove actions not in navigation_bar_items
-        self.toolitems = tuple([t for t in NavigationToolbar2QTAgg.toolitems if
+        self.toolitems = tuple([t for t in NavigationToolbar2QT.toolitems if
                                 t[0] in navigation_bar_items])
         for action in self.actions():
             if action.text() not in navigation_bar_items:

@@ -908,7 +908,7 @@ class SignalViewerWidget(QtGui.QWidget):
         self.minimap.minimapSelector.set(visible=False)  # Hide minimap selector while loading
         self.minimap.set_record(self.document.record, step)
         # Plot signal
-        step_samples = step * self.fs
+        step_samples = int(step * self.fs)
         self._signal_data = self.signal_ax.plot(self.time[:step_samples],
                                                   self.signal[:step_samples],
                                                   color='black',
@@ -928,7 +928,7 @@ class SignalViewerWidget(QtGui.QWidget):
         cf_loaded = (self.cf.size != 0)
         self.set_cf_visible(cf_loaded)
         self.CF_loaded.emit(cf_loaded)
-        cf_step_samples = min(step_samples,len(self.cf))
+        cf_step_samples = int(min(step_samples, len(self.cf)))
         self._cf_data = self.cf_ax.plot(self.time[:cf_step_samples],
                                         self.cf[:cf_step_samples],
                                         color='black',

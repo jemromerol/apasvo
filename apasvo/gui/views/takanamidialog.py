@@ -239,8 +239,10 @@ class TakanamiDialog(QtGui.QDialog):
             clt.float_secs_2_string_date(time_in_secs, starttime=self.record.starttime)))
         # Plot estimated arrival time
         m_event = rc.ApasvoEvent(self.record, time, aic=aic, n0_aic=n0_aic)
-        m_event.plot_aic(show_envelope=True, num=self.fig.number)
-        self.fig.canvas.draw_idle()
+        self.fig = m_event.plot_aic(show_envelope=True)
+        self.canvas.figure = self.fig
+        self.canvas.draw_idle()
+        self.adjustSize()
 
     def load_settings(self):
         """Loads settings from persistent storage."""
