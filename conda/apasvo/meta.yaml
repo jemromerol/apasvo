@@ -4,7 +4,7 @@ package:
 
 source:
   git_url: https://github.com/jemromerol/apasvo
-  git_tag: move_to_conda
+  git_tag: release/v0.0.7
 
 # build:
   # noarch_python: True
