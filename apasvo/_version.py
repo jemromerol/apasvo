@@ -24,6 +24,6 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 _organization = 'UGR'
 _application_name = 'APASVO'
