@@ -15,5 +15,10 @@ cf_data/*
 build/*
 dist/*
 cover/*
+conda/linux-32/*
+conda/linux-64/*
+conda/osx-64/*
+conda/win-32/*
+conda/win-64/*
 *.egg-info/*
 
