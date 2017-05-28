@@ -9,9 +9,9 @@ source:
 build:
   script: python setup.py install
   entry_points:
-    - apasvo = apasvo.apasvo-gui:main
-    - apasvo-detector = apasvo.apasvo-detector:main
-    - apasvo-generator = apasvo.apasvo-generator:main
+    - apasvo = apasvo.apasvo_gui:main
+    - apasvo-detector = apasvo.apasvo_detector:main
+    - apasvo-generator = apasvo.apasvo_generator:main
 
 
   # If this is a new build for the same version, increment the build
