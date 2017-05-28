@@ -6,16 +6,12 @@ source:
   git_url: https://github.com/jemromerol/apasvo
   git_tag: release/v0.0.7
 
-# build:
-  # noarch_python: True
-  # preserve_egg_dir: True
-  # entry_points:
-    # Put any entry points (scripts to be generated automatically) here. The
-    # syntax is module:function.  For example
-    #
-    # - apasvo = apasvo:main
-    #
-    # Would create an entry point called apasvo that calls apasvo.main()
+build:
+  script: python setup.py install
+  entry_points:
+    - apasvo = apasvo.apasvo-gui:main
+    - apasvo-detector = apasvo.apasvo-detector:main
+    - apasvo-generator = apasvo.apasvo-generator:main
 
 
   # If this is a new build for the same version, increment the build
@@ -73,6 +69,12 @@ test:
   # requires:
     # Put any additional test requirements here.  For example
     # - nose
+
+app:
+  entry: apasvo
+  icon: res/images/app.png
+  summary: "APASVO picking tool"
+  own_environment: True
 
 about:
   home: https://github.com/jemromerol/apasvo

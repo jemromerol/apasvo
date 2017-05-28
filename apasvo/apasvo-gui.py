@@ -33,7 +33,7 @@ from apasvo._version import _application_name
 from apasvo.gui.views import mainwindow
 
 
-if __name__ == '__main__':
+def main(argv=None):
 #    QtGui.QApplication.setLibraryPaths([])  # Disable looking for plugins
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName(_application_name)
@@ -85,5 +85,9 @@ if __name__ == '__main__':
         app.exec_()
     except Exception, e:
         error.display_error_dlg(str(e), traceback.format_exc())
-        sys.exit(1)
-    sys.exit(0)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
